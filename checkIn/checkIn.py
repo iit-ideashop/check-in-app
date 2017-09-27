@@ -175,12 +175,5 @@ def newLogin():
 def newUser():
     return render_template('newUser.html')
 
-@app.route('/printMembers', methods=['GET']) # test print all Staff & Students
-def printMembers():
-    staff = request.args.get('staff')
-#    student = request.args.get('student')
-#    return "Staff: %s \n Students: %s" % (staff, student)
-    return render_template('printMembers.html', staff=staff)
- 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True)

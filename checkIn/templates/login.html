@@ -1,0 +1,36 @@
+{% extends "layout.html" %}
+{% block data %}
+<div class="col-md-6" style="margin:auto">
+{% if error %}
+	<div class="alert alert-danger alert-dismissible" role="alert">
+		<button type="button" class="close" data-dismiss="alert" aria-label="Close">
+			<span aria-hidden="true">&times;</span>
+		</button>
+		<p class=error>
+			<strong>Error:</strong>
+			{{ error }}
+		</p>
+	</div>
+{% endif %}
+	<div class="panel panel-primary">
+		<div class="panel-heading">Enter Login</div>
+		<div class="panel-body">
+			<form action="{{ url_for('login') }}" method=post>
+				<dl>
+					<dt>Username:</dt>
+					<dd><input type=text name=username></dd>
+					<dt>Password:</dt>
+					<dd><input type=password name=password></dd>
+					{% if startup %}
+					<dt>Location name:</dt>
+					<dd><input type=text name=location></dd>
+					<dt>Hardware ID (of card scanner):</dt>
+					<dd><input type=text name=hardware_id></dd>
+					{% endif %}
+					<dd><input type=submit value=Login></dd>
+				</dl>
+			</form>
+		</div>
+	</div>
+</div>
+{% endblock %}

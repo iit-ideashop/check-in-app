@@ -1,0 +1,14 @@
+{% extends "layout.html" %}
+{% block data %}
+<script type="text/javascript">
+	window.setTimeout(function() {
+		window.location.replace("/index.html");
+	}, 1000);
+</script>
+<div class="col-md-6" style="margin:auto">
+	<div class="alert alert-success" role="alert">
+		<strong>Success!</strong> {{ msg }}
+		<p>Redirecting to <a href="index.html" class="alert-link">the index</a> in 1 second...</p>
+	</div>
+</div>
+{% endblock %}

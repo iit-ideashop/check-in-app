@@ -1,0 +1,3 @@
+graft checkIn/templates
+graft checkIn/static
+include checkIn/schema.sqla

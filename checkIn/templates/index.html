@@ -1,0 +1,29 @@
+{% extends "layout.html" %}
+{% block data %}
+<script type="text/javascript">
+	const s = new WebSocket('ws://host/'); // where are we running this?
+	s.onopen = function(e) {
+		s.send('{{ hardware_id }}');
+	};
+	s.onmessage = function(e) {
+		console.log('message: ', event.data);
+		if (event.data == "Success") {
+			window.location.href = '{{ url_for('success', action='checkin') }}';
+		}
+		else if (event.data.startswith("Failure")) {
+			// idk show a message of some type
+		}
+	};
+</script>
+
+<div class="jumbotron text-center" style="margin:auto">
+  <h1>Check-in system coming soon!</h1>
+  <p>If you need to be safety trained, please find a staff member.</p>
+  <!--
+  <h1>Tap ID to check in</h1>
+  <br />
+  <a class="btn btn-primary btn-lg" href="{{ url_for('doesExist') }}" style="margin-top: 50px">Forgot your ID?</a>
+  -->
+</div>
+
+{% endblock %}

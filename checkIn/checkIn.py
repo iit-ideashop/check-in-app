@@ -4,8 +4,9 @@ import os
 from flask import Flask, request, session, g, redirect, url_for, abort, render_template, flash
 from flask_bootstrap import Bootstrap
 import sqlalchemy as sa
+from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
-#from socketServer import WSServer
+from socketServer import WSServer
 from collections import defaultdict
 
 # TODO: consider using flask-login
@@ -23,14 +24,19 @@ app.config.from_envvar('FLASKR_SETTINGS', silent=True)
 Bootstrap(app)
 
 engine = sa.create_engine(app.config['DB'])
+#engine = sa.create_engine('sqlite://')
 Base = declarative_base()
+
+# Old schema, uncommented for testing
+
 class KioskUser(Base):
     __tablename__ = 'kioskUsers'
     id = sa.Column(sa.BigInteger, primary_key=True)
     card_facility = sa.Column(sa.Integer, nullable=False)
     card_number = sa.Column(sa.Integer, nullable=False)
-    name = sa.Column(sa.String)
-    a_number = sa.Column(sa.String, nullable=False)
+    name = sa.Column(sa.String, length=100)
+    a_number = sa.Column(sa.String, nullable=False, length=10)
+    
 class KioskSignature(Base):
     __tablename__ = 'kioskSignatures'
     id = sa.Column(sa.BigInteger, primary_key=True)
@@ -41,15 +47,113 @@ class kioskLocation(Base):
     __tablename__ = 'kioskLocations'
     id = sa.Column(sa.Integer, primary_key=True)
     name = sa.Column(sa.String, nullable=False)
+
+
+# New schema
+class User(Base):
+    __tablename__ = 'users'
+    sid = sa.Column(sa.BigInteger, primary_key=True)
+    name = sa.Column(sa.String(length=100), nullable=False)
+    type_id = sa.Column(sa.Integer, sa.ForeignKey('Type.id'))
+    waiverSigned = sa.Column(sa.DateTime)
+
+    type = relationship("Type")
+    trainings = relationship("Training")
+
+    def __repr__(self):
+        return "<User A%d (%s)>" % (self.sid, self.name)
+
+class HawkCard(Base):
+    __tablename__ = 'hawkcards'
+    sid = sa.Column(sa.BigInteger, sa.ForeignKey('User.sid'))
+    card = sa.Column(sa.BigInteger, primary_key=True)
+
+    user = relationship("User")
+
+    def __repr__(self):
+        return "<HawkCard %d (A%d)>" % (self.card, self.sid)
+
+class Type(Base):
+    __tablename__ = 'types'
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
+    name = sa.Column(sa.String(length=50))
+
+    def __repr__(self):
+        return "<Type %s>" % self.name
+
+class Machine(Base):
+    __tablename__ = 'machines'
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
+    name = sa.Column(sa.String(length=50))
+
+    def __repr__(self):
+        return "<Machine %s>" % self.name
+
+class Training(Base):
+    __tablename__ = 'safetyTraining'
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
+    trainee_id = sa.Column(sa.BigInteger, sa.ForeignKey('User.sid'))
+    trainer_id = sa.Column(sa.BigInteger, sa.ForeignKey('User.sid'))
+    machine_id = sa.Column(sa.Integer, sa.ForeignKey('Machine.id'))
+    date = sa.Column(sa.DateTime, server_default=sa.func.now())
+
+    trainee = relationship('User', foreign_keys=[trainee_id])
+    trainer = relationship('User', foreign_keys=[trainer_id])
+    machine = relationship('Machine', foreign_keys=[machine_id])
+
+    def __repr__(self):
+        return "<%s trained %s on %s, time=%s>" %\
+               (self.trainee.name, self.trainer.name, self.machine.name, str(self.date))
+
+class Access(Base):
+    __tablename__ = 'access'
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
+    sid = sa.Column(sa.BigInteger, sa.ForeignKey('User.sid'))
+    timeIn = sa.Column(sa.DateTime, nullable=False, server_default=sa.func.now())
+    timeOut = sa.Column(sa.DateTime, default=None)
+    location_id = sa.Column(sa.Integer, sa.ForeignKey('Location.id'))
+
+    user = relationship('User')
+
+    def __repr__(self):
+        return "<Access %s(%s-%s)>" % (self.user.name, str(self.timeIn), str(self.timeOut))
+
+class AdminLog(Base):
+    __tablename__ = 'adminLog'
+    id = sa.Column(sa.BigInteger, primary_key=True, autoincrement=True)
+    admin_id = sa.Column(sa.BigInteger, sa.ForeignKey('User.sid'))
+    action = sa.Column(sa.String(length=50))
+    target_id = sa.Column(sa.BigInteger, sa.ForeignKey('User.sid'))
+    data = sa.Column(sa.Text)
+
+    admin = relationship('User', foreign_keys=[admin_id])
+    target = relationship('User', foreign_keys=[target_id])
+
+    def __repr__(self):
+        return "<AdminLog %s (%s) %s, data=%s>" % (self.admin.name, self.action, self.target.name, self.data)
+
+class CardScan(Base):
+    __tablename__ = 'scanLog'
+    id = sa.Column(sa.BigInteger, primary_key=True, autoincrement=True)
+    card = sa.Column(sa.BigInteger, sa.ForeignKey('HawkCard.card'), nullable=False)
+    time = sa.Column(sa.DateTime, server_default=sa.func.now())
+
+    def __repr__(self):
+        return "<CardScan %d at %s>" % (self.card, self.time)
+
+class Location(Base):
+    __tablename__ = 'locations'
+    id = sa.Column(sa.BigInteger, primary_key=True, autoincrement=True)
+    name = sa.Column(sa.String(length=50), nullable=False)
+
+    def __repr__(self):
+        return "<Location %s>" % self.name
+
+
 db_session = sa.orm.sessionmaker(bind=engine)
 
-#socket_server = WSServer()
-#socket_server.start()
-
-#def connect_db():
-#    """Connects to the specific database."""
-#    mariadb_connection = mariadb.connect(host='10.0.8.18',user='checkIn',password='iaG0sN2pUOyyuxjdGABzho0c6h7jJls3',database='checkIn')
-#    return mariadb_connection
+socket_server = WSServer()
+socket_server.start()
 
 @app.teardown_appcontext
 def close_db(error):
@@ -83,7 +187,7 @@ success_messages.update({
 })
 @app.route('/success/<action>', methods=['GET'])
 def success(action):
-    return render_template('success.html', msg=messages[action])
+    return render_template('success.html', msg=success_messages[action])
 
 @app.route('/card_read', methods=['POST'])
 def card_read():

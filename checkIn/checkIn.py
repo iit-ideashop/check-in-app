@@ -28,7 +28,7 @@ engine = sa.create_engine(app.config['DB'])
 Base = declarative_base()
 
 # Old schema, uncommented for testing
-
+"""
 class KioskUser(Base):
     __tablename__ = 'kioskUsers'
     id = sa.Column(sa.BigInteger, primary_key=True)
@@ -47,7 +47,7 @@ class kioskLocation(Base):
     __tablename__ = 'kioskLocations'
     id = sa.Column(sa.Integer, primary_key=True)
     name = sa.Column(sa.String, nullable=False)
-
+"""
 
 # New schema
 class User(Base):
@@ -135,8 +135,10 @@ class AdminLog(Base):
 class CardScan(Base):
     __tablename__ = 'scanLog'
     id = sa.Column(sa.BigInteger, primary_key=True, autoincrement=True)
-    card = sa.Column(sa.BigInteger, sa.ForeignKey('HawkCard.card'), nullable=False)
+    card_id = sa.Column(sa.BigInteger, sa.ForeignKey('HawkCard.card'), nullable=False)
     time = sa.Column(sa.DateTime, server_default=sa.func.now())
+
+    card = relationship('HawkCard')
 
     def __repr__(self):
         return "<CardScan %d at %s>" % (self.card, self.time)
@@ -191,27 +193,29 @@ def success(action):
 
 @app.route('/card_read', methods=['POST'])
 def card_read():
-    user = db_session.query(KioskUser).filter(
-        KioskUser.card_facility == request.form['card_facility'],
-        KioskUser.card_number == request.form['card_number']
+    logEntry = CardScan(card_id=request.form['card_number'])
+
+    user = db_session.query(HawkCard).filter_by(
+        card=request.form['card_number']
     ).one_or_none()
     if not user:
         print("User for card id {}{} not found"
             .format(request.form['card_facility'], request.form['card_number']))
     else:
-        signatures = db_session.query(KioskSignature)\
-            .filter(KioskSignature.user_id == user.id)\
-            .all()
-        for signature in signatures:
-            if signature.location_id == session['location_id']:
-                socket_server.succeed(request.form['hardware_id'])
-                return
-        print("User {} (card id {}) is not cleared for entry at location {} (id {})"\
-            .format(
+        if User.waiverSigned != None:
+            print("User {} (card id {}) is cleared for entry at location {} (id {})" \
+                .format(
                 user.name, request.form['card_facility'], request.form['card_number'],
                 session['location_name'], session['location_id']
             ))
-        socket_server.fail(request.form['hardware_id'])
+            return socket_server.succeed(request.form['hardware_id'])
+        else:
+            print("User {} (card id {}) is NOT cleared for entry at location {} (id {})" \
+                .format(
+                user.name, request.form['card_facility'], request.form['card_number'],
+                session['location_name'], session['location_id']
+            ))
+            return socket_server.fail(request.form['hardware_id'])
 
 def _login(request):
     error = None
@@ -231,8 +235,8 @@ def start_reading():
         if socket_server.has_connection(hwid):
             error = 'Hardware ID already in use'
         else:
-            lid = db_session.query(KioskLocation)\
-                .filter(KioskLocation.name == request.form['location'])\
+            lid = db_session.query(Location)\
+                .filter_by(name=request.form['location'])\
                 .one_or_none()
             if not lid:
                 error = 'Location not found'

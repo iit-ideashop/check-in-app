@@ -6,14 +6,6 @@ config.cfg
 config.cfg.default
 *.cfg
 
-# Binary image files
-images
-*.jpg
-*.png
-*.tif
-*.bmp
-*.raw
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

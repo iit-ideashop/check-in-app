@@ -6,7 +6,7 @@ from flask_bootstrap import Bootstrap
 import sqlalchemy as sa
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
-from socketServer import WSServer
+#from socketServer import WSServer
 from collections import defaultdict
 
 # TODO: consider using flask-login
@@ -50,99 +50,6 @@ class kioskLocation(Base):
 """
 
 # New schema
-class User(Base):
-    __tablename__ = 'users'
-    sid = sa.Column(sa.BigInteger, primary_key=True)
-    name = sa.Column(sa.String(length=100), nullable=False)
-    type_id = sa.Column(sa.Integer, sa.ForeignKey('Type.id'))
-    waiverSigned = sa.Column(sa.DateTime)
-
-    type = relationship("Type")
-    trainings = relationship("Training")
-
-    def __repr__(self):
-        return "<User A%d (%s)>" % (self.sid, self.name)
-
-class HawkCard(Base):
-    __tablename__ = 'hawkcards'
-    sid = sa.Column(sa.BigInteger, sa.ForeignKey('User.sid'))
-    card = sa.Column(sa.BigInteger, primary_key=True)
-
-    user = relationship("User")
-
-    def __repr__(self):
-        return "<HawkCard %d (A%d)>" % (self.card, self.sid)
-
-class Type(Base):
-    __tablename__ = 'types'
-    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-    name = sa.Column(sa.String(length=50))
-
-    def __repr__(self):
-        return "<Type %s>" % self.name
-
-class Machine(Base):
-    __tablename__ = 'machines'
-    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-    name = sa.Column(sa.String(length=50))
-
-    def __repr__(self):
-        return "<Machine %s>" % self.name
-
-class Training(Base):
-    __tablename__ = 'safetyTraining'
-    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-    trainee_id = sa.Column(sa.BigInteger, sa.ForeignKey('User.sid'))
-    trainer_id = sa.Column(sa.BigInteger, sa.ForeignKey('User.sid'))
-    machine_id = sa.Column(sa.Integer, sa.ForeignKey('Machine.id'))
-    date = sa.Column(sa.DateTime, server_default=sa.func.now())
-
-    trainee = relationship('User', foreign_keys=[trainee_id])
-    trainer = relationship('User', foreign_keys=[trainer_id])
-    machine = relationship('Machine', foreign_keys=[machine_id])
-
-    def __repr__(self):
-        return "<%s trained %s on %s, time=%s>" %\
-               (self.trainee.name, self.trainer.name, self.machine.name, str(self.date))
-
-class Access(Base):
-    __tablename__ = 'access'
-    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-    sid = sa.Column(sa.BigInteger, sa.ForeignKey('User.sid'))
-    timeIn = sa.Column(sa.DateTime, nullable=False, server_default=sa.func.now())
-    timeOut = sa.Column(sa.DateTime, default=None)
-    location_id = sa.Column(sa.Integer, sa.ForeignKey('Location.id'))
-
-    user = relationship('User')
-
-    def __repr__(self):
-        return "<Access %s(%s-%s)>" % (self.user.name, str(self.timeIn), str(self.timeOut))
-
-class AdminLog(Base):
-    __tablename__ = 'adminLog'
-    id = sa.Column(sa.BigInteger, primary_key=True, autoincrement=True)
-    admin_id = sa.Column(sa.BigInteger, sa.ForeignKey('User.sid'))
-    action = sa.Column(sa.String(length=50))
-    target_id = sa.Column(sa.BigInteger, sa.ForeignKey('User.sid'))
-    data = sa.Column(sa.Text)
-
-    admin = relationship('User', foreign_keys=[admin_id])
-    target = relationship('User', foreign_keys=[target_id])
-
-    def __repr__(self):
-        return "<AdminLog %s (%s) %s, data=%s>" % (self.admin.name, self.action, self.target.name, self.data)
-
-class CardScan(Base):
-    __tablename__ = 'scanLog'
-    id = sa.Column(sa.BigInteger, primary_key=True, autoincrement=True)
-    card_id = sa.Column(sa.BigInteger, sa.ForeignKey('HawkCard.card'), nullable=False)
-    time = sa.Column(sa.DateTime, server_default=sa.func.now())
-
-    card = relationship('HawkCard')
-
-    def __repr__(self):
-        return "<CardScan %d at %s>" % (self.card, self.time)
-
 class Location(Base):
     __tablename__ = 'locations'
     id = sa.Column(sa.BigInteger, primary_key=True, autoincrement=True)
@@ -151,11 +58,117 @@ class Location(Base):
     def __repr__(self):
         return "<Location %s>" % self.name
 
+class Type(Base):
+    __tablename__ = 'types'
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
+    name = sa.Column(sa.String(length=50))
+    location_id = sa.Column(sa.Integer, sa.ForeignKey('locations.id'), nullable=False)
+
+    def __repr__(self):
+        return "<Type %s>" % self.name
+
+class Access(Base):
+    __tablename__ = 'access'
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
+    sid = sa.Column(sa.BigInteger, sa.ForeignKey('users.sid'))
+    timeIn = sa.Column(sa.DateTime, nullable=False, server_default=sa.func.now())
+    timeOut = sa.Column(sa.DateTime, default=None)
+    location_id = sa.Column(sa.Integer, sa.ForeignKey('locations.id'), nullable=False)
+
+    user = relationship('users')
+    location = relationship('locations')
+
+    def __repr__(self):
+        return "<Access %s(%s-%s)>" % (self.user.name, str(self.timeIn), str(self.timeOut))
+
+class User(Base):
+    __tablename__ = 'users'
+    sid = sa.Column(sa.BigInteger, primary_key=True)
+    name = sa.Column(sa.String(length=100), nullable=False)
+    type_id = sa.Column(sa.Integer, sa.ForeignKey('types.id'))
+    waiverSigned = sa.Column(sa.DateTime)
+    photo = sa.Column(sa.String(length=100), default='')
+    location_id = sa.Column(sa.INTEGER, sa.ForeignKey('locations.id'), nullable=False, primary_key=True)
+
+    type = relationship('types')
+    trainings = relationship('safetyTraining')
+    location = relationship('locations')
+
+    def __repr__(self):
+        return "<User A%d (%s)>" % (self.sid, self.name)
+
+class HawkCard(Base):
+    __tablename__ = 'hawkcards'
+    sid = sa.Column(sa.BigInteger, sa.ForeignKey('users.sid'))
+    card = sa.Column(sa.BigInteger, primary_key=True)
+
+    user = relationship('users')
+
+    def __repr__(self):
+        return "<HawkCard %d (A%d)>" % (self.card, self.sid)
+
+class Machine(Base):
+    __tablename__ = 'machines'
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
+    name = sa.Column(sa.String(length=50))
+    location_id = sa.Column(sa.Integer, sa.ForeignKey('locations.id'), nullable=False)
+
+    location = relationship('locations')
+
+    def __repr__(self):
+        return "<Machine %s>" % self.name
+
+class Training(Base):
+    __tablename__ = 'safetyTraining'
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
+    trainee_id = sa.Column(sa.BigInteger, sa.ForeignKey('users.sid'))
+    trainer_id = sa.Column(sa.BigInteger, sa.ForeignKey('users.sid'))
+    machine_id = sa.Column(sa.Integer, sa.ForeignKey('machines.id'))
+    date = sa.Column(sa.DateTime, server_default=sa.func.now())
+
+    trainee = relationship('users', foreign_keys=[trainee_id])
+    trainer = relationship('users', foreign_keys=[trainer_id])
+    machine = relationship('machines', foreign_keys=[machine_id])
+
+    def __repr__(self):
+        return "<%s trained %s on %s, time=%s>" %\
+               (self.trainee.name, self.trainer.name, self.machine.name, str(self.date))
+
+class AdminLog(Base):
+    __tablename__ = 'adminLog'
+    id = sa.Column(sa.BigInteger, primary_key=True, autoincrement=True)
+    admin_id = sa.Column(sa.BigInteger, sa.ForeignKey('users.sid'))
+    action = sa.Column(sa.String(length=50))
+    target_id = sa.Column(sa.BigInteger, sa.ForeignKey('users.sid'))
+    data = sa.Column(sa.Text)
+    location_id = sa.Column(sa.Integer, sa.ForeignKey('locations.id'))
+
+    admin = relationship('users', foreign_keys=[admin_id])
+    target = relationship('users', foreign_keys=[target_id])
+    location = relationship('locations')
+
+    def __repr__(self):
+        return "<AdminLog %s (%s) %s, data=%s>" % (self.admin.name, self.action, self.target.name, self.data)
+
+class CardScan(Base):
+    __tablename__ = 'scanLog'
+    id = sa.Column(sa.BigInteger, primary_key=True, autoincrement=True)
+    card_id = sa.Column(sa.BigInteger, sa.ForeignKey('hawkcards.card'), nullable=False)
+    time = sa.Column(sa.DateTime, server_default=sa.func.now())
+    location_id = sa.Column(sa.Integer, sa.ForeignKey('locations.id'), nullable=False)
+
+    card = relationship('hawkcards')
+    location = relationship('locations')
+
+    def __repr__(self):
+        return "<CardScan %d at %s>" % (self.card, self.time)
+
 
 db_session = sa.orm.sessionmaker(bind=engine)
+Base.metadata.create_all(engine)
 
-socket_server = WSServer()
-socket_server.start()
+#socket_server = WSServer()
+#socket_server.start()
 
 @app.teardown_appcontext
 def close_db(error):
@@ -179,7 +192,17 @@ def index():
 #    print(data)
 #    db.close()
 
-    return render_template('index.html', hardware_id=session['hardware_id'])
+# TODO: Move this to be a part of the template or a global listener so we don't have to do it in every
+# render function
+    session = db_session()
+    staff = session.query(Access)\
+        .filter(Access.timeOut is None)\
+        .filter(Access.user.type > 0)
+
+    students = session.query(Access)\
+        .filter(Access.user.type == 0)
+
+    return render_template('index.html', hardware_id=session['hardware_id'], staff=staff, students=students)
 
 success_messages = defaultdict(str)
 success_messages.update({
@@ -202,7 +225,7 @@ def card_read():
         print("User for card id {}{} not found"
             .format(request.form['card_facility'], request.form['card_number']))
     else:
-        if User.waiverSigned != None:
+        if User.waiverSigned:
             print("User {} (card id {}) is cleared for entry at location {} (id {})" \
                 .format(
                 user.name, request.form['card_facility'], request.form['card_number'],
@@ -221,7 +244,7 @@ def _login(request):
     error = None
     if request.method == 'POST':
         if (request.form['username'] != app.config['USERNAME']
-            or request.form['password'] != app.config['PASSWORD']):
+           or request.form['password'] != app.config['PASSWORD']):
             error = 'Authentication failure'
         else:
             session['logged_in'] = True

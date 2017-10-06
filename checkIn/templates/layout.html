@@ -46,17 +46,19 @@
 				<div class="panel-heading text-center">
 					Staff
 				</div>
+                {% for staffMember in staff %}
 				<div class="row">
   					<div class="col-sm-4 col-md-4" style="margin:10px">
 						 <div class="thumbnail">
      							<img src="../static/images/Patrick.jpg">
       							<div class="caption text-center">
-        							<h4>Patrick Karnia</h4>
-								<h5>Lab Manager</h5>
+        							<h4>{{ staffMember.name }}</h4>
+							    	<h5>{{ staffMember.type.name }}</h5>
      							</div>
-    						 </div>
+                         </div>
   					</div>
 				</div>
+                {% endfor %}
 			</div>
 				<div class="panel panel-default">
 					<div class="panel-heading test-center">
@@ -67,10 +69,15 @@
 							<th>Name</th>
 							<th></th>
 						</tr>
+                        {% for student in students %}
 						<tr>
-							<td style="vertical-align:middle"><span class="glyphicon glyphicon-user" aria-hidden="true">&nbsp;</span>John Doe</td>
+							<td style="vertical-align:middle">
+                                <span class="glyphicon glyphicon-user" aria-hidden="true">&nbsp;</span>
+                                {{ student.name }}
+                            </td>
 							<td><button type="button" class="btn btn-danger">Checkout</button></td>
 						</tr>
+                        {% endfor %}
 					</table>
 				</div>
 			</div>

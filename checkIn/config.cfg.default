@@ -1,0 +1,4 @@
+DB = 'sqlite:///:memory:',
+SECRET_KEY='this is really, really secret',
+USERNAME='username',
+PASSWORD = 'password'

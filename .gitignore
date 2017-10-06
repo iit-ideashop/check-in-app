@@ -3,8 +3,7 @@
 # MYSQL database config file
 
 config.cfg
-config.cfg.default
-*.cfg
+!config.cfg.default
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -49,7 +49,7 @@ class Access(Base):
     __tablename__ = 'access'
     id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
     sid = sa.Column(sa.BigInteger, sa.ForeignKey('users.sid'))
-    timeIn = sa.Column(sa.DateTime, nullable=False, server_default=sa.func.now())
+    timeIn = sa.Column(sa.DateTime, nullable=False)
     timeOut = sa.Column(sa.DateTime, default=None)
     location_id = sa.Column(sa.Integer, sa.ForeignKey('locations.id'), nullable=False)
 

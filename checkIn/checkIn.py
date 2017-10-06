@@ -61,7 +61,8 @@ class Location(Base):
 class Type(Base):
     __tablename__ = 'types'
     id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-    name = sa.Column(sa.String(length=50))
+    level = sa.Column(sa.Integer, nullable=False)
+    name = sa.Column(sa.String(length=50), nullable=False)
     location_id = sa.Column(sa.Integer, sa.ForeignKey('locations.id'), nullable=False)
 
     def __repr__(self):
@@ -75,8 +76,8 @@ class Access(Base):
     timeOut = sa.Column(sa.DateTime, default=None)
     location_id = sa.Column(sa.Integer, sa.ForeignKey('locations.id'), nullable=False)
 
-    user = relationship('users')
-    location = relationship('locations')
+    user = relationship('User')
+    location = relationship('Location')
 
     def __repr__(self):
         return "<Access %s(%s-%s)>" % (self.user.name, str(self.timeIn), str(self.timeOut))
@@ -90,9 +91,8 @@ class User(Base):
     photo = sa.Column(sa.String(length=100), default='')
     location_id = sa.Column(sa.INTEGER, sa.ForeignKey('locations.id'), nullable=False, primary_key=True)
 
-    type = relationship('types')
-    trainings = relationship('safetyTraining')
-    location = relationship('locations')
+    type = relationship('Type')
+    location = relationship('Location')
 
     def __repr__(self):
         return "<User A%d (%s)>" % (self.sid, self.name)
@@ -102,7 +102,7 @@ class HawkCard(Base):
     sid = sa.Column(sa.BigInteger, sa.ForeignKey('users.sid'))
     card = sa.Column(sa.BigInteger, primary_key=True)
 
-    user = relationship('users')
+    user = relationship('User')
 
     def __repr__(self):
         return "<HawkCard %d (A%d)>" % (self.card, self.sid)
@@ -113,7 +113,7 @@ class Machine(Base):
     name = sa.Column(sa.String(length=50))
     location_id = sa.Column(sa.Integer, sa.ForeignKey('locations.id'), nullable=False)
 
-    location = relationship('locations')
+    location = relationship('Location')
 
     def __repr__(self):
         return "<Machine %s>" % self.name
@@ -126,9 +126,9 @@ class Training(Base):
     machine_id = sa.Column(sa.Integer, sa.ForeignKey('machines.id'))
     date = sa.Column(sa.DateTime, server_default=sa.func.now())
 
-    trainee = relationship('users', foreign_keys=[trainee_id])
-    trainer = relationship('users', foreign_keys=[trainer_id])
-    machine = relationship('machines', foreign_keys=[machine_id])
+    trainee = relationship('User', foreign_keys=[trainee_id])
+    trainer = relationship('User', foreign_keys=[trainer_id])
+    machine = relationship('Machine', foreign_keys=[machine_id])
 
     def __repr__(self):
         return "<%s trained %s on %s, time=%s>" %\
@@ -143,9 +143,9 @@ class AdminLog(Base):
     data = sa.Column(sa.Text)
     location_id = sa.Column(sa.Integer, sa.ForeignKey('locations.id'))
 
-    admin = relationship('users', foreign_keys=[admin_id])
-    target = relationship('users', foreign_keys=[target_id])
-    location = relationship('locations')
+    admin = relationship('User', foreign_keys=[admin_id])
+    target = relationship('User', foreign_keys=[target_id])
+    location = relationship('Location')
 
     def __repr__(self):
         return "<AdminLog %s (%s) %s, data=%s>" % (self.admin.name, self.action, self.target.name, self.data)
@@ -157,8 +157,8 @@ class CardScan(Base):
     time = sa.Column(sa.DateTime, server_default=sa.func.now())
     location_id = sa.Column(sa.Integer, sa.ForeignKey('locations.id'), nullable=False)
 
-    card = relationship('hawkcards')
-    location = relationship('locations')
+    card = relationship('HawkCard')
+    location = relationship('Location')
 
     def __repr__(self):
         return "<CardScan %d at %s>" % (self.card, self.time)
@@ -169,6 +169,17 @@ Base.metadata.create_all(engine)
 
 #socket_server = WSServer()
 #socket_server.start()
+
+@app.before_request
+def update_current_students():
+    session = db_session()
+    student_access = session.query(Access).filter_by(timeOut=None).filter(Type.level == 0)
+    staff_access = session.query(Access).filter_by(timeOut=None).filter(Type.level > 0)
+
+    g.students = [a.user for a in student_access]
+    g.staff = [a.user for a in staff_access]
+
+    session.close()
 
 @app.teardown_appcontext
 def close_db(error):
@@ -192,17 +203,7 @@ def index():
 #    print(data)
 #    db.close()
 
-# TODO: Move this to be a part of the template or a global listener so we don't have to do it in every
-# render function
-    session = db_session()
-    staff = session.query(Access)\
-        .filter(Access.timeOut is None)\
-        .filter(Access.user.type > 0)
-
-    students = session.query(Access)\
-        .filter(Access.user.type == 0)
-
-    return render_template('index.html', hardware_id=session['hardware_id'], staff=staff, students=students)
+    return render_template('index.html', hardware_id=session['hardware_id'])
 
 success_messages = defaultdict(str)
 success_messages.update({

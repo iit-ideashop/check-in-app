@@ -1,7 +1,6 @@
 # all the imports
 import os
-#import mysql.connector as mariadb
-from flask import Flask, request, session, g, redirect, url_for, abort, render_template, flash
+from flask import Flask, request, session, g, redirect, url_for, render_template, send_from_directory
 from flask_bootstrap import Bootstrap
 import sqlalchemy as sa
 from sqlalchemy.orm import relationship, joinedload, lazyload
@@ -285,6 +284,10 @@ def newLogin():
 @app.route('/newUser', methods=['GET']) # this doesn't do anything
 def newUser():
     return render_template('newUser.html')
+
+@app.route('/static/<path:path>')
+def send_static(path):
+    return send_from_directory('static', path)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True)

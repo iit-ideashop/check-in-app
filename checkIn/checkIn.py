@@ -29,7 +29,7 @@ Base = declarative_base()
 # New schema
 class Location(Base):
     __tablename__ = 'locations'
-    id = sa.Column(sa.BigInteger, primary_key=True, autoincrement=True)
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
     name = sa.Column(sa.String(length=50), nullable=False)
 
     def __repr__(self):

@@ -131,7 +131,7 @@ class CardScan(Base):
     __tablename__ = 'scanLog'
     id = sa.Column(sa.BigInteger, primary_key=True, autoincrement=True)
     card_id = sa.Column(sa.BigInteger, sa.ForeignKey('hawkcards.card'), nullable=False)
-    time = sa.Column(sa.DateTime, server_default=sa.func.now())
+    time = sa.Column(sa.DateTime)
     location_id = sa.Column(sa.Integer, sa.ForeignKey('locations.id'), nullable=False)
 
     card = relationship('HawkCard')
@@ -196,7 +196,7 @@ def success(action):
 
 @app.route('/card_read', methods=['POST'])
 def card_read():
-    logEntry = CardScan(card_id=request.form['card_number'])
+    logEntry = CardScan(card_id=request.form['card_number'], time=sa.func.now(), location_id=session['location_id'])
 
     user = db_session.query(HawkCard).filter_by(
         card=request.form['card_number']

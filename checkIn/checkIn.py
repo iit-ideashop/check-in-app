@@ -101,7 +101,7 @@ class Training(Base):
     trainee_id = sa.Column(sa.BigInteger, sa.ForeignKey('users.sid'))
     trainer_id = sa.Column(sa.BigInteger, sa.ForeignKey('users.sid'))
     machine_id = sa.Column(sa.Integer, sa.ForeignKey('machines.id'))
-    date = sa.Column(sa.DateTime, server_default=sa.func.now())
+    date = sa.Column(sa.DateTime)
 
     trainee = relationship('User', foreign_keys=[trainee_id])
     trainer = relationship('User', foreign_keys=[trainer_id])

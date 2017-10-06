@@ -4,7 +4,7 @@ import os
 from flask import Flask, request, session, g, redirect, url_for, abort, render_template, flash
 from flask_bootstrap import Bootstrap
 import sqlalchemy as sa
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, joinedload, lazyload
 from sqlalchemy.ext.declarative import declarative_base
 #from socketServer import WSServer
 from collections import defaultdict
@@ -24,30 +24,7 @@ app.config.from_envvar('FLASKR_SETTINGS', silent=True)
 Bootstrap(app)
 
 engine = sa.create_engine(app.config['DB'])
-#engine = sa.create_engine('sqlite://')
 Base = declarative_base()
-
-# Old schema, uncommented for testing
-"""
-class KioskUser(Base):
-    __tablename__ = 'kioskUsers'
-    id = sa.Column(sa.BigInteger, primary_key=True)
-    card_facility = sa.Column(sa.Integer, nullable=False)
-    card_number = sa.Column(sa.Integer, nullable=False)
-    name = sa.Column(sa.String, length=100)
-    a_number = sa.Column(sa.String, nullable=False, length=10)
-    
-class KioskSignature(Base):
-    __tablename__ = 'kioskSignatures'
-    id = sa.Column(sa.BigInteger, primary_key=True)
-    user_id = sa.Column(sa.BigInteger, sa.ForeignKey('kioskUsers.id'))
-    location_id = sa.Column(sa.Integer, sa.ForeignKey('kioskLocations.id'))
-    time_signed = sa.Column(sa.DateTime, nullable=False)
-class kioskLocation(Base):
-    __tablename__ = 'kioskLocations'
-    id = sa.Column(sa.Integer, primary_key=True)
-    name = sa.Column(sa.String, nullable=False)
-"""
 
 # New schema
 class Location(Base):
@@ -173,11 +150,13 @@ Base.metadata.create_all(engine)
 @app.before_request
 def update_current_students():
     session = db_session()
-    student_access = session.query(Access).filter_by(timeOut=None).filter(Type.level == 0)
-    staff_access = session.query(Access).filter_by(timeOut=None).filter(Type.level > 0)
+    in_lab = session.query(Access)\
+        .options(joinedload('user.type'))\
+        .filter_by(timeOut=None)\
+        .all()
 
-    g.students = [a.user for a in student_access]
-    g.staff = [a.user for a in staff_access]
+    g.students = [a.user for a in in_lab if a.user.type.level == 0]
+    g.staff = [a.user for a in in_lab if a.user.type.level > 0]
 
     session.close()
 
@@ -193,7 +172,7 @@ def checkIn():
 def index():
     # don't allow just anyone to be a kiosk,
     # otherwise people could conceivably pretend to be here
-    if not session['logged_in']:
+    if 'logged_in' not in session or not session['logged_in']:
         return redirect(url_for('start_reading'))
 
 #    db = connect_db()

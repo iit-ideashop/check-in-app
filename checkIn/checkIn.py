@@ -1,9 +1,11 @@
 # all the imports
 import os
+import hashlib
+import hmac
 from flask import Flask, request, session, g, redirect, url_for, render_template, send_from_directory
 from flask_bootstrap import Bootstrap
 import sqlalchemy as sa
-from sqlalchemy.orm import relationship, joinedload, lazyload
+from sqlalchemy.orm import relationship, joinedload
 from sqlalchemy.ext.declarative import declarative_base
 #from socketServer import WSServer
 from collections import defaultdict
@@ -30,6 +32,16 @@ class Location(Base):
     __tablename__ = 'locations'
     id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
     name = sa.Column(sa.String(length=50), nullable=False)
+    secret = sa.Column(sa.Binary(length=16), nullable=False)
+    salt = sa.Column(sa.Binary(length=16), nullable=False)
+
+    def set_secret(self, secret):
+        self.salt = os.urandom(16)
+        # 100,000 rounds of sha256 w/ a random salt
+        self.secret = hashlib.pbkdf2_hmac('sha256', secret, self.salt, 100000)
+
+    def verify_secret(self, attempt):
+        return hmac.compare_digest(self.secret, hashlib.pbkdf2_hmac('sha256', attempt, self.salt, 100000))
 
     def __repr__(self):
         return "<Location %s>" % self.name

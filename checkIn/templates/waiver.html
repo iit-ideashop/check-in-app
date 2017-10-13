@@ -1,0 +1,123 @@
+{% extends "layout.html" %}
+
+{% block data %}
+    <!--<div class="panel panel-default">
+        <div class="panel-heading text-center"><strong>Idea Shop User Agreement</strong></div>-->
+        <div class="container">
+            <div class="alert alert-danger text-center">
+                <strong>Any persons wishing to use equipment or perform tasks in the Idea Shop must agree to this User
+                    Agreement.<br/>
+                    Every time you enter the Idea Shop you are agreeing to the following terms.</strong>
+            </div>
+            <h4>General</h4>
+            <ul>
+                <li>Safety training and authorization is required to use any piece of equipment in the Idea Shop.</li>
+                <li>Always report any injury, broken tool, housekeeping issue, or potential hazard.</li>
+                <li>Be aware of others around your work, and the work being performed around you, at all times.</li>
+                <li>If you see someone working in an unsafe manner, say something.</li>
+            </ul>
+
+            <h4>Personal</h4>
+            <ul>
+                <li>Personal protection equipment (safety glasses, ear plugs, breathing masks, etc) are to be worn
+                    anywhere signs are posted in the work space, or whenever appropriate based on training for that
+                    tool.
+                </li>
+                <li>Never approach any power tools with loose clothing, long untied hair, lanyards, headphone cords,
+                    gloves or large jewelry that could pull you toward the machine.
+                </li>
+                <li>No headphones allowed in the lab. You must be able to hear what is going on around you.</li>
+                <li>Closed toe shoes are required in the lab.</li>
+                <li>All individuals are required to act in a professional manner.</li>
+            </ul>
+
+            <h4>Lab Space</h4>
+            <ul>
+                <li>Exits, corridors, and passageways must be kept clear for safe passage during an emergency.</li>
+                <li>Keep a clean, organized, and safe work area. Clean any debris that you have created or others have
+                    created before you. Always leave the space better than you found it.
+                </li>
+                <li>Help keep the floor space dry and free of tripping or slipping hazards such as saw dust, oil,
+                    electrical cords, or raw materials.
+                </li>
+                <li>No food or drinks allowed in the lab. (Exception for sealed water bottles.)</li>
+            </ul>
+
+            <h4>Tools</h4>
+            <ul>
+                <li>Use the correct tool for the job and never abuse the tool.</li>
+                <li>Personal protection equipment (safety glasses, ear plugs, breathing masks, etc) are to be worn
+                    anywhere signs are posted in the work space, or whenever appropriate based on training for that
+                    tool.
+                </li>
+                <li>Whenever you use a tool, you are responsible for returning it to its proper storage location,
+                    regardless of where you found it. If you are unsure, please ask the lab personnel.
+                </li>
+                <li>Never modify any tool, and especially, never remove safety devices from tools.</li>
+            </ul>
+            <button type="button" class="btn btn-lg btn-block btn-danger" data-toggle="modal" data-target="#declineModal">I do NOT agree</button>
+            <button type="button" class="btn btn-lg btn-block btn-success" data-toggle="modal" data-target="#signatureModal">
+                I agree
+            </button>
+            <br />
+        <!--</div>-->
+    </div>
+
+    <div class="modal fade" id="signatureModal" tabindex="-1" role="dialog" aria-labelledby="signatureModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <span class="modal-title" id="signatureModalLabel">Signature</span>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    I understand that I agree to the Idea Shop User Agreement each time I enter the Idea Shop and that
+                    this agreement is subject to change without notice.
+                </div>
+                <div class="modal-footer">
+                    <form method="get" action="/waiver">
+                        <div class="form-row">
+                            <div class="col-sm-10">
+                                <input type="text" name="name" id="sigField" class="keyboard form-control" placeholder="Sign here"/>
+                            </div>
+                            <input type="hidden" name="agreed" value="true" />
+                            <div class="col-sm-2"><button type="submit" class="btn btn-success">Submit</button></div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="declineModal" tabindex="-1" role="dialog" aria-labelledby="declineModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <span class="modal-title" id="declineModalLabel">Are you sure?</span>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    Are you sure you wish to decline? You can always agree later, but you won't be able to use the Idea
+                    Shop until then.
+                </div>
+                <div class="modal-footer">
+                    <a href="/waiver?agreed=false"><button type="button" class="btn btn-danger">Yes, I decline.</button></a>
+                    <button type="button" class="btn btn-default" data-dismiss="modal">No, take me back to the agreement.</button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script>
+    $(function() {
+        $("#sigField").keyboard({initCaps: true})
+    })
+    </script>
+{% endblock %}

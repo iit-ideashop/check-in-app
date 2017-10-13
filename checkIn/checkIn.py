@@ -301,5 +301,16 @@ def newUser():
 def send_static(path):
     return send_from_directory('static', path)
 
+@app.route('/waiver', methods=['GET'])
+def waiver():
+    if not request.args.get('agreed'):
+        return render_template('waiver.html')
+    elif request.args.get('agreed') == 'true':
+        # TODO: next step in flow, actually sign in
+        return redirect('/success/checkin')
+    else:
+        # TODO: clear any active session
+        return redirect('/')
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True)

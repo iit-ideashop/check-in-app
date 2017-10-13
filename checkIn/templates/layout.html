@@ -46,20 +46,20 @@
 				<div class="panel-heading text-center">
 					Staff
 				</div>
+                <div class="row">
                 {% for staffMember in g.staff %}
-				<div class="row">
-  					<div class="col-sm-4 col-md-4" style="margin:10px">
+  					<div class="col-sm-4 col-md-4">
 						 <div class="thumbnail">
-     							<img src="../static/images/Patrick.jpg">
+     							<img src="/static/staff/A{{ staffMember.sid }}.jpg">
       							<div class="caption text-center">
         							<h4>{{ staffMember.name }}</h4>
 							    	<h5>{{ staffMember.type.name }}</h5>
      							</div>
                          </div>
   					</div>
-				</div>
                 {% endfor %}
-			</div>
+                </div>
+            </div>
 				<div class="panel panel-default">
 					<div class="panel-heading test-center">
 						Students

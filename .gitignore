@@ -114,3 +114,5 @@ venv.bak/
 .idea/
 
 tmp/
+
+staff/

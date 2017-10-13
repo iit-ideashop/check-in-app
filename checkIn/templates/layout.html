@@ -1,6 +1,17 @@
 {% extends "bootstrap/base.html" %}
 {% block title %}Lab Check In{% endblock %}
 
+{% block styles %}
+    {{ super() }}
+    <link rel="stylesheet" href="/static/css/jqbtk.min.css" />
+{% endblock styles %}
+
+{% block scripts %}
+    {{ super() }}
+
+    <script src="/static/js/jqbtk.min.js"></script>
+{% endblock scripts %}
+
 {% block navbar %}
 
 <nav class="navbar navbar-default">

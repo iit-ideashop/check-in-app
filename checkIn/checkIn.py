@@ -7,6 +7,7 @@ from flask_bootstrap import Bootstrap
 import sqlalchemy as sa
 from sqlalchemy.orm import relationship, joinedload
 from sqlalchemy.ext.declarative import declarative_base
+from iitlookup import IITLookup
 #from socketServer import WSServer
 from collections import defaultdict
 
@@ -21,6 +22,12 @@ app.config.update(dict(
 ))
 app.config.from_pyfile('config.cfg')
 app.config.from_envvar('FLASKR_SETTINGS', silent=True)
+
+cbord = IITLookup(
+    wsurl=app.config['CBORD_ENDPOINT'],
+    user=app.config['CBORD_USER'],
+    pwd=app.config['CBORD_PASS']
+)
 
 Bootstrap(app)
 

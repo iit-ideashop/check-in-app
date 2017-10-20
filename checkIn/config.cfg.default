@@ -2,3 +2,6 @@ DB = 'sqlite:///:memory:',
 SECRET_KEY='this is really, really secret',
 USERNAME='username',
 PASSWORD = 'password'
+CBORD_ENDPOINT = ''
+CBORD_USER = ''
+CBORD_PASS = ''

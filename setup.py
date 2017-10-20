@@ -8,5 +8,6 @@ setup(
             'flask',
             'flask-bootstrap',
             'sqlalchemy',
+            'pysimplesoap'
             ],
 )

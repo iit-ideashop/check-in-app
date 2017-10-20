@@ -1,0 +1,46 @@
+{% extends "layout.html" %}
+
+{% block data %}
+<div class="container">
+    <h1>Please verify the information below.</h1>
+    <form action="/register" method="post">
+        <div class="form-group form-group-lg row">
+            <label for="sid" class="col-sm-2 col-form-label col-form-label-lg">Card Number</label>
+            <div class="input-group col-sm-10">
+                <input class="form-control input-lg col-sm-10" type="tel" value="{{ card_id }}" id="cardnum" readonly />
+            </div>
+        </div>
+
+        <div class="form-group form-group-lg row">
+            <label for="sid" class="col-sm-2 col-form-label col-form-label-lg">Student ID</label>
+            <div class="input-group col-sm-10">
+                <div class="input-group-addon">A</div>
+                <input class="form-control input-lg keyboard" type="tel" value="{{ sid }}" id="sid" />
+            </div>
+        </div>
+
+        <div class="form-group form-group-lg row">
+            <label for="sid" class="col-sm-2 col-form-label col-form-label-lg">Name</label>
+            <div class="input-group col-sm-10">
+                <input class="form-control input-lg keyboard col-sm-10" type="text" value="{{ name }}" id="name" />
+            </div>
+        </div>
+
+        <br />
+        <br />
+        <br />
+        <br />
+        <input class="btn btn-success btn-lg btn-block" type="submit" value="Continue"/>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script>
+        $(function() {
+            $("#sid").keyboard();
+            $("#name").keyboard({initCaps: true});
+        })
+    </script>
+{% endblock %}

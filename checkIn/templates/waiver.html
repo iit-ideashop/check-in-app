@@ -80,7 +80,7 @@
                     <form method="get" action="/waiver">
                         <div class="form-row">
                             <div class="col-sm-10">
-                                <input type="text" name="name" id="sigField" class="keyboard form-control" placeholder="Sign here"/>
+                                <input type="text" name="name" id="sigField" class="keyboard keyboard-default form-control" placeholder="Sign here"/>
                             </div>
                             <input type="hidden" name="agreed" value="true" />
                             <div class="col-sm-2"><button type="submit" class="btn btn-success">Submit</button></div>
@@ -111,4 +111,13 @@
             </div>
         </div>
     </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script>
+        $(function() {
+            $("#sigField").keyboard({initCaps: true});
+        })
+    </script>
 {% endblock %}

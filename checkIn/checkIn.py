@@ -4,17 +4,18 @@ import hashlib
 import hmac
 from flask import Flask, request, session, g, redirect, url_for, render_template, send_from_directory
 from flask_bootstrap import Bootstrap
+from flask_socketio import SocketIO, emit
 import sqlalchemy as sa
 from sqlalchemy.orm import relationship, joinedload
 from sqlalchemy.ext.declarative import declarative_base
 from iitlookup import IITLookup
-#from socketServer import WSServer
 from collections import defaultdict
 
 # TODO: consider using flask-login
 # or maybe not, they don't seem to support forced reauthentication on 'fresh' logins
 
 app = Flask(__name__) # create the application instance :)
+socketio = SocketIO(app)
 app.config.from_object(__name__)
 
 app.config.update(dict(
@@ -167,8 +168,8 @@ Base.metadata.create_all(engine)
 
 @app.before_request
 def update_current_students():
-    session = db_session()
-    in_lab = session.query(Access)\
+    db = db_session()
+    in_lab = db.query(Access)\
         .options(joinedload('user.type'))\
         .filter_by(timeOut=None)\
         .all()
@@ -176,7 +177,7 @@ def update_current_students():
     g.students = [a.user for a in in_lab if a.user.type.level == 0]
     g.staff = [a.user for a in in_lab if a.user.type.level > 0]
 
-    session.close()
+    db.close()
 
 @app.teardown_appcontext
 def close_db(error):
@@ -214,6 +215,7 @@ def card_read(location_id):
         db.add(HawkCard(sid=None, card=card_id))
 
         # send to registration page
+        emit('go', {'to': url_for('/register', card_id=card_id)})
         db.commit()
     else:
         lastIn = db.query(Access)\
@@ -225,8 +227,7 @@ def card_read(location_id):
         if lastIn:
             # user signing out
             print("User %s (card id %d) signed out at location %s (id %d)" % (
-                card.user.name, card_id,
-                location.name, location.id
+                card.user.name, card_id, location.name, location.id
             ))
 
             lastIn.timeOut = sa.func.now()
@@ -236,8 +237,7 @@ def card_read(location_id):
         elif User.waiverSigned:
             # user signing in
             print("User %s (card id %d) is cleared for entry at location %s (id %d)" % (
-                card.user.name, card_id,
-                location.name, location.id
+                card.user.name, card_id, location.name, location.id
             ))
             # sign user in and send to confirmation page
 
@@ -391,5 +391,35 @@ def waiver():
         # TODO: clear any active session
         return redirect('/')
 
+@app.route('/register/', methods=['GET', 'POST'])
+def register():
+    if request.method == 'GET':
+        return render_template('register.html',
+                               sid=request.args.get('sid'),
+                               cardid=request.args.get('card_id'),
+                               name=request.args.get('name'))
+
+    elif request.method == 'POST':
+        db = db_session()
+        newtype = db.query(Type)\
+            .filter_by(location_id=session['location_id'])\
+            .filter_by(level=0)\
+            .one_or_none()
+
+        db.add(User(sid=request.form['sid'],
+                    name=request.form['name'],
+                    type_id=newtype.id,
+                    waiverSigned=None,
+                    location_id=request.session['location_id']))
+
+        card = db.query(HawkCard)\
+            .filter_by(card=request.form['cardid'])\
+            .one_or_none()
+        card.sid = request.form['sid']
+
+        db.commit()
+
+        return redirect('/waiver')
+
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', debug=True)
+    socketio.run(app, host='0.0.0.0', debug=True)

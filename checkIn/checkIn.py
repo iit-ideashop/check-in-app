@@ -179,6 +179,76 @@ def close_db(error):
 def checkIn():
     return render_template('index.html')
 
+@app.route('/card_read/<location_id>', methods=['GET', 'POST', 'PUT'])
+def card_read(location_id):
+    resp = 'Read success: Facility %s, card %s' % (request.form['facility'], request.form['cardnum'])
+    db = db_session()
+    card_id = int(request.form['cardnum'])
+    logEntry = CardScan(card_id=card_id, time=sa.func.now(), location_id=location_id)
+
+    card = db.query(HawkCard).filter_by(
+        card=request.form['cardnum']
+    ).one_or_none()
+
+    location = db.query(Location).filter_by(
+        id=location_id
+    ).one_or_none()
+
+    db.add(logEntry)
+
+    if not location:
+        print("Location %d not found" % location_id)
+        db.commit()
+
+    if not card:
+        # first time in lab
+        print("User for card id %d not found" % card_id)
+
+        db.add(HawkCard(sid=None, card=card_id))
+
+        # send to registration page
+        db.commit()
+    else:
+        lastIn = db.query(Access)\
+            .filter_by(location_id=location)\
+            .filter_by(timeOut=None)\
+            .filter_by(sid=card.sid)\
+            .one_or_none()
+
+        if lastIn:
+            # user signing out
+            print("User %s (card id %d) signed out at location %s (id %d)" % (
+                card.user.name, card_id,
+                location.name, location.id
+            ))
+
+            lastIn.timeOut = sa.func.now()
+            db.commit()
+            # sign user out and send to confirmation page
+
+        elif User.waiverSigned:
+            # user signing in
+            print("User %s (card id %d) is cleared for entry at location %s (id %d)" % (
+                card.user.name, card_id,
+                location.name, location.id
+            ))
+            # sign user in and send to confirmation page
+
+            db.commit()
+
+        else:
+            # user has account but hasn't signed waiver
+            print("User %s (card id %d) needs to sign waiver at location %s (id %d)" % (
+                card.user.name, card_id,
+                location.name, location.id
+            ))
+            # present waiver page
+
+            db.commit()
+
+    print(resp)
+    return resp
+
 @app.route('/index', methods=['GET'])
 def index():
     # don't allow just anyone to be a kiosk,
@@ -204,7 +274,7 @@ success_messages.update({
 @app.route('/success/<action>', methods=['GET'])
 def success(action):
     return render_template('success.html', msg=success_messages[action])
-
+"""
 @app.route('/card_read', methods=['POST'])
 def card_read():
     logEntry = CardScan(card_id=request.form['card_number'], time=sa.func.now(), location_id=session['location_id'])
@@ -212,24 +282,26 @@ def card_read():
     user = db_session.query(HawkCard).filter_by(
         card=request.form['card_number']
     ).one_or_none()
+
     if not user:
         print("User for card id {}{} not found"
             .format(request.form['card_facility'], request.form['card_number']))
     else:
         if User.waiverSigned:
-            print("User {} (card id {}) is cleared for entry at location {} (id {})" \
+            print("User {} (card id {}) is cleared for entry at location {} (id {})"
                 .format(
                 user.name, request.form['card_facility'], request.form['card_number'],
                 session['location_name'], session['location_id']
             ))
-            return socket_server.succeed(request.form['hardware_id'])
+            # return socket_server.succeed(request.form['hardware_id'])
         else:
-            print("User {} (card id {}) is NOT cleared for entry at location {} (id {})" \
-                .format(
-                user.name, request.form['card_facility'], request.form['card_number'],
-                session['location_name'], session['location_id']
+            print("User {} (card id {}) needs to sign waiver at location {} (id {})"
+                  .format(
+                    user.name, request.form['card_facility'], request.form['card_number'],
+                    session['location_name'], session['location_id']
             ))
-            return socket_server.fail(request.form['hardware_id'])
+            # return socket_server.fail(request.form['hardware_id'])
+"""
 
 def _login(request):
     error = None

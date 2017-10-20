@@ -112,12 +112,3 @@
         </div>
     </div>
 {% endblock %}
-
-{% block scripts %}
-    {{ super() }}
-    <script>
-    $(function() {
-        $("#sigField").keyboard({initCaps: true})
-    })
-    </script>
-{% endblock %}

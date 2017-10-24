@@ -206,7 +206,6 @@ def card_read(location_id):
 
     if not location:
         print("Location %d not found" % location_id)
-        db.commit()
 
     if not card:
         # first time in lab
@@ -216,7 +215,6 @@ def card_read(location_id):
 
         # send to registration page
         emit('go', {'to': url_for('/register', card_id=card_id)})
-        db.commit()
     else:
         lastIn = db.query(Access)\
             .filter_by(location_id=location)\
@@ -229,10 +227,10 @@ def card_read(location_id):
             print("User %s (card id %d) signed out at location %s (id %d)" % (
                 card.user.name, card_id, location.name, location.id
             ))
-
-            lastIn.timeOut = sa.func.now()
-            db.commit()
+            
             # sign user out and send to confirmation page
+            lastIn.timeOut = sa.func.now()
+            emit('go', {'to': url_for('/success/checkout')})            
 
         elif User.waiverSigned:
             # user signing in
@@ -240,8 +238,9 @@ def card_read(location_id):
                 card.user.name, card_id, location.name, location.id
             ))
             # sign user in and send to confirmation page
-
-            db.commit()
+            accessEntry = Access(sid=card.sid, timeIn=sa.func.now(), location_id=location_id)
+            db.add(accessEntry)
+            emit('go', {'to': url_for('/success/checkin')})
 
         else:
             # user has account but hasn't signed waiver
@@ -250,9 +249,9 @@ def card_read(location_id):
                 location.name, location.id
             ))
             # present waiver page
+            emit('go', {'to': url_for('/waiver')})
 
-            db.commit()
-
+    db.commit()
     print(resp)
     return resp
 
@@ -276,7 +275,8 @@ success_messages = defaultdict(str)
 success_messages.update({
     'login':   "You have been logged in.",
     'logout':  "You have been logged out.",
-    'checkin': "You have checked in."
+    'checkin': "You have checked in.",
+    'checkout': "You have checked out."
 })
 @app.route('/success/<action>', methods=['GET'])
 def success(action):

@@ -187,7 +187,7 @@ def close_db(error):
 def checkIn():
     return render_template('index.html')
 
-@app.route('/card_read/<location_id>', methods=['GET', 'POST', 'PUT'])
+@app.route('/card_read/<int:location_id>', methods=['GET', 'POST'])
 def card_read(location_id):
     resp = 'Read success: Facility %s, card %s' % (request.form['facility'], request.form['cardnum'])
     db = db_session()
@@ -217,7 +217,7 @@ def card_read(location_id):
         emit('go', {'to': url_for('/register', card_id=card_id)})
     else:
         lastIn = db.query(Access)\
-            .filter_by(location_id=location)\
+            .filter_by(location_id=location.id)\
             .filter_by(timeOut=None)\
             .filter_by(sid=card.sid)\
             .one_or_none()
@@ -227,7 +227,6 @@ def card_read(location_id):
             print("User %s (card id %d) signed out at location %s (id %d)" % (
                 card.user.name, card_id, location.name, location.id
             ))
-            
             # sign user out and send to confirmation page
             lastIn.timeOut = sa.func.now()
             emit('go', {'to': url_for('/success/checkout')})            
@@ -383,9 +382,15 @@ def send_static(path):
 @app.route('/waiver', methods=['GET'])
 def waiver():
     if not request.args.get('agreed'):
-        return render_template('waiver.html')
+        return render_template('waiver.html', sid=request.args.get('sid'))
     elif request.args.get('agreed') == 'true':
-        # TODO: next step in flow, actually sign in
+        db = db_session()
+        db.add(Access(
+            sid=request.args.get('sid'),
+            location_id=session['location_id'],
+            timeIn=sa.func.now(),
+            timeOut=None
+        ))
         return redirect('/success/checkin')
     else:
         # TODO: clear any active session
@@ -419,7 +424,7 @@ def register():
 
         db.commit()
 
-        return redirect('/waiver')
+        return redirect(url_for('/waiver', sid=request.form['sid']))
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', debug=True)

@@ -175,6 +175,9 @@ Base.metadata.create_all(engine)
 
 @app.before_request
 def update_current_students():
+    # TODO: remove this dirty hack
+    session['location_id'] = 1
+
     db = db_session()
     in_lab = db.query(Access)\
         .options(joinedload('user.type'))\
@@ -241,7 +244,7 @@ def card_read(location_id):
             ))
             # sign user out and send to confirmation page
             lastIn.timeOut = sa.func.now()
-            #emit('go', {'to': url_for('.success', action='checkout')})            
+            socketio.emit('go', {'to': url_for('.success', action='checkout')})
 
         elif User.waiverSigned:
             # user signing in
@@ -251,7 +254,7 @@ def card_read(location_id):
             # sign user in and send to confirmation page
             accessEntry = Access(sid=card.sid, timeIn=sa.func.now(), location_id=location_id)
             db.add(accessEntry)
-            #emit('go', {'to': url_for('.success', action='checkin')})
+            socketio.emit('go', {'to': url_for('.success', action='checkin')})
 
         else:
             # user has account but hasn't signed waiver
@@ -260,7 +263,7 @@ def card_read(location_id):
                 location.name, location.id
             ))
             # present waiver page
-            #emit('go', {'to': url_for('.waiver')})
+            socketio.emit('go', {'to': url_for('.waiver')})
 
     db.commit()
     print(resp)
@@ -405,7 +408,7 @@ def register():
                     name=request.form['name'],
                     type_id=newtype.id,
                     waiverSigned=None,
-                    location_id=request.session['location_id']))
+                    location_id=session['location_id']))
 
         card = db.query(HawkCard)\
             .filter_by(card=request.form['cardid'])\

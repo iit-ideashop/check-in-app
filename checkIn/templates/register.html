@@ -7,7 +7,7 @@
         <div class="form-group form-group-lg row">
             <label for="sid" class="col-sm-2 col-form-label col-form-label-lg">Card Number</label>
             <div class="input-group col-sm-10">
-                <input class="form-control input-lg col-sm-10" type="tel" value="{{ card_id }}" id="cardnum" readonly />
+                <input class="form-control input-lg col-sm-10" type="tel" value="{{ card_id }}" id="cardnum" readonly name="cardid" />
             </div>
         </div>
 
@@ -15,14 +15,14 @@
             <label for="sid" class="col-sm-2 col-form-label col-form-label-lg">Student ID</label>
             <div class="input-group col-sm-10">
                 <div class="input-group-addon">A</div>
-                <input class="form-control input-lg keyboard" type="tel" value="{{ sid }}" id="sid" />
+                <input class="form-control input-lg keyboard" type="tel" value="{{ sid }}" id="sid" name="sid" />
             </div>
         </div>
 
         <div class="form-group form-group-lg row">
             <label for="sid" class="col-sm-2 col-form-label col-form-label-lg">Name</label>
             <div class="input-group col-sm-10">
-                <input class="form-control input-lg keyboard col-sm-10" type="text" value="{{ name }}" id="name" />
+                <input class="form-control input-lg keyboard col-sm-10" type="text" value="{{ name }}" id="name" name="name" />
             </div>
         </div>
 

@@ -223,8 +223,10 @@ def card_read(location_id):
 
         db.add(HawkCard(sid=None, card=card_id))
 
+    if not card or not card.user:
         # send to registration page
-        emit('go', {'to': url_for('.register', card_id=card_id)})
+        socketio.emit('go', {'to': url_for('.register', card_id=card_id)}, broadcast=True)
+
     else:
         lastIn = db.query(Access)\
             .filter_by(location_id=location.id)\
@@ -388,9 +390,9 @@ def waiver():
 def register():
     if request.method == 'GET':
         return render_template('register.html',
-                               sid=request.args.get('sid'),
-                               cardid=request.args.get('card_id'),
-                               name=request.args.get('name'))
+                               sid=00000000,
+                               card_id=request.args.get('card_id'),
+                               name='John Doe')
 
     elif request.method == 'POST':
         db = db_session()

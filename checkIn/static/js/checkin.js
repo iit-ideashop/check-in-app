@@ -1,10 +1,12 @@
-$(function() 
-var socket = new io.Socket('ideashop-fedora',
-	{port: 5000});
-socket.connect();
+$(function() {
+    localStorage.debug = '*';
 
-socket.on('message',function(data)
-	{window.location.href = data;}
-);
-)
+    var socket = io();
+
+    socket.connect();
+
+    socket.on('go', function (data) {
+        window.location.href = data.to;
+    });
+});
 

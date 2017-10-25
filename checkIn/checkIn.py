@@ -35,6 +35,7 @@ Bootstrap(app)
 engine = sa.create_engine(app.config['DB'])
 Base = declarative_base()
 
+
 # New schema
 class Location(Base):
     __tablename__ = 'locations'
@@ -54,6 +55,7 @@ class Location(Base):
     def __repr__(self):
         return "<Location %s>" % self.name
 
+
 class Type(Base):
     __tablename__ = 'types'
     id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
@@ -63,6 +65,7 @@ class Type(Base):
 
     def __repr__(self):
         return "<Type %s>" % self.name
+
 
 class Access(Base):
     __tablename__ = 'access'
@@ -77,6 +80,7 @@ class Access(Base):
 
     def __repr__(self):
         return "<Access %s(%s-%s)>" % (self.user.name, str(self.timeIn), str(self.timeOut))
+
 
 class User(Base):
     __tablename__ = 'users'
@@ -93,6 +97,7 @@ class User(Base):
     def __repr__(self):
         return "<User A%d (%s)>" % (self.sid, self.name)
 
+
 class HawkCard(Base):
     __tablename__ = 'hawkcards'
     sid = sa.Column(sa.BigInteger, sa.ForeignKey('users.sid'))
@@ -102,6 +107,7 @@ class HawkCard(Base):
 
     def __repr__(self):
         return "<HawkCard %d (A%d)>" % (self.card, self.sid)
+
 
 class Machine(Base):
     __tablename__ = 'machines'
@@ -113,6 +119,7 @@ class Machine(Base):
 
     def __repr__(self):
         return "<Machine %s>" % self.name
+
 
 class Training(Base):
     __tablename__ = 'safetyTraining'
@@ -130,6 +137,7 @@ class Training(Base):
         return "<%s trained %s on %s, time=%s>" %\
                (self.trainee.name, self.trainer.name, self.machine.name, str(self.date))
 
+
 class AdminLog(Base):
     __tablename__ = 'adminLog'
     id = sa.Column(sa.BigInteger, primary_key=True, autoincrement=True)
@@ -145,6 +153,7 @@ class AdminLog(Base):
 
     def __repr__(self):
         return "<AdminLog %s (%s) %s, data=%s>" % (self.admin.name, self.action, self.target.name, self.data)
+
 
 class CardScan(Base):
     __tablename__ = 'scanLog'
@@ -163,8 +172,6 @@ class CardScan(Base):
 db_session = sa.orm.sessionmaker(bind=engine)
 Base.metadata.create_all(engine)
 
-#socket_server = WSServer()
-#socket_server.start()
 
 @app.before_request
 def update_current_students():
@@ -179,13 +186,16 @@ def update_current_students():
 
     db.close()
 
+
 @app.teardown_appcontext
 def close_db(error):
     """Closes the database again at the end of the request."""
 
+
 @app.route('/')
 def checkIn():
     return render_template('index.html')
+
 
 @app.route('/card_read/<int:location_id>', methods=['GET', 'POST'])
 def card_read(location_id):
@@ -254,19 +264,13 @@ def card_read(location_id):
     print(resp)
     return resp
 
+
 @app.route('/index', methods=['GET'])
 def index():
     # don't allow just anyone to be a kiosk,
     # otherwise people could conceivably pretend to be here
     if 'logged_in' not in session or not session['logged_in']:
         return redirect(url_for('start_reading'))
-
-#    db = connect_db()
-#    cur = db.cursor()
-#    cur.execute('describe scanLog')
-#    data = cur.fetchall()
-#    print(data)
-#    db.close()
 
     return render_template('index.html', hardware_id=session['hardware_id'])
 
@@ -277,37 +281,12 @@ success_messages.update({
     'checkin': "You have checked in.",
     'checkout': "You have checked out."
 })
+
+
 @app.route('/success/<action>', methods=['GET'])
 def success(action):
     return render_template('success.html', msg=success_messages[action])
-"""
-@app.route('/card_read', methods=['POST'])
-def card_read():
-    logEntry = CardScan(card_id=request.form['card_number'], time=sa.func.now(), location_id=session['location_id'])
 
-    user = db_session.query(HawkCard).filter_by(
-        card=request.form['card_number']
-    ).one_or_none()
-
-    if not user:
-        print("User for card id {}{} not found"
-            .format(request.form['card_facility'], request.form['card_number']))
-    else:
-        if User.waiverSigned:
-            print("User {} (card id {}) is cleared for entry at location {} (id {})"
-                .format(
-                user.name, request.form['card_facility'], request.form['card_number'],
-                session['location_name'], session['location_id']
-            ))
-            # return socket_server.succeed(request.form['hardware_id'])
-        else:
-            print("User {} (card id {}) needs to sign waiver at location {} (id {})"
-                  .format(
-                    user.name, request.form['card_facility'], request.form['card_number'],
-                    session['location_name'], session['location_id']
-            ))
-            # return socket_server.fail(request.form['hardware_id'])
-"""
 
 def _login(request):
     error = None
@@ -318,6 +297,7 @@ def _login(request):
         else:
             session['logged_in'] = True
     return error
+
 
 @app.route('/start_reading', methods=['GET', 'POST'])
 def start_reading():
@@ -339,6 +319,7 @@ def start_reading():
                 return redirect(url_for('success', action='login'))
     return render_template('login.html', error=error, startup=True)
 
+
 @app.route('/login', methods=['GET','POST'])
 def login():
     error = _login(request)
@@ -346,14 +327,17 @@ def login():
         return redirect(url_for('success', action='login'))
     return render_template('login.html', error=error, startup=False)
 
+
 @app.route('/logout')
 def logout():
     session.pop('logged_in', None)
     return redirect(url_for('success', action='logout'))
 
+
 @app.route('/doesExist', methods=['GET'])
 def doesExist():
     return render_template('doesExist.html')
+
 
 @app.route('/newLogin', methods=['GET','POST'])
 def newLogin():
@@ -371,13 +355,16 @@ def newLogin():
                 return render_template('newLogin.html', success=success)
     return render_template('newLogin.html', error=error)
 
+
 @app.route('/newUser', methods=['GET']) # this doesn't do anything
 def newUser():
     return render_template('newUser.html')
 
+
 @app.route('/static/<path:path>')
 def send_static(path):
     return send_from_directory('static', path)
+
 
 @app.route('/waiver', methods=['GET'])
 def waiver():
@@ -395,6 +382,7 @@ def waiver():
     else:
         # TODO: clear any active session
         return redirect('/')
+
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -425,6 +413,7 @@ def register():
         db.commit()
 
         return redirect(url_for('.waiver', sid=request.form['sid']))
+
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', debug=True)

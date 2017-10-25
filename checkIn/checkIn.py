@@ -23,13 +23,13 @@ app.config.update(dict(
 ))
 app.config.from_pyfile('config.cfg')
 app.config.from_envvar('FLASKR_SETTINGS', silent=True)
-
+"""
 cbord = IITLookup(
     wsurl=app.config['CBORD_ENDPOINT'],
     user=app.config['CBORD_USER'],
     pwd=app.config['CBORD_PASS']
 )
-
+"""
 Bootstrap(app)
 
 engine = sa.create_engine(app.config['DB'])
@@ -214,7 +214,7 @@ def card_read(location_id):
         db.add(HawkCard(sid=None, card=card_id))
 
         # send to registration page
-        emit('go', {'to': url_for('/register', card_id=card_id)})
+        emit('go', {'to': url_for('.register', card_id=card_id)})
     else:
         lastIn = db.query(Access)\
             .filter_by(location_id=location.id)\
@@ -229,7 +229,7 @@ def card_read(location_id):
             ))
             # sign user out and send to confirmation page
             lastIn.timeOut = sa.func.now()
-            emit('go', {'to': url_for('/success/checkout')})            
+            #emit('go', {'to': url_for('.success', action='checkout')})            
 
         elif User.waiverSigned:
             # user signing in
@@ -239,7 +239,7 @@ def card_read(location_id):
             # sign user in and send to confirmation page
             accessEntry = Access(sid=card.sid, timeIn=sa.func.now(), location_id=location_id)
             db.add(accessEntry)
-            emit('go', {'to': url_for('/success/checkin')})
+            #emit('go', {'to': url_for('.success', action='checkin')})
 
         else:
             # user has account but hasn't signed waiver
@@ -248,7 +248,7 @@ def card_read(location_id):
                 location.name, location.id
             ))
             # present waiver page
-            emit('go', {'to': url_for('/waiver')})
+            #emit('go', {'to': url_for('.waiver')})
 
     db.commit()
     print(resp)
@@ -396,7 +396,7 @@ def waiver():
         # TODO: clear any active session
         return redirect('/')
 
-@app.route('/register/', methods=['GET', 'POST'])
+@app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'GET':
         return render_template('register.html',
@@ -424,7 +424,7 @@ def register():
 
         db.commit()
 
-        return redirect(url_for('/waiver', sid=request.form['sid']))
+        return redirect(url_for('.waiver', sid=request.form['sid']))
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', debug=True)

@@ -1,12 +1,15 @@
 {% extends "layout.html" %}
 {% block data %}
-{% if error %}
-<div class="alert alert-danger text-center">
-    <strong>{{ error }}</strong>
-</div>
-{% endif %}
 <div class="jumbotron text-center" style="margin:auto">
-    <h1>Please tap your card to sign in.</h1>
+    {% if error %}
+        <div class="alert alert-danger text-center">
+            <strong>{{ error }}</strong>
+        </div>
+    {% endif %}
+    <h1>Please tap your card to sign in.</h1><br />
+    <div class="form-group">
+        <a href="/"><button class="btn btn-default btn-block btn-lg">Cancel</button></a>
+    </div>
 </div>
 {% endblock %}
 
@@ -18,8 +21,8 @@ $(function() {
 
     var socket = io();
     socket.connect();
-    socket.on('go', function (data) {
-        window.location.href = data.to;
+    socket.on('scan', function (data) {
+        window.location.assign("/admin/login?sid=" + data.sid + "&cardnum=" + data.card);
     });
 });
 </script>

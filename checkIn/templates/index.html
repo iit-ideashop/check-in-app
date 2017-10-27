@@ -21,7 +21,7 @@ $(function() {
     var socket = io();
     socket.connect();
     socket.on('go', function (data) {
-        window.location.assign(data.to);
+        window.location.href = data.to;
     });
     socket.on('scan', function (data) {
         socket.emit('check in', data)

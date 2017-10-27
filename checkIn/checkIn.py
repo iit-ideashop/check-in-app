@@ -2,7 +2,7 @@
 import os
 import hashlib
 import hmac
-from flask import Flask, request, session, g, redirect, url_for, render_template, send_from_directory
+from flask import Flask, request, session, g, redirect, url_for, render_template, send_from_directory, abort
 from flask_bootstrap import Bootstrap
 from flask_socketio import SocketIO, emit
 import sqlalchemy as sa
@@ -90,6 +90,7 @@ class User(Base):
     waiverSigned = sa.Column(sa.DateTime)
     photo = sa.Column(sa.String(length=100), default='')
     location_id = sa.Column(sa.INTEGER, sa.ForeignKey('locations.id'), nullable=False, primary_key=True)
+    pin = sa.Column(sa.BigInteger)
 
     type = relationship('Type')
     location = relationship('Location')
@@ -203,13 +204,21 @@ def checkIn():
 @app.route('/card_read/<int:location_id>', methods=['GET', 'POST'])
 def card_read(location_id):
     resp = 'Read success: Facility %s, card %s' % (request.form['facility'], request.form['cardnum'])
+    db = db_session()
+    dbcard = db.query(HawkCard)\
+        .filter_by(card=request.form['cardnum'])\
+        .one_or_none()
+    user = dbcard.user if dbcard else None
     socketio.emit('scan', {
         'facility': request.form['facility'],
         'card': request.form['cardnum'],
-        'location': location_id
+        'location': location_id,
+        'sid': user.sid if user else None,
+        'name': user.name if user else None,
     })
     print(resp)
-    return resp;
+    return resp
+
 
 @app.route('/checkout_button/<int:location_id>', methods=['POST'])
 def checkout_button(location_id):
@@ -283,35 +292,40 @@ def _login(request):
     return error
 
 
-@app.route('/start_reading', methods=['GET', 'POST'])
-def start_reading():
-    error = _login(request)
-    if not error and request.method == "POST":
-        hwid = request.form['hardware_id']
-        if socket_server.has_connection(hwid):
-            error = 'Hardware ID already in use'
-        else:
-            lid = db_session.query(Location)\
-                .filter_by(name=request.form['location'])\
-                .one_or_none()
-            if not lid:
-                error = 'Location not found'
-            else:
-                session['hardware_id'] = hwid
-                session['location_id'] = lid
-                session['location_name'] = request.form['location']
-                return redirect(url_for('success', action='login'))
-    return render_template('login.html', error=error, startup=True)
-
-
+# Admin authentication
 @app.route('/admin/login', methods=['GET','POST'])
 def admin_login():
-    if not request.args.get('sid'):
+    if not request.args.get('sid') and not request.args.get('card'):
         return render_template('admin/login_cardtap.html')
-    elif request.method == 'GET':
-        return render_template('admin/login_pin.html', sid=request.args.get('sid'))
-    elif request.method == 'POST':
-        pass
+    else:
+        if not request.args.get('sid'):
+            return render_template('admin/login_cardtap.html',
+                                   error='This HawkCard is not registered!')
+        return render_template('admin/login_pin.html',
+                               sid=request.args.get('sid'))
+
+
+@app.route('/admin/auth', methods=['POST'])
+def admin_auth():
+    # sanity checks
+    db = db_session()
+
+    # check for sufficient permission
+    user = db.query(User).filter_by(sid=request.form['sid']).one_or_none()
+    if user.type.level <= 0:
+        return render_template('admin/login_cardtap.html',
+                               error='Insufficient permission! This incident will be reported.')
+
+    # check valid pin
+    pin = int(request.form['pin'])
+    if user.pin != pin:
+        return render_template('admin/login_pin.html',
+                               error='Invalid PIN!',
+                               sid=request.form['sid'])
+
+    # we good
+    return redirect(url_for('/admin'))
+
 
 
 @app.route('/login', methods=['GET','POST'])
@@ -436,7 +450,7 @@ def check_in(data):
         # first time in lab
         resp = ("User for card id %d not found" % data['card'])
 
-        db.add(HawkCard(sid=None, card=data.card))
+        db.add(HawkCard(sid=None, card=data['card']))
 
     if not card or not card.user:
         # send to registration page

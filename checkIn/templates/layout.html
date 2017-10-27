@@ -27,7 +27,7 @@
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
       </button>
-      <a class="navbar-brand" style="font-size:2em" href="#">Idea Shop Prototyping Lab Check In</a>
+      <a class="navbar-brand" style="font-size:2em" href="{{ url_for('.index') }}">Idea Shop Prototyping Lab Check In</a>
     </div>
 
     <!-- Collect the nav links, forms, and other content for toggling -->
@@ -39,7 +39,7 @@
             <li><a href="#">User Lookup</a></li>
 	    <li><a href="{{ url_for('login') }}">Login</a></li>
             <li role="separator" class="divider"></li>
-	    <li><a href="{{ url_for('index') }}">Return to Welcome Screen</a></li>
+	    <li><a href="{{ url_for('.index') }}">Return to Welcome Screen</a></li>
           </ul>
         </li>
       </ul>
@@ -64,7 +64,7 @@
                 {% for staffMember in g.staff %}
   					<div class="col-sm-4 col-md-4">
 						 <div class="thumbnail">
-     							<img src="/static/staff/A{{ staffMember.sid }}.jpg">
+     							<img src="/static/images/A{{ staffMember.sid }}.jpg">
       							<div class="caption text-center">
         							<h4>{{ staffMember.name }}</h4>
 							    	<h5>{{ staffMember.type.name }}</h5>
@@ -89,7 +89,7 @@
                                 <span class="glyphicon glyphicon-user" aria-hidden="true">&nbsp;</span>
                                 {{ student.name }}
                             </td>
-							<td><button type="button" class="btn btn-danger">Checkout</button></td>
+							<td><form action="{{url_for('.checkout_button', location_id=1, sid=student.sid) }}" method="post"><button type="submit" class="btn btn-danger">Checkout</button></form></td>
 						</tr>
                         {% endfor %}
 					</table>

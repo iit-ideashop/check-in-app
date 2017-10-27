@@ -205,6 +205,7 @@ def card_read(location_id):
     resp = 'Read success: Facility %s, card %s' % (request.form['facility'], request.form['cardnum'])
     db = db_session()
     card_id = int(request.form['cardnum'])
+    
     logEntry = CardScan(card_id=card_id, time=sa.func.now(), location_id=location_id)
 
     card = db.query(HawkCard).filter_by(
@@ -269,6 +270,43 @@ def card_read(location_id):
     print(resp)
     return resp
 
+@app.route('/checkout_button/<int:location_id>', methods=['POST'])
+def checkout_button(location_id):
+    db = db_session()
+    
+    card = db.query(HawkCard).filter_by(
+        sid=request.args['sid']
+    ).one_or_none()
+    print(card)
+    logEntry = CardScan(card_id=card.card, time=sa.func.now(), location_id=location_id)
+    
+    location = db.query(Location).filter_by(
+        id=location_id
+    ).one_or_none()
+
+    db.add(logEntry)
+
+    resp = 'Checkout button pressed.'
+    if not location:
+        print("Location %d not found" % location_id)
+
+    else:
+        lastIn = db.query(Access)\
+            .filter_by(location_id=location.id)\
+            .filter_by(timeOut=None)\
+            .filter_by(sid=card.sid)\
+            .one_or_none()
+        
+        if lastIn:
+            # user signing out
+            print("User %s (card id %d) signed out at location %s (id %d)" % (
+                card.user.name, card.card, location.name, location.id
+            ))
+            # sign user out and send to confirmation page
+            lastIn.timeOut = sa.func.now()
+            return render_template('.success', action='checkout')
+    db.commit()
+    return resp
 
 @app.route('/index', methods=['GET'])
 def index():
@@ -406,12 +444,12 @@ def register():
 
         db.add(User(sid=request.form['sid'],
                     name=request.form['name'],
-                    type_id=newtype.id,
+                    type_id=1,
                     waiverSigned=None,
                     location_id=session['location_id']))
 
         card = db.query(HawkCard)\
-            .filter_by(card=request.form['cardid'])\
+            .filter_by(card=request.form['card_id'])\
             .one_or_none()
         card.sid = request.form['sid']
 

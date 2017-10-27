@@ -1,0 +1,17 @@
+{% extends "layout.html" %}
+{% block data %}
+{% if error %}
+<div class="alert alert-danger text-center">
+    <strong>{{ error }}</strong>
+</div>
+{% endif %}
+<div class="jumbotron text-center" style="margin:auto">
+    <h1>Please tap your card to sign in.</h1>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+
+</script>
+{% endblock %}

@@ -363,6 +363,16 @@ def start_reading():
     return render_template('login.html', error=error, startup=True)
 
 
+@app.route('/admin/login', methods=['GET','POST'])
+def admin_login():
+    if not request.args.get('sid'):
+        return render_template('admin/login_cardtap.html')
+    elif request.method == 'GET':
+        return render_template('admin/login_pin.html', sid=request.args.get('sid'))
+    elif request.method == 'POST':
+        pass
+
+
 @app.route('/login', methods=['GET','POST'])
 def login():
     error = _login(request)

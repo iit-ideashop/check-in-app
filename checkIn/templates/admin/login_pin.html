@@ -1,0 +1,35 @@
+{% extends "layout.html" %}
+{% block data %}
+
+{% if error %}
+<div class="alert alert-danger text-center">
+    <strong>{{ error }}</strong>
+</div>
+{% endif %}
+
+<div class="jumbotron text-center" style="margin:auto">
+    <h1>Please enter your admin PIN.</h1>
+    <form action="/admin/login" method="post">
+        <div class="form-group">
+            <input type="password" class="form-control form-control-lg keyboard" id="pin" name="pin" />
+            <input type="hidden" id="sid" name="sid" value="{{ sid }}" />
+        </div>
+        <div class="form-group">
+            <input type="submit" class="btn btn-success btn-lg btn-block" id="submit" value="OK" />
+        </div>
+    </form>
+    <a href="/admin/logout"><button class="btn btn-danger btn-lg btn-block">Cancel</button></a>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+
+{{ super() }}
+<script>
+ $(function() {
+    $('#pin').keyboard({type: 'tel'});
+ });
+</script>
+
+{% endblock %}

@@ -440,7 +440,7 @@ def check_in(data):
 
     if not card or not card.user:
         # send to registration page
-        socketio.send('go', {'to': url_for('.register', card_id=data['card'])})
+        emit('go', {'to': url_for('.register', card_id=data['card'])})
 
     else:
         lastIn = db.query(Access) \
@@ -456,7 +456,7 @@ def check_in(data):
             ))
             # sign user out and send to confirmation page
             lastIn.timeOut = sa.func.now()
-            socketio.send('go', {'to': url_for('.success', action='checkout')})
+            emit('go', {'to': url_for('.success', action='checkout')})
 
         elif User.waiverSigned:
             # user signing in
@@ -466,7 +466,7 @@ def check_in(data):
             # sign user in and send to confirmation page
             accessEntry = Access(sid=card.sid, timeIn=sa.func.now(), location_id=location.id)
             db.add(accessEntry)
-            socketio.send('go', {'to': url_for('.success', action='checkin')})
+            emit('go', {'to': url_for('.success', action='checkin')})
 
         else:
             # user has account but hasn't signed waiver
@@ -475,7 +475,7 @@ def check_in(data):
                 location.name, location.id
             ))
             # present waiver page
-            socketio.send('go', {'to': url_for('.waiver')})
+            emit('go', {'to': url_for('.waiver')})
 
     db.commit()
     print(resp)

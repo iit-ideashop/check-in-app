@@ -203,72 +203,13 @@ def checkIn():
 @app.route('/card_read/<int:location_id>', methods=['GET', 'POST'])
 def card_read(location_id):
     resp = 'Read success: Facility %s, card %s' % (request.form['facility'], request.form['cardnum'])
-    db = db_session()
-    card_id = int(request.form['cardnum'])
-    
-    logEntry = CardScan(card_id=card_id, time=sa.func.now(), location_id=location_id)
-
-    card = db.query(HawkCard).filter_by(
-        card=request.form['cardnum']
-    ).one_or_none()
-
-    location = db.query(Location).filter_by(
-        id=location_id
-    ).one_or_none()
-
-    db.add(logEntry)
-
-    if not location:
-        print("Location %d not found" % location_id)
-
-    if not card:
-        # first time in lab
-        print("User for card id %d not found" % card_id)
-
-        db.add(HawkCard(sid=None, card=card_id))
-
-    if not card or not card.user:
-        # send to registration page
-        socketio.emit('go', {'to': url_for('.register', card_id=card_id)}, broadcast=True)
-
-    else:
-        lastIn = db.query(Access)\
-            .filter_by(location_id=location.id)\
-            .filter_by(timeOut=None)\
-            .filter_by(sid=card.sid)\
-            .one_or_none()
-
-        if lastIn:
-            # user signing out
-            print("User %s (card id %d) signed out at location %s (id %d)" % (
-                card.user.name, card_id, location.name, location.id
-            ))
-            # sign user out and send to confirmation page
-            lastIn.timeOut = sa.func.now()
-            socketio.emit('go', {'to': url_for('.success', action='checkout')})
-
-        elif User.waiverSigned:
-            # user signing in
-            print("User %s (card id %d) is cleared for entry at location %s (id %d)" % (
-                card.user.name, card_id, location.name, location.id
-            ))
-            # sign user in and send to confirmation page
-            accessEntry = Access(sid=card.sid, timeIn=sa.func.now(), location_id=location_id)
-            db.add(accessEntry)
-            socketio.emit('go', {'to': url_for('.success', action='checkin')})
-
-        else:
-            # user has account but hasn't signed waiver
-            print("User %s (card id %d) needs to sign waiver at location %s (id %d)" % (
-                card.user.name, card_id,
-                location.name, location.id
-            ))
-            # present waiver page
-            socketio.emit('go', {'to': url_for('.waiver')})
-
-    db.commit()
+    socketio.emit('scan', {
+        'facility': request.form['facility'],
+        'card': request.form['cardnum'],
+        'location': location_id
+    })
     print(resp)
-    return resp
+    return resp;
 
 @app.route('/checkout_button/<int:location_id>', methods=['POST'])
 def checkout_button(location_id):
@@ -466,6 +407,79 @@ def register():
         db.commit()
 
         return redirect(url_for('.waiver', sid=request.form['sid']))
+
+
+@socketio.on('check in')
+def check_in(data):
+    db = db_session()
+    data['card'] = int(data['card'])
+    data['facility'] = int(data['facility'])
+    data['location'] = int(data['location'])
+    resp = ""
+
+    logEntry = CardScan(card_id=data['card'], time=sa.func.now(), location_id=data['location'])
+
+    card = db.query(HawkCard).filter_by(
+        card=data['card']
+    ).one_or_none()
+
+    location = db.query(Location).filter_by(
+        id=data['location']
+    ).one_or_none()
+
+    db.add(logEntry)
+
+    if not location:
+        resp = ("Location %d not found" % data['location'])
+
+    if not card:
+        # first time in lab
+        resp = ("User for card id %d not found" % data['card'])
+
+        db.add(HawkCard(sid=None, card=data.card))
+
+    if not card or not card.user:
+        # send to registration page
+        socketio.send('go', {'to': url_for('.register', card_id=data['card'])})
+
+    else:
+        lastIn = db.query(Access) \
+            .filter_by(location_id=location.id) \
+            .filter_by(timeOut=None) \
+            .filter_by(sid=card.sid) \
+            .one_or_none()
+
+        if lastIn:
+            # user signing out
+            resp = ("User %s (card id %d) signed out at location %s (id %d)" % (
+                card.user.name, data['card'], location.name, location.id
+            ))
+            # sign user out and send to confirmation page
+            lastIn.timeOut = sa.func.now()
+            socketio.send('go', {'to': url_for('.success', action='checkout')})
+
+        elif User.waiverSigned:
+            # user signing in
+            resp = ("User %s (card id %d) is cleared for entry at location %s (id %d)" % (
+                card.user.name, data['card'], location.name, location.id
+            ))
+            # sign user in and send to confirmation page
+            accessEntry = Access(sid=card.sid, timeIn=sa.func.now(), location_id=location.id)
+            db.add(accessEntry)
+            socketio.send('go', {'to': url_for('.success', action='checkin')})
+
+        else:
+            # user has account but hasn't signed waiver
+            resp = ("User %s (card id %d) needs to sign waiver at location %s (id %d)" % (
+                card.user.name, data['card'],
+                location.name, location.id
+            ))
+            # present waiver page
+            socketio.send('go', {'to': url_for('.waiver')})
+
+    db.commit()
+    print(resp)
+    return resp
 
 
 if __name__ == '__main__':

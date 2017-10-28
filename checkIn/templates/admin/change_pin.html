@@ -8,8 +8,8 @@
     </div>
     {% endif %}
 
-    <h1>Please enter your admin PIN.</h1>
-    <form action="/admin/auth" method="post">
+    <h1>Please enter your new PIN.</h1>
+    <form action="/admin/change_pin" method="post">
         <div class="form-group">
             <input type="password" class="form-control form-control-lg keyboard" id="pin" name="pin" />
             <input type="hidden" id="sid" name="sid" value="{{ sid }}" />
@@ -18,7 +18,7 @@
             <input type="submit" class="btn btn-success btn-lg btn-block" id="submit" value="OK" />
         </div>
     </form>
-    <a href="/admin/logout"><button class="btn btn-danger btn-lg btn-block">Cancel</button></a>
+    <a href="/admin"><button class="btn btn-danger btn-lg btn-block">Cancel</button></a>
 </div>
 
 {% endblock %}

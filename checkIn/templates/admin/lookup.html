@@ -1,0 +1,75 @@
+{% extends "layout.html" %}
+{% block data %}
+    <div class="container">
+        <div class="row">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <form role="form" class="form-inline" action="/admin/lookup" method="get">
+                        <div class="form-group">
+                            <div class="input-group">
+                                <a href="/admin" class="btn btn-primary"><i class="glyphicon glyphicon-chevron-left"></i></a>
+                            </div>
+                            <div class="input-group">
+                                <div class="input-group-addon">A</div>
+                                <input class="form-control keyboard" type="tel"
+                                       placeholder="Student ID" id="sid" name="sid"
+                                       value="{{ request.args.get('sid') | default('', true) }}" />
+                            </div>
+                            <div class="input-group">
+                                <input class="form-control keyboard" type="text"
+                                       placeholder="Name" id="name" name="name"
+                                       value="{{ request.args.get('name') | default('', true) }}" />
+                            </div>
+                            <div class="input-group">
+                                <input class="form-control keyboard" type="tel"
+                                       placeholder="Card Number" id="card" name="card"
+                                       value="{{ request.args.get('card') | default('', true) }}" />
+                            </div>
+                            <div class="input-group">
+                                <input class="btn btn-success" type="submit" value="Go" />
+                                or tap an ID
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                {% if results and results | length > 1 %}
+                <div class="panel-body">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <td>ID</td>
+                                <td>Name</td>
+                                <td>Position</td>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for u in results %}
+                                <tr>
+                                    <td><a href="/admin/lookup?sid={{ u.sid }}" class="btn btn-xs btn-primary">A{{ u.sid }}</a></td>
+                                    <td>{{ u.name }}</td>
+                                    <td>{{ u.type.name }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script>
+    $(function() {
+        localStorage.debug = '*';
+
+        var socket = io();
+        socket.connect();
+        socket.on('scan', function (data) {
+            window.location.assign("/admin/lookup?sid=" + data.sid + "&card=" + data.card + "&name=" + data.name);
+        });
+    });
+    </script>
+{% endblock %}

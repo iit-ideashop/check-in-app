@@ -181,19 +181,18 @@ def update_current_students():
 
     db = db_session()
     in_lab = db.query(Access)\
-        .options(joinedload('user.type'))\
         .filter_by(timeOut=None)\
         .all()
 
     g.students = [a.user for a in in_lab if a.user.type.level == 0]
     g.staff = [a.user for a in in_lab if a.user.type.level > 0]
-
-    db.close()
+    g.admin = db.query(User).filter_by(sid=session['admin']).one_or_none()\
+                if 'admin' in session else None
 
 
 @app.teardown_appcontext
 def close_db(error):
-    """Closes the database again at the end of the request."""
+    db_session.close_all()
 
 
 @app.route('/')
@@ -309,26 +308,43 @@ def admin_login():
 def admin_auth():
     # sanity checks
     db = db_session()
-
     # check for sufficient permission
     user = db.query(User).filter_by(sid=request.form['sid']).one_or_none()
     if user.type.level <= 0:
         return render_template('admin/login_cardtap.html',
                                error='Insufficient permission! This incident will be reported.')
-
     # check valid pin
     pin = int(request.form['pin'])
     if user.pin != pin:
         return render_template('admin/login_pin.html',
                                error='Invalid PIN!',
                                sid=request.form['sid'])
-
     # we good
-    return redirect(url_for('/admin'))
+    session['admin'] = user.sid
+    return redirect('/admin')
+
+@app.route('/admin/logout', methods=['GET'])
+def admin_logout():
+    session['admin'] = None
+    return redirect('/success/logout')
 
 
+# Admin flow
+@app.route('/admin', methods=['GET'])
+def admin_dash():
+    if g.admin:
+        return render_template('admin/index.html')
+    else:
+        return redirect('/')
 
-@app.route('/login', methods=['GET','POST'])
+
+@app.route('/admin/lookup', methods=['GET', 'POST'])
+def admin_lookup():
+    db = db_session()
+    return render_template('admin/lookup.html', results=db.query(User).all())
+
+
+@app.route('/login', methods=['GET', 'POST'])
 def login():
     error = _login(request)
     if not error:
@@ -386,6 +402,7 @@ def waiver():
             timeIn=sa.func.now(),
             timeOut=None
         ))
+        db.commit()
         return redirect('/success/checkin')
     else:
         # TODO: clear any active session

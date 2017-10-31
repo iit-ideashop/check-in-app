@@ -32,7 +32,7 @@ cbord = IITLookup(
 """
 Bootstrap(app)
 
-engine = sa.create_engine(app.config['DB'])
+engine = sa.create_engine(app.config['DB'], pool_recycle=3600)
 Base = declarative_base()
 
 
@@ -180,12 +180,13 @@ def update_current_students():
     session['location_id'] = 1
 
     db = db_session()
+    in_lab = None
     in_lab = db.query(Access)\
         .filter_by(timeOut=None)\
         .all()
     
-    g.students = [a.user for a in in_lab if a.user.type.level == 1]
-    g.staff = [a.user for a in in_lab if a.user.type.level > 1]
+    g.students = [a.user for a in in_lab if a.user.type.level == 0]
+    g.staff = [a.user for a in in_lab if a.user.type.level > 0]
     g.admin = db.query(User).filter_by(sid=session['admin']).one_or_none()\
                if 'admin' in session else None
 
@@ -402,6 +403,11 @@ def waiver():
             timeIn=sa.func.now(),
             timeOut=None
         ))
+        user = db.query(User)\
+            .filter_by(sid=request.args.get('sid'))\
+            .one_or_none()
+        if user:
+            user.waiverSigned=sa.func.now()
         db.commit()
         return redirect('/success/checkin')
     else:
@@ -489,7 +495,7 @@ def check_in(data):
             lastIn.timeOut = sa.func.now()
             emit('go', {'to': url_for('.success', action='checkout')})
 
-        elif User.waiverSigned:
+        elif card.user.waiverSigned:
             # user signing in
             resp = ("User %s (card id %d) is cleared for entry at location %s (id %d)" % (
                 card.user.name, data['card'], location.name, location.id
@@ -506,7 +512,7 @@ def check_in(data):
                 location.name, location.id
             ))
             # present waiver page
-            emit('go', {'to': url_for('.waiver')})
+            emit('go', {'to': url_for('.waiver', sid=card.sid)})
 
     db.commit()
     print(resp)

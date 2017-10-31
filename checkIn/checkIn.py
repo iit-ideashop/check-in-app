@@ -183,11 +183,11 @@ def update_current_students():
     in_lab = db.query(Access)\
         .filter_by(timeOut=None)\
         .all()
-
-    g.students = [a.user for a in in_lab if a.user.type.level == 0]
-    g.staff = [a.user for a in in_lab if a.user.type.level > 0]
+    
+    g.students = [a.user for a in in_lab if a.user.type.level == 1]
+    g.staff = [a.user for a in in_lab if a.user.type.level > 1]
     g.admin = db.query(User).filter_by(sid=session['admin']).one_or_none()\
-                if 'admin' in session else None
+               if 'admin' in session else None
 
 
 @app.teardown_appcontext
@@ -253,7 +253,7 @@ def checkout_button(location_id):
             ))
             # sign user out and send to confirmation page
             lastIn.timeOut = sa.func.now()
-            return render_template('.success', action='checkout')
+            resp= success('checkout')
     db.commit()
     return resp
 
@@ -479,7 +479,7 @@ def check_in(data):
             .filter_by(timeOut=None) \
             .filter_by(sid=card.sid) \
             .one_or_none()
-
+        print(lastIn)
         if lastIn:
             # user signing out
             resp = ("User %s (card id %d) signed out at location %s (id %d)" % (

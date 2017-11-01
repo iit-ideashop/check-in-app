@@ -6,7 +6,7 @@ from flask import Flask, request, session, g, redirect, url_for, render_template
 from flask_bootstrap import Bootstrap
 from flask_socketio import SocketIO, emit
 import sqlalchemy as sa
-from sqlalchemy.orm import relationship, joinedload
+from sqlalchemy.orm import relationship, joinedload, scoped_session, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from iitlookup import IITLookup
 from collections import defaultdict
@@ -170,7 +170,7 @@ class CardScan(Base):
         return "<CardScan %d at %s>" % (self.card, self.time)
 
 
-db_session = sa.orm.sessionmaker(bind=engine)
+db_session = scoped_session(sessionmaker(autocommit=False,autoflush=False,bind=engine))
 Base.metadata.create_all(engine)
 
 
@@ -180,7 +180,6 @@ def update_current_students():
     session['location_id'] = 1
 
     db = db_session()
-    in_lab = None
     in_lab = db.query(Access)\
         .filter_by(timeOut=None)\
         .all()
@@ -190,11 +189,10 @@ def update_current_students():
     g.admin = db.query(User).filter_by(sid=session['admin']).one_or_none()\
                if 'admin' in session else None
 
-
 @app.teardown_appcontext
 def close_db(error):
-    db_session.close_all()
-
+    db_session.remove()
+    
 
 @app.route('/')
 def checkIn():

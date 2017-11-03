@@ -4,7 +4,7 @@ import os
 import hashlib
 import hmac
 import sys
-from flask import Flask, request, session, g, redirect, url_for, render_template, send_from_directory, abort
+from flask import Flask, request, session, g, redirect, url_for, render_template, send_from_directory, abort, safe_join, send_file
 from flask_bootstrap import Bootstrap
 from flask_socketio import SocketIO, emit
 import sqlalchemy as sa
@@ -16,7 +16,7 @@ from collections import defaultdict
 # TODO: consider using flask-login
 # or maybe not, they don't seem to support forced reauthentication on 'fresh' logins
 
-app = Flask(__name__) # create the application instance :)
+app = Flask(__name__, static_url_path='/static', static_folder='static') # create the application instance :)
 socketio = SocketIO(app)
 app.config.from_object(__name__)
 
@@ -375,11 +375,6 @@ def admin_dash():
 def admin_lookup():
     db = db_session()
     return render_template('admin/lookup.html', results=db.query(User).all())
-
-
-@app.route('/static/<path:path>')
-def send_static(path):
-    return send_from_directory('static', path)
 
 
 @app.route('/waiver', methods=['GET'])

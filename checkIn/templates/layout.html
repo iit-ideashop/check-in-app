@@ -56,7 +56,11 @@
                 {% for staffMember in g.staff %}
   					<div class="col-sm-4 col-md-4">
 						 <div class="thumbnail">
-     							<img src="/static/images/A{{ staffMember.sid }}.jpg">
+							 {% if staffMember.photo %}
+     							<img src="{{ staffMember.photo }}" height="200" width="200" class="img-circle" />
+							 {% else %}
+							 	<img src="/static/images/placeholder.png" height="200" width="200" class="img-circle" />
+							 {% endif %}
       							<div class="caption text-center">
         							<h4>{{ staffMember.name }}</h4>
 							    	<h5>{{ staffMember.type.name }}</h5>

@@ -1,4 +1,5 @@
 # all the imports
+# all the imports
 import os
 import hashlib
 import hmac
@@ -184,8 +185,8 @@ def update_current_students():
         .filter_by(timeOut=None)\
         .all()
     
-    g.students = [a.user for a in in_lab if a.user.type.level == 1]
-    g.staff = [a.user for a in in_lab if a.user.type.level > 1]
+    g.students = [a.user for a in in_lab if a.user.type.level == 0]
+    g.staff = [a.user for a in in_lab if a.user.type.level > 0]
     g.admin = db.query(User).filter_by(sid=session['admin']).one_or_none()\
                if 'admin' in session else None
 
@@ -259,12 +260,7 @@ def checkout_button(location_id):
 
 @app.route('/index', methods=['GET'])
 def index():
-    # don't allow just anyone to be a kiosk,
-    # otherwise people could conceivably pretend to be here
-    if 'logged_in' not in session or not session['logged_in']:
-        return redirect(url_for('start_reading'))
-
-    return render_template('index.html', hardware_id=session['hardware_id'])
+    return redirect('/')
 
 success_messages = defaultdict(str)
 success_messages.update({
@@ -344,25 +340,6 @@ def admin_lookup():
     return render_template('admin/lookup.html', results=db.query(User).all())
 
 
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    error = _login(request)
-    if not error:
-        return redirect(url_for('success', action='login'))
-    return render_template('login.html', error=error, startup=False)
-
-
-@app.route('/logout')
-def logout():
-    session.pop('logged_in', None)
-    return redirect(url_for('success', action='logout'))
-
-
-@app.route('/doesExist', methods=['GET'])
-def doesExist():
-    return render_template('doesExist.html')
-
-
 @app.route('/newLogin', methods=['GET','POST'])
 def newLogin():
     error = None
@@ -378,11 +355,6 @@ def newLogin():
                 # TODO: actually create account
                 return render_template('newLogin.html', success=success)
     return render_template('newLogin.html', error=error)
-
-
-@app.route('/newUser', methods=['GET']) # this doesn't do anything
-def newUser():
-    return render_template('newUser.html')
 
 
 @app.route('/static/<path:path>')

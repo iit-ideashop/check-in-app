@@ -1,4 +1,5 @@
 # all the imports
+# all the imports
 import os
 import hashlib
 import hmac
@@ -85,7 +86,24 @@ class User(Base):
     waiverSigned = sa.Column(sa.DateTime)
     photo = sa.Column(sa.String(length=100), default='')
     location_id = sa.Column(sa.INTEGER, sa.ForeignKey('locations.id'), nullable=False, primary_key=True)
-    pin = sa.Column(sa.BigInteger)
+    pin = sa.Column(sa.Binary(length=16), nullable=False)
+    pin_salt = sa.Column(sa.Binary(length=16), nullable=False)
+
+    def set_pin(self, pin):
+        self.pin_salt = os.urandom(16)
+        print('Changing pin of user %s to %s with salt %s' % (self.name, pin, str(self.pin_salt)))
+        # 100,000 rounds of sha256 w/ a random salt
+        self.pin = hashlib.pbkdf2_hmac('sha256', bytearray(pin, 'utf-8'), self.pin_salt, 100000)
+        print('New pin: %s' % self.pin)
+
+    def verify_pin(self, attempt):
+        print('Verifying attempt %s on user %s' % (attempt, str(self.pin)))
+        digest = hashlib.pbkdf2_hmac('sha256', bytearray(attempt, 'utf-8'), self.pin_salt, 100000)
+        print('%s == %s' % (self.pin, digest))
+        return hmac.compare_digest(self.pin, digest)
+
+    def __repr__(self):
+        return "<Location %s>" % self.name
 
     type = relationship('Type')
     location = relationship('Location')
@@ -257,12 +275,7 @@ def checkout_button(location_id):
 
 @app.route('/index', methods=['GET'])
 def index():
-    # don't allow just anyone to be a kiosk,
-    # otherwise people could conceivably pretend to be here
-    if 'logged_in' not in session or not session['logged_in']:
-        return redirect(url_for('start_reading'))
-
-    return render_template('index.html', hardware_id=session['hardware_id'])
+    return redirect('/')
 
 success_messages = defaultdict(str)
 success_messages.update({
@@ -298,6 +311,15 @@ def admin_login():
         if not request.args.get('sid'):
             return render_template('admin/login_cardtap.html',
                                    error='This HawkCard is not registered!')
+
+        # check to see if user has a pin
+        db = db_session()
+        user = db.query(User).filter_by(sid=request.args.get('sid')).one_or_none()
+
+        if not user.pin:
+            session['admin'] = user.sid
+            return render_template('admin/change_pin.html')
+
         return render_template('admin/login_pin.html',
                                sid=request.args.get('sid'))
 
@@ -312,8 +334,7 @@ def admin_auth():
         return render_template('admin/login_cardtap.html',
                                error='Insufficient permission! This incident will be reported.')
     # check valid pin
-    pin = int(request.form['pin'])
-    if user.pin != pin:
+    if not user.verify_pin(request.form['pin']):
         return render_template('admin/login_pin.html',
                                error='Invalid PIN!',
                                sid=request.form['sid'])
@@ -321,10 +342,24 @@ def admin_auth():
     session['admin'] = user.sid
     return redirect('/admin')
 
+
+
 @app.route('/admin/logout', methods=['GET'])
 def admin_logout():
     session['admin'] = None
     return redirect('/success/logout')
+
+
+@app.route('/admin/change_pin', methods=['GET', 'POST'])
+def admin_change_pin():
+    if request.method == 'GET':
+        return render_template('admin/change_pin.html')
+    else:
+        db = db_session()
+        user = db.query(User).filter_by(sid=session['admin']).one_or_none()
+        user.set_pin(request.form['pin'])
+        db.commit()
+        return redirect('/admin')
 
 
 # Admin flow
@@ -340,47 +375,6 @@ def admin_dash():
 def admin_lookup():
     db = db_session()
     return render_template('admin/lookup.html', results=db.query(User).all())
-
-
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    error = _login(request)
-    if not error:
-        return redirect(url_for('success', action='login'))
-    return render_template('login.html', error=error, startup=False)
-
-
-@app.route('/logout')
-def logout():
-    session.pop('logged_in', None)
-    return redirect(url_for('success', action='logout'))
-
-
-@app.route('/doesExist', methods=['GET'])
-def doesExist():
-    return render_template('doesExist.html')
-
-
-@app.route('/newLogin', methods=['GET','POST'])
-def newLogin():
-    error = None
-    success = None
-    if request.method == 'POST':
-        error = _login(request)
-        if not error:
-            for k,v in request.form.items():
-                if (not v) or (v == ""):
-                    error = 'Field ' + k + ' cannot be empty.'
-            else:
-                success = request.form['newusername']
-                # TODO: actually create account
-                return render_template('newLogin.html', success=success)
-    return render_template('newLogin.html', error=error)
-
-
-@app.route('/newUser', methods=['GET']) # this doesn't do anything
-def newUser():
-    return render_template('newUser.html')
 
 
 @app.route('/static/<path:path>')

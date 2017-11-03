@@ -91,15 +91,11 @@ class User(Base):
 
     def set_pin(self, pin):
         self.pin_salt = os.urandom(16)
-        print('Changing pin of user %s to %s with salt %s' % (self.name, pin, str(self.pin_salt)))
         # 100,000 rounds of sha256 w/ a random salt
         self.pin = hashlib.pbkdf2_hmac('sha256', bytearray(pin, 'utf-8'), self.pin_salt, 100000)
-        print('New pin: %s' % self.pin)
 
     def verify_pin(self, attempt):
-        print('Verifying attempt %s on user %s' % (attempt, str(self.pin)))
         digest = hashlib.pbkdf2_hmac('sha256', bytearray(attempt, 'utf-8'), self.pin_salt, 100000)
-        print('%s == %s' % (self.pin, digest))
         return hmac.compare_digest(self.pin, digest)
 
     def __repr__(self):
@@ -241,7 +237,6 @@ def checkout_button(location_id):
     card = db.query(HawkCard).filter_by(
         sid=request.args['sid']
     ).one_or_none()
-    print(card)
     logEntry = CardScan(card_id=card.card, time=sa.func.now(), location_id=location_id)
     
     location = db.query(Location).filter_by(
@@ -250,7 +245,6 @@ def checkout_button(location_id):
 
     db.add(logEntry)
 
-    resp = 'Checkout button pressed.'
     if not location:
         print("Location %d not found" % location_id)
 
@@ -268,10 +262,9 @@ def checkout_button(location_id):
             ))
             # sign user out and send to confirmation page
             lastIn.timeOut = sa.func.now()
-            resp= success('checkout')
     db.commit()
     db.close()
-    return resp
+    return success('checkout')
 
 @app.route('/index', methods=['GET'])
 def index():
@@ -371,10 +364,20 @@ def admin_dash():
         return redirect('/')
 
 
-@app.route('/admin/lookup', methods=['GET', 'POST'])
+@app.route('/admin/lookup', methods=['GET'])
 def admin_lookup():
     db = db_session()
-    return render_template('admin/lookup.html', results=db.query(User).limit(20).all())
+    query = db.query(User)
+
+    sid = request.args.get('sid')
+    if sid and sid != '':
+        query = query.filter_by(sid=sid)
+
+    name = request.args.get('name')
+    if name and name != '':
+        query = query.filter_by(name=name)
+
+    return render_template('admin/lookup.html', results=query.limit(20).all())
 
 
 @app.route('/waiver', methods=['GET'])

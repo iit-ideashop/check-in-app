@@ -2,6 +2,7 @@
 import os
 import hashlib
 import hmac
+import sys
 from flask import Flask, request, session, g, redirect, url_for, render_template, send_from_directory, abort
 from flask_bootstrap import Bootstrap
 from flask_socketio import SocketIO, emit
@@ -23,13 +24,7 @@ app.config.update(dict(
 ))
 app.config.from_pyfile('config.cfg')
 app.config.from_envvar('FLASKR_SETTINGS', silent=True)
-"""
-cbord = IITLookup(
-    wsurl=app.config['CBORD_ENDPOINT'],
-    user=app.config['CBORD_USER'],
-    pwd=app.config['CBORD_PASS']
-)
-"""
+
 Bootstrap(app)
 
 engine = sa.create_engine(app.config['DB'], pool_recycle=3600)
@@ -170,7 +165,7 @@ class CardScan(Base):
         return "<CardScan %d at %s>" % (self.card, self.time)
 
 
-db_session = scoped_session(sessionmaker(autocommit=False,autoflush=False,bind=engine))
+db_session = scoped_session(sessionmaker(bind=engine))
 Base.metadata.create_all(engine)
 
 
@@ -186,8 +181,10 @@ def update_current_students():
     
     g.students = [a.user for a in in_lab if a.user.type.level == 0]
     g.staff = [a.user for a in in_lab if a.user.type.level > 0]
+    g.staff.sort(key=lambda x: x.type.level, reverse=True)
     g.admin = db.query(User).filter_by(sid=session['admin']).one_or_none()\
                if 'admin' in session else None
+    db.close()
 
 @app.teardown_appcontext
 def close_db(error):
@@ -214,6 +211,7 @@ def card_read(location_id):
         'sid': user.sid if user else None,
         'name': user.name if user else None,
     })
+    db.close()
     print(resp)
     return resp
 
@@ -254,6 +252,7 @@ def checkout_button(location_id):
             lastIn.timeOut = sa.func.now()
             resp= success('checkout')
     db.commit()
+    db.close()
     return resp
 
 @app.route('/index', methods=['GET'])
@@ -407,6 +406,7 @@ def waiver():
         if user:
             user.waiverSigned=sa.func.now()
         db.commit()
+        db.close()
         return redirect('/success/checkin')
     else:
         # TODO: clear any active session
@@ -416,12 +416,26 @@ def waiver():
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'GET':
-        return render_template('register.html',
-                               sid=00000000,
-                               card_id=request.args.get('card_id'),
-                               name='John Doe')
+            resp=""    
+            card_id=request.args.get('card_id')
+            name=""
+            sid=""
+            #try:
+            il = IITLookup(app.config['IITLOOKUPURL'],app.config['IITLOOKUPUSER'],app.config['IITLOOKUPPASS'])
+            resp=il.nameIDByCard(request.args.get('card_id'))
+            #except:
+             #   print(sys.exc_info()[0])
+            if resp:        
+                sid=resp['idnumber'][1:]
+                name=("%s %s") % (resp['first_name'],resp['last_name'])
+            return render_template('register.html',
+                               sid=sid,
+                               card_id=card_id,
+                               name=name)
 
     elif request.method == 'POST':
+        if request.form['name']=="" or int(request.form['sid'])<20000000:
+            return render_template('register.html', sid=request.form['sid'],card_id=request.form['card_id'],name=request.form['name']) 
         db = db_session()
         newtype = db.query(Type)\
             .filter_by(location_id=session['location_id'])\
@@ -429,7 +443,7 @@ def register():
             .one_or_none()
 
         db.add(User(sid=request.form['sid'],
-                    name=request.form['name'],
+                    name=request.form['name'].title(),
                     type_id=1,
                     waiverSigned=None,
                     location_id=session['location_id']))
@@ -440,7 +454,7 @@ def register():
         card.sid = request.form['sid']
 
         db.commit()
-
+        db.close()
         return redirect(url_for('.waiver', sid=request.form['sid']))
 
 
@@ -513,6 +527,7 @@ def check_in(data):
             emit('go', {'to': url_for('.waiver', sid=card.sid)})
 
     db.commit()
+    db.close()
     print(resp)
     return resp
 

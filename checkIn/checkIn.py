@@ -7,7 +7,7 @@ from flask import Flask, request, session, g, redirect, url_for, render_template
 from flask_bootstrap import Bootstrap
 from flask_socketio import SocketIO, emit
 import sqlalchemy as sa
-from sqlalchemy.orm import relationship, joinedload
+from sqlalchemy.orm import relationship, joinedload, scoped_session, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from iitlookup import IITLookup
 from collections import defaultdict
@@ -33,7 +33,7 @@ cbord = IITLookup(
 """
 Bootstrap(app)
 
-engine = sa.create_engine(app.config['DB'])
+engine = sa.create_engine(app.config['DB'], pool_recycle=3600)
 Base = declarative_base()
 
 
@@ -171,7 +171,7 @@ class CardScan(Base):
         return "<CardScan %d at %s>" % (self.card, self.time)
 
 
-db_session = sa.orm.sessionmaker(bind=engine)
+db_session = scoped_session(sessionmaker(autocommit=False,autoflush=False,bind=engine))
 Base.metadata.create_all(engine)
 
 
@@ -190,11 +190,10 @@ def update_current_students():
     g.admin = db.query(User).filter_by(sid=session['admin']).one_or_none()\
                if 'admin' in session else None
 
-
 @app.teardown_appcontext
 def close_db(error):
-    db_session.close_all()
-
+    db_session.remove()
+    
 
 @app.route('/')
 def checkIn():
@@ -374,6 +373,11 @@ def waiver():
             timeIn=sa.func.now(),
             timeOut=None
         ))
+        user = db.query(User)\
+            .filter_by(sid=request.args.get('sid'))\
+            .one_or_none()
+        if user:
+            user.waiverSigned=sa.func.now()
         db.commit()
         return redirect('/success/checkin')
     else:
@@ -461,7 +465,7 @@ def check_in(data):
             lastIn.timeOut = sa.func.now()
             emit('go', {'to': url_for('.success', action='checkout')})
 
-        elif User.waiverSigned:
+        elif card.user.waiverSigned:
             # user signing in
             resp = ("User %s (card id %d) is cleared for entry at location %s (id %d)" % (
                 card.user.name, data['card'], location.name, location.id
@@ -478,7 +482,7 @@ def check_in(data):
                 location.name, location.id
             ))
             # present waiver page
-            emit('go', {'to': url_for('.waiver')})
+            emit('go', {'to': url_for('.waiver', sid=card.sid)})
 
     db.commit()
     print(resp)

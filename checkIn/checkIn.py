@@ -374,7 +374,7 @@ def admin_dash():
 @app.route('/admin/lookup', methods=['GET', 'POST'])
 def admin_lookup():
     db = db_session()
-    return render_template('admin/lookup.html', results=db.query(User).all())
+    return render_template('admin/lookup.html', results=db.query(User).limit(20).all())
 
 
 @app.route('/waiver', methods=['GET'])

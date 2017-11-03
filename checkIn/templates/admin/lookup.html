@@ -9,18 +9,18 @@
                             <div class="input-group">
                                 <a href="/admin" class="btn btn-primary"><i class="glyphicon glyphicon-chevron-left"></i></a>
                             </div>
-                            <div class="input-group">
+                            <div class="input-group" style="width: 25%;">
                                 <div class="input-group-addon">A</div>
                                 <input class="form-control keyboard" type="tel"
                                        placeholder="Student ID" id="sid" name="sid"
                                        value="{{ request.args.get('sid') | default('', true) }}" />
                             </div>
-                            <div class="input-group">
+                            <div class="input-group" style="width: 25%;">
                                 <input class="form-control keyboard" type="text"
                                        placeholder="Name" id="name" name="name"
                                        value="{{ request.args.get('name') | default('', true) }}" />
                             </div>
-                            <div class="input-group">
+                            <div class="input-group" style="width: 25%;">
                                 <input class="form-control keyboard" type="tel"
                                        placeholder="Card Number" id="card" name="card"
                                        value="{{ request.args.get('card') | default('', true) }}" />

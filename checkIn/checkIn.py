@@ -355,10 +355,22 @@ def admin_change_pin():
         return redirect('/admin')
 
 
+@app.route('/admin/clear_lab', methods=['GET'])
+def admin_clear_lab():
+    if not session['admin']:
+        return redirect('/admin/login')
+
+    db = db_session()
+    db.query(Access).filter_by(timeOut=None).update({"timeOut": sa.func.now()}, synchronize_session=False)
+    db.commit()
+    session['admin'] = None
+    return redirect('/success/checkout')
+
+
 # Admin flow
 @app.route('/admin', methods=['GET'])
 def admin_dash():
-    if g.admin:
+    if session['admin']:
         return render_template('admin/index.html')
     else:
         return redirect('/')
@@ -416,7 +428,7 @@ def register():
             il = IITLookup(app.config['IITLOOKUPURL'],app.config['IITLOOKUPUSER'],app.config['IITLOOKUPPASS'])
             resp=il.nameIDByCard(request.args.get('card_id'))
             #except:
-             #   print(sys.exc_info()[0])
+            #   print(sys.exc_info()[0])
             if resp:        
                 sid=resp['idnumber'][1:]
                 name=("%s %s") % (resp['first_name'],resp['last_name'])

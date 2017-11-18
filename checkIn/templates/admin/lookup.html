@@ -106,10 +106,12 @@
                 </div>
                 <div class="panel-footer">
                     <button class="btn btn-primary" data-toggle="modal" data-target="#stModal">Add safety training</button> <!-- TODO: add safety training flow -->
-                    <button class="btn btn-danger">Delete user</button> <!-- TODO: delete user flow -->
-                    {% if g.admin.type.level >= 75 %}
-                    <button class="btn btn-danger">Ban from lab</button> <!-- TODO: ban from lab flow -->
-                    {% endif %}
+                    <div class="pull-right">
+                        <button class="btn btn-danger">Delete user</button> <!-- TODO: delete user flow -->
+                        {% if g.admin.type.level >= 75 %}
+                            <button class="btn btn-danger">Ban from lab</button> <!-- TODO: ban from lab flow -->
+                        {% endif %}
+                    </div>
                 </div>
                 <div class="modal fade" id="stModal">
                     <div class="modal-dialog">

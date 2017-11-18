@@ -390,12 +390,16 @@ def admin_lookup():
         query = query.filter_by(sid=sid)
 
     name = request.args.get('name')
+    machines = None
     if name and name != '':
         query = query.filter(User.name.ilike(name + '%'))
 
     results = query.limit(20).all()
 
-    return render_template('admin/lookup.html', results=results)
+    if len(results) == 1:
+        machines = db.query(Machine).filter_by(location_id=session['location_id']).all()
+
+    return render_template('admin/lookup.html', results=results, machines=machines)
 
 
 @app.route('/admin/clear_waiver', methods=['GET'])
@@ -412,6 +416,36 @@ def admin_clear_waiver():
     db.commit()
     return redirect('/admin/lookup?sid=' + str(user.sid))
 
+
+@app.route('/admin/training/add', methods=['POST'])
+def admin_add_training():
+    if not session['admin']:
+        return redirect('/')
+    db = db_session()
+    t = Training(trainee_id=int(request.form['student_id']),
+                 trainer_id=int(session['admin']),
+                 machine_id=int(request.form['machine']),
+                 date=sa.func.now())
+    db.add(t)
+    db.commit()
+    return redirect('/admin/lookup?sid=' + str(request.form['student_id']))
+
+
+@app.route('/admin/training/remove')
+def admin_remove_training():
+    if not session['admin']:
+        return redirect('/')
+    db = db_session()
+    training = db.query(Training).filter_by(id=request.args.get('id')).one_or_none()
+    sid = 0
+    if training:
+        sid = training.trainee_id if training else None
+        db.delete(training)
+        db.commit()
+    else:
+        sid = request.args.get('sid')
+
+    return redirect('/admin/lookup?sid=' + str(sid))
 
 
 @app.route('/waiver', methods=['GET'])

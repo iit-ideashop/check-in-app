@@ -94,18 +94,46 @@
                                     <td>{{ t.machine.name }}</td>
                                     <td>{{ t.trainer.name }}</td>
                                     <td>{{ t.date }}</td>
-                                    <td><button class="btn btn-danger btn-xs"><i class="glyphicon glyphicon-remove"></i></button></td>
+                                    <td>
+                                        <a href="/admin/training/remove?sid={{ results[0].sid }}&id={{ t.id }}" class="btn btn-danger btn-xs">
+                                            <i class="glyphicon glyphicon-remove"></i>
+                                        </a>
+                                    </td>
                                 </tr>
                             {% endfor %}
                         </table>
                     </div>
                 </div>
                 <div class="panel-footer">
-                    <button class="btn btn-primary">Add safety training</button> <!-- TODO: add safety training flow -->
+                    <button class="btn btn-primary" data-toggle="modal" data-target="#stModal">Add safety training</button> <!-- TODO: add safety training flow -->
                     <button class="btn btn-danger">Delete user</button> <!-- TODO: delete user flow -->
                     {% if g.admin.type.level >= 75 %}
                     <button class="btn btn-danger">Ban from lab</button> <!-- TODO: ban from lab flow -->
                     {% endif %}
+                </div>
+                <div class="modal fade" id="stModal">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <form action="/admin/training/add" method="post">
+                                <div class="modal-header">
+                                    <button class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                                    <h4 class="modal-title">Add safety training</h4>
+                                </div>
+                                <div class="modal-body">
+                                    <input type="hidden" name="admin_id" value="{{ g.admin.sid }}" />
+                                    <input type="hidden" name="student_id" value="{{ results[0].sid }}" />
+                                    <select class="form-control" name="machine">
+                                        {% for m in machines %}
+                                            <option value="{{ m.id }}">{{ m.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="modal-footer">
+                                    <input type="submit" class="btn btn-primary" value="Submit" />
+                                </div>
+                            </form>
+                        </div>
+                    </div>
                 </div>
                 {% else %}
                     <div class="panel-body">

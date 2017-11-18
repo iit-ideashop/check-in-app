@@ -55,8 +55,69 @@
                 </div>
                 {% elif results and results | length == 1 %}
                 <div class="panel-body">
+                    {% if results[0].photo %}
+     				    <img src="{{ results[0].photo }}" height="75" width="75" class="img-circle pull-right" />
+					{% else %}
+						<img src="/static/images/placeholder.png" height="75" width="75" class="img-circle pull-right" />
+                    {% endif %}
+                    <img src="{{ results[0].photo }}" class="pull-right" />
+                    <h1>{{ results[0].name }} <small>{{ results[0].type.name }}</small></h1>
+                    <hr />
+                    {% if results[0].waiverSigned %}
+                        <div class="alert alert-success">
+                            Accepted user agreement on {{ results[0].waiverSigned }}.
+                            <a href="/admin/clear_waiver?sid={{ results[0].sid }}">
+                                <button class="btn btn-xs btn-success pull-right">
+                                    Require another signature
+                                </button>
+                            </a>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-danger">
+                            Has not yet accepted user agreement.
+                        </div>
+                    {% endif %}
 
                 </div>
+                <div class="list-group">
+                    <div class="list-group-item">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Safety Training</th>
+                                    <th>Trained by</th>
+                                    <th>On date</th>
+                                </tr>
+                            </thead>
+                            {% for t in results[0].trainings %}
+                                <tr>
+                                    <td>{{ t.machine.name }}</td>
+                                    <td>{{ t.trainer.name }}</td>
+                                    <td>{{ t.date }}</td>
+                                    <td><button class="btn btn-danger btn-xs"><i class="glyphicon glyphicon-remove"></i></button></td>
+                                </tr>
+                            {% endfor %}
+                        </table>
+                    </div>
+                </div>
+                <div class="panel-footer">
+                    <button class="btn btn-primary">Add safety training</button> <!-- TODO: add safety training flow -->
+                    <button class="btn btn-danger">Delete user</button> <!-- TODO: delete user flow -->
+                    {% if g.admin.type.level >= 75 %}
+                    <button class="btn btn-danger">Ban from lab</button> <!-- TODO: ban from lab flow -->
+                    {% endif %}
+                </div>
+                {% else %}
+                    <div class="panel-body">
+                        <div class="alert alert-danger text-center">
+                            <strong>No results found.</strong> Please try different search criteria.
+                        </div>
+                    </div>
+                    <div class="list-group">
+                        <div class="list-group-item">
+
+                        </div>
+                    </div>
                 {% endif %}
             </div>
         </div>

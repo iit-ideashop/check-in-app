@@ -78,36 +78,6 @@ class Access(Base):
         return "<Access %s(%s-%s)>" % (self.user.name, str(self.timeIn), str(self.timeOut))
 
 
-class User(Base):
-    __tablename__ = 'users'
-    sid = sa.Column(sa.BigInteger, primary_key=True)
-    name = sa.Column(sa.String(length=100), nullable=False)
-    type_id = sa.Column(sa.Integer, sa.ForeignKey('types.id'))
-    waiverSigned = sa.Column(sa.DateTime)
-    photo = sa.Column(sa.String(length=100), default='')
-    location_id = sa.Column(sa.INTEGER, sa.ForeignKey('locations.id'), nullable=False, primary_key=True)
-    pin = sa.Column(sa.Binary(length=16), nullable=False)
-    pin_salt = sa.Column(sa.Binary(length=16), nullable=False)
-
-    def set_pin(self, pin):
-        self.pin_salt = os.urandom(16)
-        # 100,000 rounds of sha256 w/ a random salt
-        self.pin = hashlib.pbkdf2_hmac('sha256', bytearray(pin, 'utf-8'), self.pin_salt, 100000)
-
-    def verify_pin(self, attempt):
-        digest = hashlib.pbkdf2_hmac('sha256', bytearray(attempt, 'utf-8'), self.pin_salt, 100000)
-        return hmac.compare_digest(self.pin, digest)
-
-    def __repr__(self):
-        return "<Location %s>" % self.name
-
-    type = relationship('Type')
-    location = relationship('Location')
-
-    def __repr__(self):
-        return "<User A%d (%s)>" % (self.sid, self.name)
-
-
 class HawkCard(Base):
     __tablename__ = 'hawkcards'
     sid = sa.Column(sa.BigInteger, sa.ForeignKey('users.sid'))
@@ -139,13 +109,45 @@ class Training(Base):
     machine_id = sa.Column(sa.Integer, sa.ForeignKey('machines.id'))
     date = sa.Column(sa.DateTime)
 
-    trainee = relationship('User', foreign_keys=[trainee_id])
+    trainee = relationship('User', foreign_keys=[trainee_id], back_populates='trainings')
     trainer = relationship('User', foreign_keys=[trainer_id])
     machine = relationship('Machine', foreign_keys=[machine_id])
 
     def __repr__(self):
         return "<%s trained %s on %s, time=%s>" %\
                (self.trainee.name, self.trainer.name, self.machine.name, str(self.date))
+
+
+class User(Base):
+    __tablename__ = 'users'
+    sid = sa.Column(sa.BigInteger, primary_key=True)
+    name = sa.Column(sa.String(length=100), nullable=False)
+    type_id = sa.Column(sa.Integer, sa.ForeignKey('types.id'))
+    waiverSigned = sa.Column(sa.DateTime)
+    photo = sa.Column(sa.String(length=100), default='')
+    location_id = sa.Column(sa.INTEGER, sa.ForeignKey('locations.id'), nullable=False, primary_key=True)
+    pin = sa.Column(sa.Binary(length=16), nullable=False)
+    pin_salt = sa.Column(sa.Binary(length=16), nullable=False)
+
+    def set_pin(self, pin):
+        self.pin_salt = os.urandom(16)
+        # 100,000 rounds of sha256 w/ a random salt
+        self.pin = hashlib.pbkdf2_hmac('sha256', bytearray(pin, 'utf-8'), self.pin_salt, 100000)
+
+    def verify_pin(self, attempt):
+        digest = hashlib.pbkdf2_hmac('sha256', bytearray(attempt, 'utf-8'), self.pin_salt, 100000)
+        return hmac.compare_digest(self.pin, digest)
+
+    def __repr__(self):
+        return "<Location %s>" % self.name
+
+    type = relationship('Type')
+    location = relationship('Location')
+    trainings = relationship('Training', foreign_keys=[Training.trainee_id])
+
+
+    def __repr__(self):
+        return "<User A%d (%s)>" % (self.sid, self.name)
 
 
 class AdminLog(Base):
@@ -198,7 +200,6 @@ def update_current_students():
     g.staff.sort(key=lambda x: x.type.level, reverse=True)
     g.admin = db.query(User).filter_by(sid=session['admin']).one_or_none()\
                if 'admin' in session else None
-    db.close()
 
 @app.teardown_appcontext
 def close_db(error):
@@ -378,6 +379,9 @@ def admin_dash():
 
 @app.route('/admin/lookup', methods=['GET'])
 def admin_lookup():
+    if not session['admin']:
+        return redirect('/')
+
     db = db_session()
     query = db.query(User)
 
@@ -387,9 +391,27 @@ def admin_lookup():
 
     name = request.args.get('name')
     if name and name != '':
-        query = query.filter_by(name=name)
+        query = query.filter(User.name.ilike(name + '%'))
 
-    return render_template('admin/lookup.html', results=query.limit(20).all())
+    results = query.limit(20).all()
+
+    return render_template('admin/lookup.html', results=results)
+
+
+@app.route('/admin/clear_waiver', methods=['GET'])
+def admin_clear_waiver():
+    if not session['admin']:
+        return redirect('/')
+    if not request.args.get('sid'):
+        return redirect('/admin/lookup')
+
+    db = db_session()
+    user = db.query(User).filter_by(sid=request.args.get('sid'),
+                                    location_id=session['location_id']).one_or_none()
+    user.waiverSigned = None
+    db.commit()
+    return redirect('/admin/lookup?sid=' + str(user.sid))
+
 
 
 @app.route('/waiver', methods=['GET'])
@@ -537,4 +559,6 @@ def check_in(data):
 
 
 if __name__ == '__main__':
+    app.jinja_env.auto_reload = True
+    app.config['TEMPLATES_AUTO_RELOAD'] = True
     socketio.run(app, host='0.0.0.0', debug=True)

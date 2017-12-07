@@ -52,23 +52,22 @@
 				<div class="panel-heading text-center">
 					Staff
 				</div>
-                <div class="row">
-                {% for staffMember in g.staff %}
-  					<div class="col-sm-4 col-md-4">
-						 <div class="thumbnail">
-							 {% if staffMember.photo %}
-     							<img src="{{ staffMember.photo }}" height="200" width="200" class="img-circle" />
-							 {% else %}
-							 	<img src="/static/images/placeholder.png" height="200" width="200" class="img-circle" />
-							 {% endif %}
-      							<div class="caption text-center">
-        							<h4>{{ staffMember.name }}</h4>
-							    	<h5>{{ staffMember.type.name }}</h5>
-     							</div>
-                         </div>
-  					</div>
-                {% endfor %}
-                </div>
+				<div class="list-group">
+					{% for staffMember in g.staff %}
+					<div class="list-group-item" style="min-height: 70px;">
+						<div class="pull-right">
+							<!-- TODO: remove this -->
+						{#{% if staffMember.photo %}
+							<img src="{{ staffMember.photo }}" style="max-height: 20%; display: inline-block;" class="img-circle" />
+						{% else %}#}
+							<img src="/static/images/placeholder.png" style="max-height: 50px;" class="img-circle" />
+						{#{% endif %}#}
+						</div>
+						<h4>{{ staffMember.name }} <small>{{ staffMember.type.name }}</small></h4>
+					</div>
+					{% endfor %}
+				</div>
+			</div>
             </div>
 				<div class="panel panel-default">
 					<div class="panel-heading test-center">

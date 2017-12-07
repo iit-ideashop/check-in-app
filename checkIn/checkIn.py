@@ -16,6 +16,8 @@ from collections import defaultdict
 # TODO: consider using flask-login
 # or maybe not, they don't seem to support forced reauthentication on 'fresh' logins
 
+version = "0.8.0"
+
 app = Flask(__name__, static_url_path='/static', static_folder='static') # create the application instance :)
 socketio = SocketIO(app)
 app.config.from_object(__name__)
@@ -186,7 +188,7 @@ Base.metadata.create_all(engine)
 
 
 @app.before_request
-def update_current_students():
+def update_global_context():
     # TODO: remove this dirty hack
     session['location_id'] = 1
 
@@ -200,14 +202,26 @@ def update_current_students():
     g.staff.sort(key=lambda x: x.type.level, reverse=True)
     g.admin = db.query(User).filter_by(sid=session['admin']).one_or_none()\
                if 'admin' in session else None
+    g.version = version
+
 
 @app.teardown_appcontext
 def close_db(error):
     db_session.remove()
-    
+
+
+@app.route('/auth', methods=['GET', 'POST'])
+def auth():
+    if request.method == 'GET':
+        db = db_session()
+        locations = db.query(Location).all()
+        return render_template('auth.html', locations=locations)
+    else:
+        return abort(400)
+
 
 @app.route('/')
-def checkIn():
+def root():
     return render_template('index.html')
 
 

@@ -159,6 +159,10 @@
     $(function() {
         localStorage.debug = '*';
 
+        $("#sid").keyboard();
+        $("#card").keyboard();
+        $("#name").keyboard();
+
         var socket = io();
         socket.connect();
         socket.on('scan', function (data) {

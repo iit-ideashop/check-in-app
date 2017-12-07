@@ -226,7 +226,6 @@ def card_read(location_id):
         'sid': user.sid if user else None,
         'name': user.name if user else None,
     })
-    db.close()
     print(resp)
     return resp
 
@@ -264,7 +263,6 @@ def checkout_button(location_id):
             # sign user out and send to confirmation page
             lastIn.timeOut = sa.func.now()
     db.commit()
-    db.close()
     return success('checkout')
 
 @app.route('/index', methods=['GET'])
@@ -466,7 +464,6 @@ def waiver():
         if user:
             user.waiverSigned=sa.func.now()
         db.commit()
-        db.close()
         return redirect('/success/checkin')
     else:
         # TODO: clear any active session
@@ -514,7 +511,6 @@ def register():
         card.sid = request.form['sid']
 
         db.commit()
-        db.close()
         return redirect(url_for('.waiver', sid=request.form['sid']))
 
 
@@ -587,7 +583,6 @@ def check_in(data):
             emit('go', {'to': url_for('.waiver', sid=card.sid)})
 
     db.commit()
-    db.close()
     print(resp)
     return resp
 

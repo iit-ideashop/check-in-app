@@ -27,7 +27,7 @@
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
       </button>
-      <a class="navbar-brand" style="font-size:2em" href="{{ url_for('.checkIn') }}">Idea Shop Prototyping Lab Check In</a>
+      <a class="navbar-brand" style="font-size:2em" href="#">Idea Shop Prototyping Lab Check In</a>
     </div>
 
     <!-- Collect the nav links, forms, and other content for toggling -->
@@ -57,11 +57,11 @@
 					<div class="list-group-item" style="min-height: 70px;">
 						<div class="pull-right">
 							<!-- TODO: remove this -->
-						{#{% if staffMember.photo %}
+						{% if staffMember.photo %}
 							<img src="{{ staffMember.photo }}" style="max-height: 20%; display: inline-block;" class="img-circle" />
-						{% else %}#}
+						{% else %}
 							<img src="/static/images/placeholder.png" style="max-height: 50px;" class="img-circle" />
-						{#{% endif %}#}
+						{% endif %}
 						</div>
 						<h4>{{ staffMember.name }} <small>{{ staffMember.type.name }}</small></h4>
 					</div>

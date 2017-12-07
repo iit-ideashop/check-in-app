@@ -56,9 +56,8 @@
 					{% for staffMember in g.staff %}
 					<div class="list-group-item" style="min-height: 70px;">
 						<div class="pull-right">
-							<!-- TODO: remove this -->
 						{% if staffMember.photo %}
-							<img src="{{ staffMember.photo }}" style="max-height: 20%; display: inline-block;" class="img-circle" />
+                            <img src="{{ staffMember.photo }}" style="max-height: 50px;" class="img-circle"/>
 						{% else %}
 							<img src="/static/images/placeholder.png" style="max-height: 50px;" class="img-circle" />
 						{% endif %}

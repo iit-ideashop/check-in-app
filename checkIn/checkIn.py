@@ -406,6 +406,7 @@ def admin_lookup():
 
     name = request.args.get('name')
     machines = None
+    types = None
     if name and name != '':
         query = query.filter(User.name.ilike(name + '%'))
 
@@ -413,8 +414,13 @@ def admin_lookup():
 
     if len(results) == 1:
         machines = db.query(Machine).filter_by(location_id=session['location_id']).all()
+        # if found user has lower rank than admin user
+        if results[0].type.level < g.admin.type.level:
+            types = db.query(Type).filter_by(location_id=session['location_id'])\
+                                  .filter(Type.level <= g.admin.type.level)\
+                                  .all()
 
-    return render_template('admin/lookup.html', results=results, machines=machines)
+    return render_template('admin/lookup.html', results=results, machines=machines, types=types, error=request.args.get('error'))
 
 
 @app.route('/admin/clear_waiver', methods=['GET'])
@@ -461,6 +467,28 @@ def admin_remove_training():
         sid = request.args.get('sid')
 
     return redirect('/admin/lookup?sid=' + str(sid))
+
+
+@app.route('/admin/type/set')
+def admin_set_type():
+    if not session['admin']:
+        return redirect('/')
+    db = db_session()
+    type = db.query(Type).filter_by(id=request.args['tid'], location_id=session['location_id']).one_or_none()
+    user = db.query(User).filter_by(sid=request.args['sid']).one_or_none()
+    if not type:
+        return redirect('/admin/lookup?sid=' + request.args['sid'] + "&error=Type does not exist.")
+    if not user:
+        return redirect('/admin/lookup?sid=' + request.args['sid'] + "&error=User does not exist.")
+    elif g.admin.type.level < type.level:
+        return redirect('/admin/lookup?sid=' + request.args['sid'] + "&error=You don't have permission to set that type.")
+    elif user.type.level > g.admin.type.level:
+        return redirect('/admin/lookup?sid=' + request.args['sid'] + "&error=You don't have permission to modify that user.")
+
+    user.type_id = request.args['tid']
+    db.commit()
+    return redirect('/admin/lookup?sid=' + request.args['sid'])
+
 
 
 @app.route('/waiver', methods=['GET'])

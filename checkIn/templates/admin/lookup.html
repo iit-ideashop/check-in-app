@@ -1,6 +1,13 @@
 {% extends "layout.html" %}
 {% block data %}
     <div class="container">
+        {% if error %}
+        <div class="row">
+            <div class="alert alert-danger text-center">
+                <strong>{{ error }}</strong>
+            </div>
+        </div>
+        {% endif %}
         <div class="row">
             <div class="panel panel-default">
                 <div class="panel-heading">
@@ -60,7 +67,9 @@
 					{% else %}
 						<img src="/static/images/placeholder.png" height="75" width="75" class="img-circle pull-right" />
                     {% endif %}
-                    <h1>{{ results[0].name }} <small>{{ results[0].type.name }}</small></h1>
+                    <h1>
+                        {{ results[0].name }} <small>{{ results[0].type.name }}</small>
+                    </h1>
                     <hr />
                     {% if results[0].waiverSigned %}
                         <div class="alert alert-success">
@@ -105,10 +114,20 @@
                 </div>
                 <div class="panel-footer">
                     <button class="btn btn-primary" data-toggle="modal" data-target="#stModal">Add safety training</button> <!-- TODO: add safety training flow -->
-                    <div class="pull-right">
-                        <button class="btn btn-danger">Delete user</button> <!-- TODO: delete user flow -->
+                    <div class="pull-right btn-group">
+                        <a href="javascript:void(0);" class="btn btn-danger">Delete user</a> <!-- TODO: delete user flow -->
                         {% if g.admin.type.level >= 75 %}
-                            <button class="btn btn-danger">Ban from lab</button> <!-- TODO: ban from lab flow -->
+                            <a href="javascript:void(0);" class="btn btn-danger">Ban from lab</a> <!-- TODO: ban from lab flow -->
+                            {% if types %}
+                                <a href="javascript:void(0);" class="btn btn-success dropdown-toggle" data-toggle="dropdown">
+                                    Set rank <span class="caret"></span>
+                                </a>
+                                <ul class="dropdown-menu">
+                                    {% for type in types %}
+                                        <li><a href="/admin/type/set?sid={{ results[0].sid }}&tid={{ type.id }}">{{ type.name }} ({{ type.level }})</a></li>
+                                    {% endfor %}
+                                </ul>
+                            {% endif %}
                         {% endif %}
                     </div>
                 </div>

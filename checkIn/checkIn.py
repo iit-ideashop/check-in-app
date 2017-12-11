@@ -124,8 +124,8 @@ class User(Base):
     waiverSigned = sa.Column(sa.DateTime)
     photo = sa.Column(sa.String(length=100), default='')
     location_id = sa.Column(sa.INTEGER, sa.ForeignKey('locations.id'), nullable=False, primary_key=True)
-    pin = sa.Column(sa.Binary(length=16), nullable=False)
-    pin_salt = sa.Column(sa.Binary(length=16), nullable=False)
+    pin = sa.Column(sa.Binary(length=16))
+    pin_salt = sa.Column(sa.Binary(length=16))
 
     def set_pin(self, pin):
         self.pin_salt = os.urandom(16)

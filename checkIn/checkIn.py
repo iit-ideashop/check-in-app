@@ -1,9 +1,9 @@
 # all the imports
-# all the imports
 import os
 import hashlib
 import hmac
 import sys
+import types
 from flask import Flask, request, session, g, redirect, url_for, render_template, send_from_directory, abort, safe_join, send_file
 from flask_bootstrap import Bootstrap
 from flask_socketio import SocketIO, emit
@@ -310,7 +310,7 @@ def admin_login():
     if not request.args.get('sid') and not request.args.get('card'):
         return render_template('admin/login_cardtap.html')
     else:
-        if not request.args.get('sid'):
+        if not request.args.get('sid') or not request.args.get('sid').isdigit():
             return render_template('admin/login_cardtap.html',
                                    error='This HawkCard is not registered!')
 

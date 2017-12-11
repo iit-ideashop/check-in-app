@@ -273,6 +273,10 @@ def checkout_button(location_id):
             # sign user out and send to confirmation page
             lastIn.timeOut = sa.func.now()
     db.commit()
+
+    # need to query again for active users now that it's changed
+    update_global_context()
+
     return success('checkout')
 
 @app.route('/index', methods=['GET'])

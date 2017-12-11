@@ -114,19 +114,21 @@
                 </div>
                 <div class="panel-footer">
                     <button class="btn btn-primary" data-toggle="modal" data-target="#stModal">Add safety training</button> <!-- TODO: add safety training flow -->
-                    <div class="pull-right btn-group">
+                    <div class="pull-right">
                         <a href="javascript:void(0);" class="btn btn-danger">Delete user</a> <!-- TODO: delete user flow -->
                         {% if g.admin.type.level >= 75 %}
                             <a href="javascript:void(0);" class="btn btn-danger">Ban from lab</a> <!-- TODO: ban from lab flow -->
                             {% if types %}
-                                <a href="javascript:void(0);" class="btn btn-success dropdown-toggle" data-toggle="dropdown">
-                                    Set rank <span class="caret"></span>
-                                </a>
-                                <ul class="dropdown-menu">
-                                    {% for type in types %}
-                                        <li><a href="/admin/type/set?sid={{ results[0].sid }}&tid={{ type.id }}">{{ type.name }} ({{ type.level }})</a></li>
-                                    {% endfor %}
-                                </ul>
+                                <div class="btn-group">
+                                    <a href="javascript:void(0);" class="btn btn-success dropdown-toggle" data-toggle="dropdown">
+                                        Set rank <span class="caret"></span>
+                                    </a>
+                                    <ul class="dropdown-menu">
+                                        {% for type in types %}
+                                            <li><a href="/admin/type/set?sid={{ results[0].sid }}&tid={{ type.id }}">{{ type.name }} ({{ type.level }})</a></li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
                             {% endif %}
                         {% endif %}
                     </div>

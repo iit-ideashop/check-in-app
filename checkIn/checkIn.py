@@ -21,10 +21,6 @@ version = "0.8.0"
 app = Flask(__name__, static_url_path='/static', static_folder='static') # create the application instance :)
 socketio = SocketIO(app)
 app.config.from_object(__name__)
-
-app.config.update(dict(
-    DATABASE=os.path.join(app.root_path, 'flaskr.db')
-))
 app.config.from_pyfile('config.cfg')
 app.config.from_envvar('FLASKR_SETTINGS', silent=True)
 

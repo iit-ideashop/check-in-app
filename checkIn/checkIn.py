@@ -318,9 +318,12 @@ def admin_login():
         db = db_session()
         user = db.query(User).filter_by(sid=request.args.get('sid')).one_or_none()
 
-        if not user.pin:
+        if not user.pin and user.type.level > 0:
             session['admin'] = user.sid
             return render_template('admin/change_pin.html')
+        elif user.type.level <= 0:
+            return render_template('admin/login_cardtap.html',
+                                   error='Insufficient permission! This incident will be reported.')
 
         return render_template('admin/login_pin.html',
                                sid=request.args.get('sid'))
@@ -511,7 +514,7 @@ def register():
 
         db.add(User(sid=request.form['sid'],
                     name=request.form['name'].title(),
-                    type_id=1,
+                    type_id=newtype.id,
                     waiverSigned=None,
                     location_id=session['location_id']))
 

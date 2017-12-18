@@ -113,7 +113,7 @@
                     </div>
                 </div>
                 <div class="panel-footer">
-                    <button class="btn btn-primary" data-toggle="modal" data-target="#stModal">Add safety training</button> <!-- TODO: add safety training flow -->
+                    <button class="btn btn-primary" data-toggle="modal" data-target="#stModal">Add safety training</button>
                     <div class="pull-right">
                         <a href="javascript:void(0);" class="btn btn-danger">Delete user</a> <!-- TODO: delete user flow -->
                         {% if g.admin.type.level >= 75 %}
@@ -182,7 +182,8 @@
         var socket = io();
         socket.connect();
         socket.on('scan', function (data) {
-            window.location.assign("/admin/lookup?sid=" + data.sid + "&card=" + data.card + "&name=" + data.name);
+            if (data.hwid === {{ session['hardware_id'] | tojson }})
+                window.location.assign("/admin/lookup?sid=" + data.sid + "&card=" + data.card + "&name=" + data.name);
         });
     });
     </script>

@@ -8,6 +8,11 @@
             </div>
             <form action="/auth" method="post">
                 <div class="panel-body">
+                    {% if error %}
+                        <div class="alert alert-danger">
+                            <strong>{{ error }}</strong>
+                        </div>
+                    {% endif %}
                     <div class="form-group">
                         <label for="location">Location</label>
                         <select name="location" id="location" class="form-control">

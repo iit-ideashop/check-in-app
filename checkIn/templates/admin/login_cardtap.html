@@ -22,7 +22,8 @@ $(function() {
     var socket = io();
     socket.connect();
     socket.on('scan', function (data) {
-        window.location.assign("/admin/login?sid=" + data.sid + "&cardnum=" + data.card);
+        if (data.hwid === {{ session['hardware_id'] | tojson }})
+            window.location.assign("/admin/login?sid=" + data.sid + "&cardnum=" + data.card);
     });
 });
 </script>

@@ -2,9 +2,9 @@
 import os
 import hashlib
 import hmac
-import sys
-import types
-from flask import Flask, request, session, g, redirect, url_for, render_template, send_from_directory, abort, safe_join, send_file
+import random
+from flask import Flask, request, session, g, redirect, url_for, render_template, send_from_directory, abort, \
+    safe_join, send_file
 from flask_bootstrap import Bootstrap
 from flask_socketio import SocketIO, emit
 import sqlalchemy as sa
@@ -13,13 +13,10 @@ from sqlalchemy.ext.declarative import declarative_base
 from iitlookup import IITLookup
 from collections import defaultdict
 
-# TODO: consider using flask-login
-# or maybe not, they don't seem to support forced reauthentication on 'fresh' logins
+version = "1.0.0"
 
-version = "0.8.0"
-
-app = Flask(__name__, static_url_path='/static', static_folder='static') # create the application instance :)
-socketio = SocketIO(app)
+app = Flask(__name__, static_url_path='/static', static_folder='static')  # create the application instance :)
+socketio = SocketIO(app, manage_session=True)
 app.config.from_object(__name__)
 app.config.from_pyfile('config.cfg')
 app.config.from_envvar('FLASKR_SETTINGS', silent=True)
@@ -41,13 +38,24 @@ class Location(Base):
     def set_secret(self, secret):
         self.salt = os.urandom(16)
         # 100,000 rounds of sha256 w/ a random salt
-        self.secret = hashlib.pbkdf2_hmac('sha256', secret, self.salt, 100000)
+        self.secret = hashlib.pbkdf2_hmac('sha256', bytearray(secret, 'utf-8'), self.salt, 100000)
 
     def verify_secret(self, attempt):
-        return hmac.compare_digest(self.secret, hashlib.pbkdf2_hmac('sha256', attempt, self.salt, 100000))
+        digest = hashlib.pbkdf2_hmac('sha256', bytearray(attempt, 'utf-8'), self.salt, 100000)
+        return hmac.compare_digest(self.secret, digest)
 
     def __repr__(self):
         return "<Location %s>" % self.name
+
+
+class Kiosk(Base):
+    __tablename__ = 'kiosks'
+    location_id = sa.Column(sa.Integer, sa.ForeignKey('locations.id'), primary_key=True, nullable=False)
+    hardware_id = sa.Column(sa.Integer, primary_key=True, nullable=False)
+    token = sa.Column(sa.Binary(length=65), nullable=False)
+    last_seen = sa.Column(sa.DateTime, default=sa.func.now())
+
+    location = relationship('Location')
 
 
 class Type(Base):
@@ -80,8 +88,10 @@ class HawkCard(Base):
     __tablename__ = 'hawkcards'
     sid = sa.Column(sa.BigInteger, sa.ForeignKey('users.sid'))
     card = sa.Column(sa.BigInteger, primary_key=True)
+    location_id = sa.Column(sa.Integer, sa.ForeignKey('locations.id'))
 
     user = relationship('User')
+    location = relationship('Location')
 
     def __repr__(self):
         return "<HawkCard %d (A%d)>" % (self.card, self.sid)
@@ -112,7 +122,7 @@ class Training(Base):
     machine = relationship('Machine', foreign_keys=[machine_id])
 
     def __repr__(self):
-        return "<%s trained %s on %s, time=%s>" %\
+        return "<%s trained %s on %s, time=%s>" % \
                (self.trainee.name, self.trainer.name, self.machine.name, str(self.date))
 
 
@@ -142,7 +152,6 @@ class User(Base):
     type = relationship('Type')
     location = relationship('Location')
     trainings = relationship('Training', foreign_keys=[Training.trainee_id])
-
 
     def __repr__(self):
         return "<User A%d (%s)>" % (self.sid, self.name)
@@ -179,26 +188,41 @@ class CardScan(Base):
         return "<CardScan %d at %s>" % (self.card, self.time)
 
 
+# create tables if they don't exist
 db_session = scoped_session(sessionmaker(bind=engine))
 Base.metadata.create_all(engine)
 
 
 @app.before_request
-def update_global_context():
-    # TODO: remove this dirty hack
-    session['location_id'] = 1
+def before_request():
+    if 'location_id' not in session and request.endpoint != 'auth' and request.endpoint != 'set_secret':
+        return redirect(url_for('auth'))
 
     db = db_session()
-    in_lab = db.query(Access)\
-        .filter_by(timeOut=None)\
-        .all()
-    
+    in_lab = db.query(Access) \
+        .filter_by(timeOut=None) \
+        .filter_by(location_id=session['location_id']) \
+        .all() \
+        if 'location_id' in session else list()
+
+    g.location = db.query(Location).filter_by(
+        id=session['location_id']).one_or_none() if 'location_id' in session else None
     g.students = [a.user for a in in_lab if a.user.type.level == 0]
     g.staff = [a.user for a in in_lab if a.user.type.level > 0]
     g.staff.sort(key=lambda x: x.type.level, reverse=True)
-    g.admin = db.query(User).filter_by(sid=session['admin']).one_or_none()\
-               if 'admin' in session else None
+    g.admin = db.query(User).filter_by(sid=session['admin']).one_or_none() if 'admin' in session else None
     g.version = version
+
+
+def update_kiosks(location, except_hwid=None):
+    db = db_session()
+    kiosks = db.query(Kiosk).filter_by(location_id=location)
+    if except_hwid:
+        kiosks = kiosks.filter(Kiosk.hardware_id != except_hwid)
+    kiosks = kiosks.all()
+    for kiosk in kiosks:
+        emit('go', {'to': '/', 'hwid': kiosk.hardware_id})
+
 
 
 @app.teardown_appcontext
@@ -208,12 +232,95 @@ def close_db(error):
 
 @app.route('/auth', methods=['GET', 'POST'])
 def auth():
+    db = db_session()
+    locations = db.query(Location).all()
     if request.method == 'GET':
-        db = db_session()
-        locations = db.query(Location).all()
         return render_template('auth.html', locations=locations)
     else:
+
+        # random_utf8_seq adapted from https://stackoverflow.com/a/1477572
+        def byte_range(first, last):
+            return list(range(first, last + 1))
+
+        first_values = byte_range(0x00, 0x7F) + byte_range(0xC2, 0xF4)
+        trailing_values = byte_range(0x80, 0xBF)
+
+        def random_utf8_seq():
+            first = random.choice(first_values)
+            if first <= 0x7F:
+                return bytes([first])
+            elif first <= 0xDF:
+                return bytes([first, random.choice(trailing_values)])
+            elif first == 0xE0:
+                return bytes([first, random.choice(byte_range(0xA0, 0xBF)), random.choice(trailing_values)])
+            elif first == 0xED:
+                return bytes([first, random.choice(byte_range(0x80, 0x9F)), random.choice(trailing_values)])
+            elif first <= 0xEF:
+                return bytes([first, random.choice(trailing_values), random.choice(trailing_values)])
+            elif first == 0xF0:
+                return bytes([first, random.choice(byte_range(0x90, 0xBF)), random.choice(trailing_values),
+                              random.choice(trailing_values)])
+            elif first <= 0xF3:
+                return bytes([first, random.choice(trailing_values), random.choice(trailing_values),
+                              random.choice(trailing_values)])
+            elif first == 0xF4:
+                return bytes([first, random.choice(byte_range(0x80, 0x8F)), random.choice(trailing_values),
+                              random.choice(trailing_values)])
+
+        def random_utf8_str(length):
+            return "".join(str(random_utf8_seq(), "utf-8") for i in range(length))
+
+        if 'hwid' not in request.form or 'location' not in request.form or 'secret' not in request.form:
+            return render_template('auth.html', error='Please complete all fields.', locations=locations)
+
+        location = db.query(Location).filter_by(id=int(request.form['location'])).one_or_none()
+        if not location:
+            return render_template('auth.html', error='Internal server error: the location went away',
+                                   locations=locations)
+        if not location.verify_secret(request.form['secret']):
+            return render_template('auth.html', error='Invalid secret!', locations=locations)
+
+        new_token = random_utf8_str(32)
+        kiosk = db.query(Kiosk)\
+            .filter_by(location_id=request.form['location'], hardware_id=request.form['hwid'])\
+            .one_or_none()
+
+        if kiosk:
+            kiosk.token = new_token
+        else:
+            kiosk = Kiosk(location_id=request.form['location'],
+                          hardware_id=request.form['hwid'],
+                          token=bytes(new_token, 'utf-8'),
+                          last_seen=sa.func.now())
+            db.add(kiosk)
+
+        db.commit()
+
+        session['location_id'] = kiosk.location_id
+        session['hardware_id'] = int(request.form['hwid'])
+        session['token'] = new_token
+
+        return redirect('/')
+
+
+@app.route('/deauth')
+def deauth():
+    db = db_session()
+    db.query(Kiosk).filter_by(location_id=session['location_id'], hardware_id=session['hardware_id']).delete()
+    session.clear()
+    return redirect('/auth')
+
+
+# TODO: REMOVE THIS DEBUG SECURITY HOLE
+@app.route('/admin/locations/set_secret/<int:location_id>')
+def set_secret(location_id):
+    db = db_session()
+    location = db.query(Location).filter_by(id=location_id).one_or_none()
+    if not location:
         return abort(400)
+    location.set_secret(request.args.get('secret'))
+    db.commit()
+    return abort(200)
 
 
 @app.route('/')
@@ -221,18 +328,18 @@ def root():
     return render_template('index.html')
 
 
-@app.route('/card_read/<int:location_id>', methods=['GET', 'POST'])
-def card_read(location_id):
+@app.route('/card_read/<int:hwid>', methods=['GET', 'POST'])
+def card_read(hwid):
     resp = 'Read success: Facility %s, card %s' % (request.form['facility'], request.form['cardnum'])
     db = db_session()
-    dbcard = db.query(HawkCard)\
-        .filter_by(card=request.form['cardnum'])\
+    dbcard = db.query(HawkCard) \
+        .filter_by(card=request.form['cardnum'], location_id=session['location_id']) \
         .one_or_none()
     user = dbcard.user if dbcard else None
     socketio.emit('scan', {
         'facility': request.form['facility'],
         'card': request.form['cardnum'],
-        'location': location_id,
+        'hwid': hwid,
         'sid': user.sid if user else None,
         'name': user.name if user else None,
     })
@@ -240,53 +347,56 @@ def card_read(location_id):
     return resp
 
 
-@app.route('/checkout_button/<int:location_id>', methods=['POST'])
-def checkout_button(location_id):
+@app.route('/checkout', methods=['POST'])
+def checkout():
     db = db_session()
-    
+
     card = db.query(HawkCard).filter_by(
         sid=request.args['sid']
     ).one_or_none()
-    logEntry = CardScan(card_id=card.card, time=sa.func.now(), location_id=location_id)
-    
+    logEntry = CardScan(card_id=card.card, time=sa.func.now(), location_id=session['location_id'])
+
     location = db.query(Location).filter_by(
-        id=location_id
+        id=session['location_id']
     ).one_or_none()
 
     db.add(logEntry)
 
     if not location:
-        print("Location %d not found" % location_id)
+        print("Location %d not found" % session['location_id'])
 
     else:
-        lastIn = db.query(Access)\
-            .filter_by(location_id=location.id)\
-            .filter_by(timeOut=None)\
-            .filter_by(sid=card.sid)\
+        lastIn = db.query(Access) \
+            .filter_by(location_id=location.id) \
+            .filter_by(timeOut=None) \
+            .filter_by(sid=card.sid) \
             .one_or_none()
-        
+
         if lastIn:
             # user signing out
-            print("User %s (card id %d) signed out at location %s (id %d)" % (
-                card.user.name, card.card, location.name, location.id
+            print("User %s (card id %d) signed out at location %s (id %d, kiosk %d)" % (
+                card.user.name, card.card, location.name, location.id, session['hardware_id']
             ))
             # sign user out and send to confirmation page
             lastIn.timeOut = sa.func.now()
     db.commit()
 
     # need to query again for active users now that it's changed
-    update_global_context()
+    before_request()
+    update_kiosks(session['location_id'], except_hwid=session['hardware_id'])
 
     return success('checkout')
+
 
 @app.route('/index', methods=['GET'])
 def index():
     return redirect('/')
 
+
 success_messages = defaultdict(str)
 success_messages.update({
-    'login':   "You have been logged in.",
-    'logout':  "You have been logged out.",
+    'login': "You have been logged in.",
+    'logout': "You have been logged out.",
     'checkin': "You have checked in.",
     'checkout': "You have checked out."
 })
@@ -301,7 +411,7 @@ def _login(request):
     error = None
     if request.method == 'POST':
         if (request.form['username'] != app.config['USERNAME']
-           or request.form['password'] != app.config['PASSWORD']):
+            or request.form['password'] != app.config['PASSWORD']):
             error = 'Authentication failure'
         else:
             session['logged_in'] = True
@@ -309,7 +419,7 @@ def _login(request):
 
 
 # Admin authentication
-@app.route('/admin/login', methods=['GET','POST'])
+@app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
     if not request.args.get('sid') and not request.args.get('card'):
         return render_template('admin/login_cardtap.html')
@@ -320,7 +430,7 @@ def admin_login():
 
         # check to see if user has a pin
         db = db_session()
-        user = db.query(User).filter_by(sid=request.args.get('sid')).one_or_none()
+        user = db.query(User).filter_by(sid=request.args.get('sid'), location_id=session['location_id']).one_or_none()
 
         if not user.pin and user.type.level > 0:
             session['admin'] = user.sid
@@ -338,7 +448,7 @@ def admin_auth():
     # sanity checks
     db = db_session()
     # check for sufficient permission
-    user = db.query(User).filter_by(sid=request.form['sid']).one_or_none()
+    user = db.query(User).filter_by(sid=request.form['sid'], location_id=session['location_id']).one_or_none()
     if user.type.level <= 0:
         return render_template('admin/login_cardtap.html',
                                error='Insufficient permission! This incident will be reported.')
@@ -350,7 +460,6 @@ def admin_auth():
     # we good
     session['admin'] = user.sid
     return redirect('/admin')
-
 
 
 @app.route('/admin/logout', methods=['GET'])
@@ -365,7 +474,7 @@ def admin_change_pin():
         return render_template('admin/change_pin.html')
     else:
         db = db_session()
-        user = db.query(User).filter_by(sid=session['admin']).one_or_none()
+        user = db.query(User).filter_by(sid=session['admin'], location_id=session['location_id']).one_or_none()
         user.set_pin(request.form['pin'])
         db.commit()
         return redirect('/admin')
@@ -373,7 +482,7 @@ def admin_change_pin():
 
 @app.route('/admin/clear_lab', methods=['GET'])
 def admin_clear_lab():
-    if not session['admin']:
+    if not g.admin or g.admin.location_id != session['location_id']:
         return redirect('/admin/login')
 
     db = db_session()
@@ -386,7 +495,7 @@ def admin_clear_lab():
 # Admin flow
 @app.route('/admin', methods=['GET'])
 def admin_dash():
-    if session['admin']:
+    if g.admin and g.admin.location_id == session['location_id']:
         return render_template('admin/index.html')
     else:
         return redirect('/')
@@ -394,7 +503,7 @@ def admin_dash():
 
 @app.route('/admin/lookup', methods=['GET'])
 def admin_lookup():
-    if not session['admin']:
+    if not g.admin or g.admin.location_id != session['location_id']:
         return redirect('/')
 
     db = db_session()
@@ -416,11 +525,12 @@ def admin_lookup():
         machines = db.query(Machine).filter_by(location_id=session['location_id']).all()
         # if found user has lower rank than admin user
         if results[0].type.level < g.admin.type.level:
-            types = db.query(Type).filter_by(location_id=session['location_id'])\
-                                  .filter(Type.level <= g.admin.type.level)\
-                                  .all()
+            types = db.query(Type).filter_by(location_id=session['location_id']) \
+                .filter(Type.level <= g.admin.type.level) \
+                .all()
 
-    return render_template('admin/lookup.html', results=results, machines=machines, types=types, error=request.args.get('error'))
+    return render_template('admin/lookup.html', results=results, machines=machines, types=types,
+                           error=request.args.get('error'))
 
 
 @app.route('/admin/clear_waiver', methods=['GET'])
@@ -440,7 +550,7 @@ def admin_clear_waiver():
 
 @app.route('/admin/training/add', methods=['POST'])
 def admin_add_training():
-    if not session['admin']:
+    if not g.admin or g.admin.location_id != session['location_id']:
         return redirect('/')
     db = db_session()
     t = Training(trainee_id=int(request.form['student_id']),
@@ -454,7 +564,7 @@ def admin_add_training():
 
 @app.route('/admin/training/remove')
 def admin_remove_training():
-    if not session['admin']:
+    if not g.admin or g.admin.location_id != session['location_id']:
         return redirect('/')
     db = db_session()
     training = db.query(Training).filter_by(id=request.args.get('id')).one_or_none()
@@ -469,9 +579,39 @@ def admin_remove_training():
     return redirect('/admin/lookup?sid=' + str(sid))
 
 
+@app.route('/admin/locations')
+def admin_locations():
+    pass
+
+
+@app.route('/admin/locations/remove')
+def admin_remove_location():
+    pass
+
+
+@app.route('/admin/locations/update')
+def admin_update_location():
+    pass
+
+
+@app.route('/admin/machines')
+def admin_machines():
+    pass
+
+
+@app.route('/admin/machines/remove')
+def admin_remove_machine():
+    pass
+
+
+@app.route('/admin/machines/update')
+def admin_update_machine():
+    pass
+
+
 @app.route('/admin/type/set')
 def admin_set_type():
-    if not session['admin']:
+    if not g.admin or g.admin.location_id != session['location_id']:
         return redirect('/')
     db = db_session()
     type = db.query(Type).filter_by(id=request.args['tid'], location_id=session['location_id']).one_or_none()
@@ -481,14 +621,15 @@ def admin_set_type():
     if not user:
         return redirect('/admin/lookup?sid=' + request.args['sid'] + "&error=User does not exist.")
     elif g.admin.type.level < type.level:
-        return redirect('/admin/lookup?sid=' + request.args['sid'] + "&error=You don't have permission to set that type.")
+        return redirect(
+            '/admin/lookup?sid=' + request.args['sid'] + "&error=You don't have permission to set that type.")
     elif user.type.level > g.admin.type.level:
-        return redirect('/admin/lookup?sid=' + request.args['sid'] + "&error=You don't have permission to modify that user.")
+        return redirect(
+            '/admin/lookup?sid=' + request.args['sid'] + "&error=You don't have permission to modify that user.")
 
     user.type_id = request.args['tid']
     db.commit()
     return redirect('/admin/lookup?sid=' + request.args['sid'])
-
 
 
 @app.route('/waiver', methods=['GET'])
@@ -503,45 +644,46 @@ def waiver():
             timeIn=sa.func.now(),
             timeOut=None
         ))
-        user = db.query(User)\
-            .filter_by(sid=request.args.get('sid'))\
+        user = db.query(User) \
+            .filter_by(sid=request.args.get('sid')) \
             .one_or_none()
         if user:
-            user.waiverSigned=sa.func.now()
+            user.waiverSigned = sa.func.now()
         db.commit()
+        update_kiosks(session['location_id'], except_hwid=session['hardware_id'])
         return redirect('/success/checkin')
     else:
-        # TODO: clear any active session
         return redirect('/')
 
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'GET':
-            resp=""    
-            card_id=request.args.get('card_id')
-            name=""
-            sid=""
-            #try:
-            il = IITLookup(app.config['IITLOOKUPURL'],app.config['IITLOOKUPUSER'],app.config['IITLOOKUPPASS'])
-            resp=il.nameIDByCard(request.args.get('card_id'))
-            #except:
-            #   print(sys.exc_info()[0])
-            if resp:        
-                sid=resp['idnumber'][1:]
-                name=("%s %s") % (resp['first_name'],resp['last_name'])
-            return render_template('register.html',
+        resp = ""
+        card_id = request.args.get('card_id')
+        name = ""
+        sid = ""
+        # try:
+        il = IITLookup(app.config['IITLOOKUPURL'], app.config['IITLOOKUPUSER'], app.config['IITLOOKUPPASS'])
+        resp = il.nameIDByCard(request.args.get('card_id'))
+        # except:
+        #   print(sys.exc_info()[0])
+        if resp:
+            sid = resp['idnumber'][1:]
+            name = ("%s %s") % (resp['first_name'], resp['last_name'])
+        return render_template('register.html',
                                sid=sid,
                                card_id=card_id,
                                name=name)
 
     elif request.method == 'POST':
-        if request.form['name']=="" or int(request.form['sid'])<20000000:
-            return render_template('register.html', sid=request.form['sid'],card_id=request.form['card_id'],name=request.form['name']) 
+        if request.form['name'] == "" or int(request.form['sid']) < 20000000:
+            return render_template('register.html', sid=request.form['sid'], card_id=request.form['card_id'],
+                                   name=request.form['name'])
         db = db_session()
-        newtype = db.query(Type)\
-            .filter_by(location_id=session['location_id'])\
-            .filter_by(level=0)\
+        newtype = db.query(Type) \
+            .filter_by(location_id=session['location_id']) \
+            .filter_by(level=0) \
             .one_or_none()
 
         db.add(User(sid=request.form['sid'],
@@ -550,8 +692,8 @@ def register():
                     waiverSigned=None,
                     location_id=session['location_id']))
 
-        card = db.query(HawkCard)\
-            .filter_by(card=request.form['card_id'])\
+        card = db.query(HawkCard) \
+            .filter_by(card=request.form['card_id']) \
             .one_or_none()
         card.sid = request.form['sid']
 
@@ -565,7 +707,15 @@ def check_in(data):
     data['card'] = int(data['card'])
     data['facility'] = int(data['facility'])
     data['location'] = int(data['location'])
+
+    server_kiosk = db.query(Kiosk).filter_by(location_id=data['location'], hardware_id=data['hwid']).one_or_none()
+
     resp = ""
+
+    if server_kiosk.token.decode('utf-8') != data['token']:
+        emit('err', {'hwid': session['hardware_id'], 'err': 'Token mismatch'})
+        emit('go', {'to': '/deauth', 'hwid': session['hardware_id']})
+        return "Token mismatch!"
 
     logEntry = CardScan(card_id=data['card'], time=sa.func.now(), location_id=data['location'])
 
@@ -590,7 +740,7 @@ def check_in(data):
 
     if not card or not card.user:
         # send to registration page
-        emit('go', {'to': url_for('.register', card_id=data['card'])})
+        emit('go', {'to': url_for('.register', card_id=data['card']), 'hwid': data.hwid})
 
     else:
         lastIn = db.query(Access) \
@@ -601,31 +751,33 @@ def check_in(data):
         print(lastIn)
         if lastIn:
             # user signing out
-            resp = ("User %s (card id %d) signed out at location %s (id %d)" % (
-                card.user.name, data['card'], location.name, location.id
+            resp = ("User %s (card id %d) signed out at location %s (id %d, kiosk %d)" % (
+                card.user.name, data['card'], location.name, location.id, data['hwid']
             ))
             # sign user out and send to confirmation page
             lastIn.timeOut = sa.func.now()
-            emit('go', {'to': url_for('.success', action='checkout')})
+            emit('go', {'to': url_for('.success', action='checkout'), 'hwid': data['hwid']})
+            update_kiosks(location.id, except_hwid=data['hwid'])
 
         elif card.user.waiverSigned:
             # user signing in
-            resp = ("User %s (card id %d) is cleared for entry at location %s (id %d)" % (
-                card.user.name, data['card'], location.name, location.id
+            resp = ("User %s (card id %d) is cleared for entry at location %s (id %d, kiosk %d)" % (
+                card.user.name, data['card'], location.name, location.id, data['hwid']
             ))
             # sign user in and send to confirmation page
             accessEntry = Access(sid=card.sid, timeIn=sa.func.now(), location_id=location.id)
             db.add(accessEntry)
-            emit('go', {'to': url_for('.success', action='checkin')})
+            emit('go', {'to': url_for('.success', action='checkin'), 'hwid': data['hwid']})
+            update_kiosks(location.id, except_hwid=data['hwid'])
 
         else:
             # user has account but hasn't signed waiver
-            resp = ("User %s (card id %d) needs to sign waiver at location %s (id %d)" % (
+            resp = ("User %s (card id %d) needs to sign waiver at location %s (id %d, kiosk %d)" % (
                 card.user.name, data['card'],
-                location.name, location.id
+                location.name, location.id, data['hwid']
             ))
             # present waiver page
-            emit('go', {'to': url_for('.waiver', sid=card.sid)})
+            emit('go', {'to': url_for('.waiver', sid=card.sid), 'hwid': data['hwid']})
 
     db.commit()
     print(resp)

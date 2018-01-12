@@ -196,7 +196,7 @@ Base.metadata.create_all(engine)
 
 @app.before_request
 def before_request():
-    if 'location_id' not in session and request.endpoint != 'auth' and request.endpoint != 'set_secret':
+    if 'location_id' not in session and request.endpoint != 'auth' and request.endpoint != 'card_read':
         return redirect(url_for('auth'))
 
     db = db_session()
@@ -331,6 +331,7 @@ def root():
 
 @app.route('/card_read/<int:hwid>', methods=['GET', 'POST'])
 def card_read(hwid):
+    print(request.endpoint)
     resp = 'Read success: Facility %s, card %s' % (request.form['facility'], request.form['cardnum'])
     db = db_session()
     dbcard = db.query(HawkCard) \

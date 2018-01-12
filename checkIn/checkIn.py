@@ -339,7 +339,7 @@ def card_read(hwid):
         return abort(403)
 
     dbcard = db.query(HawkCard) \
-        .filter_by(card=request.form['cardnum'], location_id=kiosk.id) \
+        .filter_by(card=request.form['cardnum'], location_id=kiosk.location_id) \
         .one_or_none()
     user = dbcard.user if dbcard else None
     socketio.emit('scan', {

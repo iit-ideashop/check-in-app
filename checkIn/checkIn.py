@@ -3,6 +3,7 @@ import os
 import hashlib
 import hmac
 import random
+import argparse
 from flask import Flask, request, session, g, redirect, url_for, render_template, send_from_directory, abort, \
     safe_join, send_file
 from flask_bootstrap import Bootstrap
@@ -785,6 +786,29 @@ def check_in(data):
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Idea Shop Check In App')
+    #parser.add_argument('-p', '--port', help='set the port to bind on', type=int)
+    parser.add_argument('-a', '--admin', help='invoke admin tools instead of starting the web app', action='store_true')
+    parser.add_argument('-l', '--location', help='choose the location to operate on', type=int)
+    parser.add_argument('-s', '--secret', help='set a location\'s secret', type=str)
+    args = parser.parse_args()
+
+    if args.admin:
+        db = db_session()
+        location = db.query(Location).filter_by(id=args.location).one_or_none()
+        if not location:
+            print('Location %d does not exist!' % args.location)
+            exit(404)
+
+        if args.secret:
+            location.set_secret(args.secret)
+            db.commit()
+            print('Secret for %s (%d) updated.' % (location.name, location.id))
+            exit(0)
+        else:
+            print('Location %d: %s' % (location.name, location.id))
+            exit(0)
+
     app.jinja_env.auto_reload = True
     app.config['TEMPLATES_AUTO_RELOAD'] = True
     socketio.run(app, host='0.0.0.0', debug=True)

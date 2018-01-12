@@ -1,3 +1,5 @@
+ALTER TABLE locations MODIFY secret BINARY(32);
+
 ALTER TABLE hawkcards ADD facility INT NULL;
 ALTER TABLE scanLog ADD facility_id INT NULL;
 

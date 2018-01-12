@@ -332,11 +332,14 @@ def root():
 
 @app.route('/card_read/<int:hwid>', methods=['GET', 'POST'])
 def card_read(hwid):
-    print(request.endpoint)
     resp = 'Read success: Facility %s, card %s' % (request.form['facility'], request.form['cardnum'])
     db = db_session()
+    kiosk = db.query(Kiosk).filter_by(hardware_id=hwid).one_or_none()
+    if not kiosk:
+        return abort(403)
+
     dbcard = db.query(HawkCard) \
-        .filter_by(card=request.form['cardnum'], location_id=session['location_id']) \
+        .filter_by(card=request.form['cardnum'], location_id=kiosk.id) \
         .one_or_none()
     user = dbcard.user if dbcard else None
     socketio.emit('scan', {

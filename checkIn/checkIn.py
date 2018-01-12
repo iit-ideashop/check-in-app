@@ -199,20 +199,21 @@ def before_request():
     if 'location_id' not in session and request.endpoint != 'auth' and request.endpoint != 'card_read':
         return redirect(url_for('auth'))
 
-    db = db_session()
-    in_lab = db.query(Access) \
-        .filter_by(timeOut=None) \
-        .filter_by(location_id=session['location_id']) \
-        .all() \
-        if 'location_id' in session else list()
+    if request.endpoint != 'card_read':
+        db = db_session()
+        in_lab = db.query(Access) \
+            .filter_by(timeOut=None) \
+            .filter_by(location_id=session['location_id']) \
+            .all() \
+            if 'location_id' in session else list()
 
-    g.location = db.query(Location).filter_by(
-        id=session['location_id']).one_or_none() if 'location_id' in session else None
-    g.students = [a.user for a in in_lab if a.user.type.level == 0]
-    g.staff = [a.user for a in in_lab if a.user.type.level > 0]
-    g.staff.sort(key=lambda x: x.type.level, reverse=True)
-    g.admin = db.query(User).filter_by(sid=session['admin']).one_or_none() if 'admin' in session else None
-    g.version = version
+        g.location = db.query(Location).filter_by(
+            id=session['location_id']).one_or_none() if 'location_id' in session else None
+        g.students = [a.user for a in in_lab if a.user.type.level == 0]
+        g.staff = [a.user for a in in_lab if a.user.type.level > 0]
+        g.staff.sort(key=lambda x: x.type.level, reverse=True)
+        g.admin = db.query(User).filter_by(sid=session['admin']).one_or_none() if 'admin' in session else None
+        g.version = version
 
 
 def update_kiosks(location, except_hwid=None):

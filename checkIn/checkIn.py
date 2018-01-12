@@ -718,10 +718,10 @@ def check_in(data):
 
     resp = ""
 
-    if server_kiosk.token.decode('utf-8') != data['token']:
-        emit('err', {'hwid': session['hardware_id'], 'err': 'Token mismatch'})
-        emit('go', {'to': '/deauth', 'hwid': session['hardware_id']})
-        return "Token mismatch!"
+    #if server_kiosk.token.decode('utf-8') != data['token']:
+    #    emit('err', {'hwid': session['hardware_id'], 'err': 'Token mismatch'})
+    #    emit('go', {'to': '/deauth', 'hwid': session['hardware_id']})
+    #    return "Token mismatch!"
 
     logEntry = CardScan(card_id=data['card'], time=sa.func.now(), location_id=data['location'])
 

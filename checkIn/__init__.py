@@ -1,1 +1,0 @@
-from .checkIn import app

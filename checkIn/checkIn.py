@@ -1,17 +1,19 @@
 # all the imports
+import os, sys
+sys.path.insert(0, os.path.abspath(".."))
+
 import os
 import hashlib
 import hmac
 import random
 import argparse
-from flask import Flask, request, session, g, redirect, url_for, render_template, send_from_directory, abort, \
-    safe_join, send_file
+from flask import Flask, request, session, g, redirect, url_for, render_template, abort
 from flask_bootstrap import Bootstrap
 from flask_socketio import SocketIO, emit
 import sqlalchemy as sa
-from sqlalchemy.orm import relationship, joinedload, scoped_session, sessionmaker
+from sqlalchemy.orm import relationship, scoped_session, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
-from iitlookup import IITLookup
+from .iitlookup import IITLookup
 from collections import defaultdict
 
 version = "1.0.0"
@@ -788,7 +790,6 @@ def check_in(data):
     db.commit()
     print(resp)
     return resp
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Idea Shop Check In App')

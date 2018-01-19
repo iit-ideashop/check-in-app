@@ -223,7 +223,7 @@ def update_kiosks(location, except_hwid=None):
         kiosks = kiosks.filter(Kiosk.hardware_id != except_hwid)
     kiosks = kiosks.all()
     for kiosk in kiosks:
-        emit('go', {'to': '/', 'hwid': kiosk.hardware_id})
+        socketio.emit('go', {'to': '/', 'hwid': kiosk.hardware_id})
 
 
 

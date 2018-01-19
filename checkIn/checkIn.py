@@ -746,7 +746,7 @@ def check_in(data):
 
     if not card or not card.user:
         # send to registration page
-        emit('go', {'to': url_for('.register', card_id=data['card']), 'hwid': data.hwid})
+        emit('go', {'to': url_for('.register', card_id=data['card']), 'hwid': data['hwid']})
 
     else:
         lastIn = db.query(Access) \

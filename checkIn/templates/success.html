@@ -12,3 +12,28 @@
 	</div>
 </div>
 {% endblock %}
+{% block scripts %}
+{{ super }}
+<script>
+	window.setTimeout(function() {
+		window.location.replace("/");
+	}, 1000);
+    $(function() {
+        localStorage.debug = 'engine.io-client:socket';
+
+        var socket = io();
+        socket.connect();
+        socket.on('go', function (data) {
+            if (data.hwid === {{ session['hardware_id'] | tojson }}) {
+                window.location.href = data.to;
+            }
+        });
+        socket.on('scan', function (data) {
+            if (data.hwid === {{ session['hardware_id'] | tojson }}) {
+                //data.token = {{ session['token'] | tojson }};
+                data.location = {{ session['location_id'] | tojson }};
+                socket.emit('check in', data)
+            }
+        });
+    });
+</script>

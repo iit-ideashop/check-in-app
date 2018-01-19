@@ -26,7 +26,7 @@ app.config.from_envvar('FLASKR_SETTINGS', silent=True)
 
 Bootstrap(app)
 
-engine = sa.create_engine(app.config['DB'], pool_recycle=3600)
+engine = sa.create_engine(app.config['DB'], pool_recycle=3600, encoding='utf-8')
 Base = declarative_base()
 
 
@@ -55,7 +55,7 @@ class Kiosk(Base):
     __tablename__ = 'kiosks'
     location_id = sa.Column(sa.Integer, sa.ForeignKey('locations.id'), primary_key=True, nullable=False)
     hardware_id = sa.Column(sa.Integer, primary_key=True, nullable=False)
-    token = sa.Column(sa.Binary(length=65), nullable=False)
+    token = sa.Column(sa.String(length=65), nullable=False)
     last_seen = sa.Column(sa.DateTime, default=sa.func.now())
 
     location = relationship('Location')
@@ -499,7 +499,6 @@ def admin_clear_lab():
     session['admin'] = None
     return redirect('/success/checkout')
 
-
 # Admin flow
 @app.route('/admin', methods=['GET'])
 def admin_dash():
@@ -699,11 +698,6 @@ def register():
                     type_id=newtype.id,
                     waiverSigned=None,
                     location_id=session['location_id']))
-
-        card = db.query(HawkCard) \
-            .filter_by(card=request.form['card_id']) \
-            .one_or_none()
-        card.sid = request.form['sid']
 
         db.commit()
         return redirect(url_for('.waiver', sid=request.form['sid']))

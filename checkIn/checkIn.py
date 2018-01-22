@@ -401,12 +401,12 @@ def index():
     return redirect('/')
 
 
-success_messages = defaultdict(str)
+success_messages = defaultdict(tuple)
 success_messages.update({
-    'login': "You have been logged in.",
-    'logout': "You have been logged out.",
-    'checkin': "You have checked in.",
-    'checkout': "You have checked out."
+    'login': ("Logged in", "glyphicon-ok"),
+    'logout': ("Logged out", "glyphicon-remove"),
+    'checkin': ("Welcome", "glyphicon-log-in"),
+    'checkout': ("Goodbye", "glyphicon-log-out")
 })
 
 
@@ -472,8 +472,9 @@ def admin_auth():
 
 @app.route('/admin/logout', methods=['GET'])
 def admin_logout():
+
     session['admin'] = None
-    return redirect('/success/logout')
+    return redirect(url_for('.success', action='logout'))
 
 
 @app.route('/admin/change_pin', methods=['GET', 'POST'])
@@ -761,7 +762,7 @@ def check_in(data):
             ))
             # sign user out and send to confirmation page
             lastIn.timeOut = sa.func.now()
-            emit('go', {'to': url_for('.success', action='checkout'), 'hwid': data['hwid']})
+            emit('go', {'to': url_for('.success', action='checkout', name=card.user.name), 'hwid': data['hwid']})
             update_kiosks(location.id, except_hwid=data['hwid'])
 
         elif card.user.waiverSigned:
@@ -772,7 +773,7 @@ def check_in(data):
             # sign user in and send to confirmation page
             accessEntry = Access(sid=card.sid, timeIn=sa.func.now(), location_id=location.id)
             db.add(accessEntry)
-            emit('go', {'to': url_for('.success', action='checkin'), 'hwid': data['hwid']})
+            emit('go', {'to': url_for('.success', action='checkin', name=card.user.name), 'hwid': data['hwid']})
             update_kiosks(location.id, except_hwid=data['hwid'])
 
         else:

@@ -6,14 +6,14 @@
 	}, 1000);
 </script>
 <div class="col-md-6" style="margin:auto">
-	<div class="alert alert-success" role="alert">
-		<strong>Success!</strong> {{ msg }}
-		<p>Redirecting to <a href="/" class="alert-link">the index</a> in 1 second...</p>
-	</div>
+    <div class="circle-success img-circle"><i class="glyphicon {{ msg[1] }}"></i></div>
+    <hr />
+	<h1 class="text-center">{{ msg[0] }}</h1>
+    <h3 class="text-center">{{ request.args.get('name') if 'name' in request.args else '' }}</h3>
 </div>
 {% endblock %}
 {% block scripts %}
-{{ super }}
+{{ super() }}
 <script>
 	window.setTimeout(function() {
 		window.location.replace("/");
@@ -38,4 +38,20 @@
     });
 </script>
 {% endblock %}
+{% block styles %}
+{{ super() }}
 
+    <style>
+    .circle-success {
+        margin: 0 auto;
+        width: 256px;
+        text-align: center;
+        height: 256px;
+        font-size: 10em;
+        background: mediumseagreen;
+        color: white;
+        padding-top: 0.35em;
+    }
+    </style>
+
+{% endblock %}

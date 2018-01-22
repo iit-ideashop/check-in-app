@@ -5,6 +5,7 @@
 config.cfg
 !config.cfg.default
 !placeholder.png
+checkIn/static/images/A*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

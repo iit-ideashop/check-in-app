@@ -13,7 +13,7 @@ from flask_socketio import SocketIO, emit
 import sqlalchemy as sa
 from sqlalchemy.orm import relationship, scoped_session, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
-from .iitlookup import IITLookup
+from iitlookup import IITLookup
 from collections import defaultdict
 
 version = "1.0.0"
@@ -738,7 +738,7 @@ def check_in(data):
         # first time in lab
         resp = ("User for card id %d not found" % data['card'])
 
-        db.add(HawkCard(sid=None, card=data['card']))
+        db.add(HawkCard(sid=None, card=data['card'], location_id=location.id))
 
     if not card or not card.user:
         # send to registration page

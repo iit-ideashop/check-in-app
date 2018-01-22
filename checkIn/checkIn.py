@@ -699,6 +699,9 @@ def register():
                     waiverSigned=None,
                     location_id=session['location_id']))
 
+        card = db.query(HawkCard).filter_by(card=request.form['card_id']).one_or_none()
+        card.sid = request.form['sid']
+
         db.commit()
         return redirect(url_for('.waiver', sid=request.form['sid']))
 

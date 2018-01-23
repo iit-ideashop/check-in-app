@@ -15,6 +15,7 @@ from sqlalchemy.orm import relationship, scoped_session, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from iitlookup import IITLookup
 from collections import defaultdict
+from datetime import datetime
 
 version = "1.0.0"
 
@@ -155,6 +156,7 @@ class User(Base):
     type = relationship('Type')
     location = relationship('Location')
     trainings = relationship('Training', foreign_keys=[Training.trainee_id])
+    access = relationship('Access', order_by='Access.timeIn')
 
     def __repr__(self):
         return "<User A%d (%s)>" % (self.sid, self.name)
@@ -393,7 +395,10 @@ def checkout():
     before_request()
     update_kiosks(session['location_id'], except_hwid=session['hardware_id'])
 
-    return success('checkout')
+    if 'next' in request.args:
+        return redirect(request.args.get('next'))
+    else:
+        return success('checkout')
 
 
 @app.route('/index', methods=['GET'])
@@ -522,6 +527,7 @@ def admin_lookup():
         query = query.filter_by(sid=sid)
 
     name = request.args.get('name')
+    access_log = None
     machines = None
     types = None
     if name and name != '':
@@ -536,9 +542,12 @@ def admin_lookup():
             types = db.query(Type).filter_by(location_id=session['location_id']) \
                 .filter(Type.level <= g.admin.type.level) \
                 .all()
+        access_log = db.query(Access) \
+            .filter_by(sid=results[0].sid, location_id=session['location_id']) \
+            .order_by(Access.timeIn.desc()).limit(10).all()
 
-    return render_template('admin/lookup.html', results=results, machines=machines, types=types,
-                           error=request.args.get('error'))
+    return render_template('admin/lookup.html', results=results, machines=machines, types=types, access_log=access_log,
+                           now=datetime.now(), error=request.args.get('error'))
 
 
 @app.route('/admin/clear_waiver', methods=['GET'])

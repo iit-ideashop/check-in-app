@@ -111,7 +111,43 @@
                             {% endfor %}
                         </table>
                     </div>
+
+                    <div class="list-group-item">
+                        <h3>Last 10 visits</h3>
+                        <table class="table">
+                            <thead>
+                            <tr>
+                                <th>Time in</th>
+                                <th>Time out</th>
+                                <th>Duration</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for a in access_log %}
+                            <tr>
+                                <td>{{ a.timeIn }}</td>
+                                <td>
+                                    {% if a.timeOut %}
+                                        {{ a.timeOut }}
+                                    {% else %}
+                                        <span class="label label-success">In lab</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if not a.timeOut %}
+                                        <form action="{{ url_for('.checkout', sid=results[0].sid, next=request.url) }}" method="post">
+                                            <input type="submit" class="btn btn-danger btn-xs pull-right" value="Check out" />
+                                        </form>
+                                    {% endif %}
+                                    {{ ((a.timeOut if a.timeOut else now) - a.timeIn) }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
+
                 <div class="panel-footer">
                     <button class="btn btn-primary" data-toggle="modal" data-target="#stModal">Add safety training</button>
                     <div class="pull-right">
@@ -133,6 +169,7 @@
                         {% endif %}
                     </div>
                 </div>
+
                 <div class="modal fade" id="stModal">
                     <div class="modal-dialog">
                         <div class="modal-content">
@@ -157,6 +194,7 @@
                         </div>
                     </div>
                 </div>
+
                 {% else %}
                     <div class="panel-body">
                         <div class="alert alert-danger text-center">

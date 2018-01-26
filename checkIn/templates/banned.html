@@ -1,54 +1,55 @@
 {% extends "layout.html" %}
 {% block data %}
-<div class="col-md-10" style="margin:auto">
-    <div class="circle-danger img-circle"><i class="glyphicon glyphicon-remove"></i></div>
-    <hr />
-	<h1 class="text-center">No entry</h1>
-    <h3 class="text-center">Your access to the lab has been revoked due to repeated or egregious violations of the user agreement.<br />
-        Please contact {{ g.location.name }} staff to appeal.</h3>
-</div>
-    <audio autoplay loop src="/static/sound/banned_user.mp3" />
+    <div class="col-md-10" style="margin:auto">
+        <div class="circle-danger img-circle"><i class="glyphicon glyphicon-remove"></i></div>
+        <hr/>
+        <h1 class="text-center">No entry</h1>
+        <h3 class="text-center">Your access to the lab has been revoked due to repeated or egregious violations of the
+            user agreement.<br/>
+            Please contact {{ g.location.name }} staff to appeal.</h3>
+    </div>
+    <audio autoplay loop src="/static/sound/banned_user.mp3"></audio>
 {% endblock %}
 {% block scripts %}
-{{ super() }}
-<script>
-	window.setTimeout(function() {
-		window.location.replace("/");
-	}, 5000);
-    $(function() {
-        localStorage.debug = 'engine.io-client:socket';
+    {{ super() }}
+    <script>
+        window.setTimeout(function () {
+            window.location.replace("/");
+        }, 5000);
+        $(function () {
+            localStorage.debug = 'engine.io-client:socket';
 
-        var socket = io();
-        socket.connect();
-        socket.on('go', function (data) {
-            if (data.hwid === {{ session['hardware_id'] | tojson }}) {
-                window.location.href = data.to;
-            }
+            var socket = io();
+            socket.connect();
+            socket.on('go', function (data) {
+                if (data.hwid === {{ session['hardware_id'] | tojson }}) {
+                    window.location.href = data.to;
+                }
+            });
+            socket.on('scan', function (data) {
+                if (data.hwid === {{ session['hardware_id'] | tojson }}) {
+                    //data.token = {{ session['token'] | tojson }};
+                    data.location = {{ session['location_id'] | tojson }};
+                    socket.emit('check in', data)
+                }
+            });
         });
-        socket.on('scan', function (data) {
-            if (data.hwid === {{ session['hardware_id'] | tojson }}) {
-                //data.token = {{ session['token'] | tojson }};
-                data.location = {{ session['location_id'] | tojson }};
-                socket.emit('check in', data)
-            }
-        });
-    });
-</script>
+    </script>
 {% endblock %}
 {% block styles %}
-{{ super() }}
+    {{ super() }}
 
     <style>
-    .circle-danger {
-        margin: 0 auto;
-        width: 256px;
-        text-align: center;
-        height: 256px;
-        font-size: 10em;
-        background: darkred;
-        color: white;
-        padding-top: 0.35em;
-    }
+        .circle-danger {
+            margin: 0 auto;
+            width: 256px;
+            text-align: center;
+            height: 256px;
+            font-size: 10em;
+            background: darkred;
+            color: white;
+            padding-top: 0.35em;
+        }
     </style>
 
 {% endblock %}

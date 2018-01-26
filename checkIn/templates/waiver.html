@@ -1,79 +1,86 @@
 {% extends "layout.html" %}
 
 {% block data %}
-    <audio autoplay loop src="/static/sound/sign_waiver.mp3" />
+    <audio autoplay loop src="/static/sound/sign_waiver.mp3"></audio>
 
     <!--<div class="panel panel-default">
         <div class="panel-heading text-center"><strong>Idea Shop User Agreement</strong></div>-->
-        <div class="container">
-            <div class="alert alert-danger text-center">
-                <strong>Any persons wishing to use equipment or perform tasks in the Idea Shop must agree to this User
-                    Agreement.<br/>
-                    Every time you enter the Idea Shop you are agreeing to the following terms.</strong>
-            </div>
-            <h4>General</h4>
-            <ul>
-                <li>Access to this lab is restricted to IIT students, staff, faculty and other authorized individuals within posted operating hours or at the discretion of Idea Shop staff.</li>
-                <li>Safety training and authorization is required to use any piece of equipment in the Idea Shop.</li>
-                <li>Always report any injury, broken tool, housekeeping issue, or potential hazard.</li>
-                <li>Be aware of others around your work, and the work being performed around you, at all times.</li>
-                <li>If you see someone working in an unsafe manner, say something.</li>
-            </ul>
+    <div class="container">
+        <div class="alert alert-danger text-center">
+            <strong>Any persons wishing to use equipment or perform tasks in the Idea Shop must agree to this User
+                Agreement.<br/>
+                Every time you enter the Idea Shop you are agreeing to the following terms.</strong>
+        </div>
+        <h4>General</h4>
+        <ul>
+            <li>Access to this lab is restricted to IIT students, staff, faculty and other authorized individuals within
+                posted operating hours or at the discretion of Idea Shop staff.
+            </li>
+            <li>Safety training and authorization is required to use any piece of equipment in the Idea Shop.</li>
+            <li>Always report any injury, broken tool, housekeeping issue, or potential hazard.</li>
+            <li>Be aware of others around your work, and the work being performed around you, at all times.</li>
+            <li>If you see someone working in an unsafe manner, say something.</li>
+        </ul>
 
-            <h4>Personal</h4>
-            <ul>
-                <li>Personal protection equipment (safety glasses, ear plugs, breathing masks, etc) are to be worn
-                    anywhere signs are posted in the work space, or whenever appropriate based on training for that
-                    tool.
-                </li>
-                <li>Never approach any power tools with loose clothing, long untied hair, lanyards, headphone cords,
-                    gloves or large jewelry that could pull you toward the machine.
-                </li>
-                <li>No headphones allowed in the lab. You must be able to hear what is going on around you.</li>
-                <li>Pants and closed toe / closed heel shoes are required attire in the lab.</li>
-                <li>All individuals are required to act in a professional manner.</li>
-            </ul>
+        <h4>Personal</h4>
+        <ul>
+            <li>Personal protection equipment (safety glasses, ear plugs, breathing masks, etc) are to be worn
+                anywhere signs are posted in the work space, or whenever appropriate based on training for that
+                tool.
+            </li>
+            <li>Never approach any power tools with loose clothing, long untied hair, lanyards, headphone cords,
+                gloves or large jewelry that could pull you toward the machine.
+            </li>
+            <li>No headphones allowed in the lab. You must be able to hear what is going on around you.</li>
+            <li>Pants and closed toe / closed heel shoes are required attire in the lab.</li>
+            <li>All individuals are required to act in a professional manner.</li>
+        </ul>
 
-            <h4>Lab Space</h4>
-            <ul>
-                <li>Exits, corridors, and passageways must be kept clear for safe passage during an emergency.</li>
-                <li>Keep a clean, organized, and safe work area. Clean any debris that you have created or others have
-                    created before you. Always leave the space better than you found it.
-                </li>
-                <li>Help keep the floor space dry and free of tripping or slipping hazards such as saw dust, oil,
-                    electrical cords, or raw materials.
-                </li>
-                <li>This lab has surveillance devices for safety and security.
-                <li>No food or drinks allowed in the lab. (Exception for sealed water bottles.)</li>
-            </ul>
+        <h4>Lab Space</h4>
+        <ul>
+            <li>Exits, corridors, and passageways must be kept clear for safe passage during an emergency.</li>
+            <li>Keep a clean, organized, and safe work area. Clean any debris that you have created or others have
+                created before you. Always leave the space better than you found it.
+            </li>
+            <li>Help keep the floor space dry and free of tripping or slipping hazards such as saw dust, oil,
+                electrical cords, or raw materials.
+            </li>
+            <li>This lab has surveillance devices for safety and security.
+            <li>No food or drinks allowed in the lab. (Exception for sealed water bottles.)</li>
+        </ul>
 
-            <h4>Tools</h4>
-            <ul>
-                <li>Use the correct tool for the job and never abuse the tool.</li>
-                <li>Personal protection equipment (safety glasses, ear plugs, breathing masks, etc) are to be worn
-                    anywhere signs are posted in the work space, or whenever appropriate based on training for that
-                    tool.
-                </li>
-                <li>Whenever you use a tool, you are responsible for returning it to its proper storage location,
-                    regardless of where you found it. If you are unsure, please ask the lab personnel.
-                </li>
-                <li>Never modify any tool, and especially, never remove safety devices from tools.
-                </li>
-            </ul>
-            <h4>Disciplinary Action</h4>
-            <ul>
-                <li>Violation of this user agreement may result in disciplinary action as enumerated on wiki.ideashop.iit.edu
-                </li>
-            </ul>
-            <button type="button" class="btn btn-lg btn-block btn-danger" data-toggle="modal" data-target="#declineModal">I do NOT agree</button>
-            <button type="button" class="btn btn-lg btn-block btn-success" data-toggle="modal" data-target="#signatureModal">
-                I agree
-            </button>
-            <br />
+        <h4>Tools</h4>
+        <ul>
+            <li>Use the correct tool for the job and never abuse the tool.</li>
+            <li>Personal protection equipment (safety glasses, ear plugs, breathing masks, etc) are to be worn
+                anywhere signs are posted in the work space, or whenever appropriate based on training for that
+                tool.
+            </li>
+            <li>Whenever you use a tool, you are responsible for returning it to its proper storage location,
+                regardless of where you found it. If you are unsure, please ask the lab personnel.
+            </li>
+            <li>Never modify any tool, and especially, never remove safety devices from tools.
+            </li>
+        </ul>
+        <h4>Disciplinary Action</h4>
+        <ul>
+            <li>Violation of this user agreement may result in disciplinary action as enumerated on
+                wiki.ideashop.iit.edu
+            </li>
+        </ul>
+        <button type="button" class="btn btn-lg btn-block btn-danger" data-toggle="modal" data-target="#declineModal">I
+            do NOT agree
+        </button>
+        <button type="button" class="btn btn-lg btn-block btn-success" data-toggle="modal"
+                data-target="#signatureModal">
+            I agree
+        </button>
+        <br/>
         <!--</div>-->
     </div>
 
-    <div class="modal fade" id="signatureModal" tabindex="-1" role="dialog" aria-labelledby="signatureModalLabel" aria-hidden="true">
+    <div class="modal fade" id="signatureModal" tabindex="-1" role="dialog" aria-labelledby="signatureModalLabel"
+         aria-hidden="true">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
@@ -90,11 +97,14 @@
                     <form method="get" action="/waiver">
                         <div class="form-row">
                             <div class="col-sm-10">
-                                <input type="text" name="name" id="sigField" class="keyboard keyboard-default form-control" placeholder="Sign here"/>
+                                <input type="text" name="name" id="sigField"
+                                       class="keyboard keyboard-default form-control" placeholder="Sign here"/>
                             </div>
-                            <input type="hidden" name="agreed" value="true" />
+                            <input type="hidden" name="agreed" value="true"/>
                             <input type="hidden" name="sid" value="{{ sid }}"/>
-                            <div class="col-sm-2"><button type="submit" class="btn btn-success">Submit</button></div>
+                            <div class="col-sm-2">
+                                <button type="submit" class="btn btn-success">Submit</button>
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -102,7 +112,8 @@
         </div>
     </div>
 
-    <div class="modal fade" id="declineModal" tabindex="-1" role="dialog" aria-labelledby="declineModalLabel" aria-hidden="true">
+    <div class="modal fade" id="declineModal" tabindex="-1" role="dialog" aria-labelledby="declineModalLabel"
+         aria-hidden="true">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
@@ -116,8 +127,12 @@
                     Shop until then.
                 </div>
                 <div class="modal-footer">
-                    <a href="/waiver?agreed=false"><button type="button" class="btn btn-danger">Yes, I decline.</button></a>
-                    <button type="button" class="btn btn-default" data-dismiss="modal">No, take me back to the agreement.</button>
+                    <a href="/waiver?agreed=false">
+                        <button type="button" class="btn btn-danger">Yes, I decline.</button>
+                    </a>
+                    <button type="button" class="btn btn-default" data-dismiss="modal">No, take me back to the
+                        agreement.
+                    </button>
                 </div>
             </div>
         </div>
@@ -127,7 +142,7 @@
 {% block scripts %}
     {{ super() }}
     <script>
-        $(function() {
+        $(function () {
             $("#sigField").keyboard({initCaps: true});
 
             localStorage.debug = 'engine.io-client:socket';

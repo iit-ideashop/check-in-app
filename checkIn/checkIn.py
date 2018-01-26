@@ -776,7 +776,7 @@ def check_in(data):
             ))
             emit('go', {'to': url_for('.banned'), 'hwid': data['hwid']})
 
-        if lastIn:
+        elif lastIn:
             # user signing out
             resp = ("User %s (card id %d) signed out at location %s (id %d, kiosk %d)" % (
                 card.user.name, data['card'], location.name, location.id, data['hwid']

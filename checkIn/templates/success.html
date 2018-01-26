@@ -1,10 +1,5 @@
 {% extends "layout.html" %}
 {% block data %}
-<script type="text/javascript">
-	window.setTimeout(function() {
-		window.location.replace("/");
-	}, 1000);
-</script>
 <div class="col-md-6" style="margin:auto">
     <div class="circle-success img-circle"><i class="glyphicon {{ msg[1] }}"></i></div>
     <hr />
@@ -17,7 +12,7 @@
 <script>
 	window.setTimeout(function() {
 		window.location.replace("/");
-	}, 1000);
+	}, 5000);
     $(function() {
         localStorage.debug = 'engine.io-client:socket';
 

@@ -213,7 +213,7 @@ def before_request():
 
         g.location = db.query(Location).filter_by(
             id=session['location_id']).one_or_none() if 'location_id' in session else None
-        g.students = [a.user for a in in_lab if a.user.type.level == 0]
+        g.students = [a.user for a in in_lab if a.user.type.level <= 0]
         g.staff = [a.user for a in in_lab if a.user.type.level > 0]
         g.staff.sort(key=lambda x: x.type.level, reverse=True)
         g.admin = db.query(User).filter_by(sid=session['admin']).one_or_none() if 'admin' in session else None
@@ -418,6 +418,11 @@ success_messages.update({
 @app.route('/success/<action>', methods=['GET'])
 def success(action):
     return render_template('success.html', msg=success_messages[action])
+
+
+@app.route('/banned', methods=['GET'])
+def banned():
+    return render_template('banned.html')
 
 
 def _login(request):
@@ -764,6 +769,13 @@ def check_in(data):
             .filter_by(sid=card.sid) \
             .one_or_none()
         print(lastIn)
+
+        if card.user.type.level < 0:
+            resp = ("User %s (card id %d) tried to sign in at %s but is banned! (id %d, kiosk %d)" % (
+                card.user.name, data['card'], location.name, location.id, data['hwid']
+            ))
+            emit('go', {'to': url_for('.banned'), 'hwid': data['hwid']})
+
         if lastIn:
             # user signing out
             resp = ("User %s (card id %d) signed out at location %s (id %d, kiosk %d)" % (

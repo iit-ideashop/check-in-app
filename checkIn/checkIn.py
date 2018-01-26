@@ -535,6 +535,7 @@ def admin_lookup():
     access_log = None
     machines = None
     types = None
+    ban_type = None
     if name and name != '':
         query = query.filter(User.name.ilike(name + '%'))
 
@@ -550,9 +551,12 @@ def admin_lookup():
         access_log = db.query(Access) \
             .filter_by(sid=results[0].sid, location_id=session['location_id']) \
             .order_by(Access.timeIn.desc()).limit(10).all()
+        ban_type = db.query(Type).filter_by(location_id=session['location_id']) \
+            .filter(Type.level < 0) \
+            .first()
 
     return render_template('admin/lookup.html', results=results, machines=machines, types=types, access_log=access_log,
-                           now=datetime.now(), error=request.args.get('error'))
+                           now=datetime.now(), ban_type=ban_type, error=request.args.get('error'))
 
 
 @app.route('/admin/clear_waiver', methods=['GET'])

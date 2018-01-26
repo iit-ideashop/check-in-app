@@ -151,9 +151,9 @@
                 <div class="panel-footer">
                     <button class="btn btn-primary" data-toggle="modal" data-target="#stModal">Add safety training</button>
                     <div class="pull-right">
-                        <a href="javascript:void(0);" class="btn btn-danger">Delete user</a> <!-- TODO: delete user flow -->
                         {% if g.admin.type.level >= 75 %}
-                            <a href="javascript:void(0);" class="btn btn-danger">Ban from lab</a> <!-- TODO: ban from lab flow -->
+                            <a href="javascript:void(0);" class="btn btn-danger">Delete user</a> <!-- TODO: delete user flow -->
+                            <a href="/admin/type/set?sid={{ results[0].sid }}&tid={{ ban_type.id }}" class="btn btn-danger">Ban from lab</a>
                             {% if types %}
                                 <div class="btn-group">
                                     <a href="javascript:void(0);" class="btn btn-success dropdown-toggle" data-toggle="dropdown">

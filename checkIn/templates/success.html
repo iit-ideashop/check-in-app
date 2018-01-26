@@ -5,6 +5,12 @@
     <hr />
 	<h1 class="text-center">{{ msg[0] }}</h1>
     <h3 class="text-center">{{ request.args.get('name') if 'name' in request.args else '' }}</h3>
+
+    {% if 'checkin' in request.url %}
+    <audio autoplay src="/static/sound/check_in.mp3"></audio>
+    {% elif 'checkout' in request.url %}
+    <audio autoplay src="/static/sound/check_out.mp3"></audio>
+    {% endif %}
 </div>
 {% endblock %}
 {% block scripts %}

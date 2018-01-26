@@ -51,3 +51,5 @@ Any additional fields are discarded for the time being.
 ## License
 This project is licensed under the GNU Affero General Public License,
 version 3. Please see README.md for the full text.
+
+Banned user sound effect is copyright (c) soundeffects+.

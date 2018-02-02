@@ -157,6 +157,7 @@ class User(Base):
 	location = relationship('Location')
 	trainings = relationship('Training', foreign_keys=[Training.trainee_id])
 	access = relationship('Access', order_by='Access.timeIn')
+	cards = relationship('HawkCard')
 
 	def __repr__(self):
 		return "<User A%d (%s)>" % (self.sid, self.name)
@@ -528,16 +529,23 @@ def admin_lookup():
 	query = db.query(User)
 
 	sid = request.args.get('sid')
-	if sid and sid != '':
-		query = query.filter_by(sid=sid)
-
 	name = request.args.get('name')
+	card_id = request.args.get('card')
+	if sid or name or card_id:
+		if sid and sid != '':
+			query = query.filter_by(sid=sid)
+		if name and name != '':
+			query = query.filter(User.name.ilike(name + '%'))
+		if card_id:
+			query = query.filter(User.cards.any(HawkCard.card == card_id))
+	else:
+		query = query.filter(User.access.any(Access.timeOut == None))
+
+
 	access_log = None
 	machines = None
 	types = None
 	ban_type = None
-	if name and name != '':
-		query = query.filter(User.name.ilike(name + '%'))
 
 	results = query.limit(20).all()
 

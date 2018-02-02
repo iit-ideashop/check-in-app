@@ -748,9 +748,11 @@ def check_in(data):
 		sid = int(student['idnumber'].replace('A', ''))
 
 		if not student:
+			# user is new and isn't in IIT's database
 			db.add(HawkCard(sid=None, card=data['card'], location_id=location.id))
 			db.commit()
 		elif db.query(User).filter_by(sid=sid).count() > 0:
+			# user exists, has a new card
 			card = HawkCard(sid=sid, card=data['card'], location_id=location.id)
 			db.add(card)
 		else:

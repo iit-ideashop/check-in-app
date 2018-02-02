@@ -135,7 +135,7 @@
                                 </td>
                                 <td>
                                     {% if not a.timeOut %}
-                                        <form action="{{ url_for('.checkout', sid=results[0].sid, next=request.url) }}" method="post">
+                                        <form action="{{ url_for('.checkout', aid=a.id, next=request.url) }}" method="post">
                                             <input type="submit" class="btn btn-danger btn-xs pull-right" value="Check out" />
                                         </form>
                                     {% endif %}

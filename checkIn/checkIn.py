@@ -360,35 +360,32 @@ def card_read(hwid):
 	return resp
 
 
-@app.route('/checkout', methods=['POST'])
+@app.route('/checkout', methods=['GET', 'POST'])
 def checkout():
 	db = db_session()
-
-	card = db.query(HawkCard).filter_by(
-		sid=request.args['sid']
-	).one_or_none()
-	logEntry = CardScan(card_id=card.card, time=sa.func.now(), location_id=session['location_id'])
 
 	location = db.query(Location).filter_by(
 		id=session['location_id']
 	).one_or_none()
 
-	db.add(logEntry)
-
 	if not location:
 		print("Location %d not found" % session['location_id'])
 
 	else:
-		lastIn = db.query(Access) \
-			.filter_by(location_id=location.id) \
-			.filter_by(timeOut=None) \
-			.filter_by(sid=card.sid) \
-			.one_or_none()
+		lastIn = None;
+		if 'sid' in request.args:
+			lastIn = db.query(Access) \
+				.filter_by(location_id=location.id) \
+				.filter_by(timeOut=None) \
+				.filter_by(sid=int(request.args['sid'])) \
+				.one_or_none()
+		elif 'aid' in request.args:
+			lastIn = db.query(Access).get(int(request.args['aid']))
 
 		if lastIn:
 			# user signing out
-			print("User %s (card id %d) signed out at location %s (id %d, kiosk %d)" % (
-				card.user.name, card.card, location.name, location.id, session['hardware_id']
+			print("User %s signed out at location %s (id %d, kiosk %d)" % (
+				lastIn.user.name, location.name, location.id, session['hardware_id']
 			))
 			# sign user out and send to confirmation page
 			lastIn.timeOut = sa.func.now()

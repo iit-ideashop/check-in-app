@@ -18,7 +18,7 @@ to a public network -- for development purposes only.
 * `sqlalchemy`
 * `pysimplesoap` (dependency of [nkaminski/IITLookUp](https://github.com/nkaminski/IITLookUp) which is integrated
     in this project)
-* An application server running Python 3
+* An application server running Python 3.6 (earlier versions are not supported)
 * A database server [compatible with SQLAlchemy](http://docs.sqlalchemy.org/en/latest/core/engines.html#supported-databases)
 (the application is written with MariaDB/MySQL in mind)
 * [nkaminski/piProx-oss](https://github.com/nkaminski/piProx-oss) or a compatible software (see below for interface documentation)
@@ -44,12 +44,10 @@ is triggered by an HTTP POST request to `/card_read/<location_id>` resembling an
 
 Any additional fields are discarded for the time being.
 
-`location_id` for the time being should always be 1.
-
 [nkaminski/piProx-oss](https://github.com/nkaminski/piProx-oss) provides a working implementation of this interface in `http-client.c`.
 
 ## License
 This project is licensed under the GNU Affero General Public License,
 version 3. Please see README.md for the full text.
 
-Banned user sound effect is copyright (c) soundeffects+.
+Banned user and interaction required sound effects are copyright (c) soundeffects+.

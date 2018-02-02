@@ -236,6 +236,16 @@ def close_db(error):
 	db_session.remove()
 
 
+@app.errorhandler(500)
+def internal_error(error):
+
+	return render_template("internal_error.html"), 500
+
+
+@app.route('/generate_500')
+def generate_500():
+	return abort(500)
+
 @app.route('/auth', methods=['GET', 'POST'])
 def auth():
 	db = db_session()
@@ -843,4 +853,4 @@ if __name__ == '__main__':
 
 	app.jinja_env.auto_reload = True
 	app.config['TEMPLATES_AUTO_RELOAD'] = True
-	socketio.run(app, host='0.0.0.0', debug=True)
+	socketio.run(app, host='0.0.0.0')

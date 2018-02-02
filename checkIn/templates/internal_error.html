@@ -1,0 +1,39 @@
+{% extends "layout.html" %}
+{% block data %}
+<div class="col-md-6" style="margin:auto">
+    <div class="circle-danger img-circle"><i class="glyphicon glyphicon-alert"></i></div>
+    <hr />
+	<h1 class="text-center">Internal error</h1>
+    <h3 class="text-center">
+        There was an error processing your request. Please try again. If the problem persists, please contact a staff
+        member.
+    </h3>
+
+    <audio autoplay loop src="/static/sound/require_interaction.mp3"></audio>
+</div>
+{% endblock %}
+{% block scripts %}
+{{ super() }}
+<script>
+	window.setTimeout(function() {
+		window.location.replace("/");
+	}, 5000);
+</script>
+{% endblock %}
+{% block styles %}
+{{ super() }}
+
+    <style>
+    .circle-danger {
+        margin: 0 auto;
+        width: 256px;
+        text-align: center;
+        height: 256px;
+        font-size: 12em;
+        background: darkred;
+        color: white;
+        padding-top: 0.1em;
+    }
+    </style>
+
+{% endblock %}

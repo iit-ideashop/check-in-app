@@ -1,5 +1,6 @@
 # all the imports
 import os, sys
+
 sys.path.insert(0, os.path.abspath(".."))
 
 import os
@@ -234,6 +235,16 @@ def update_kiosks(location, except_hwid=None):
 @app.teardown_appcontext
 def close_db(error):
 	db_session.remove()
+
+
+@app.errorhandler(500)
+def server_error(error):
+	return render_template("internal_error.html"), 500
+
+
+@app.errorhandler(404)
+def server_error(error):
+	return render_template("internal_error.html"), 404
 
 
 @app.route('/auth', methods=['GET', 'POST'])
@@ -843,4 +854,4 @@ if __name__ == '__main__':
 
 	app.jinja_env.auto_reload = True
 	app.config['TEMPLATES_AUTO_RELOAD'] = True
-	socketio.run(app, host='0.0.0.0', debug=True)
+	socketio.run(app, host='0.0.0.0')

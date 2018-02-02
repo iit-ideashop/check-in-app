@@ -237,13 +237,18 @@ def close_db(error):
 
 
 @app.errorhandler(500)
-def server_error(error):
-	return render_template("internal_error.html"), 500
+def error_500(error):
+	return redirect(url_for('.display_error'))
 
 
 @app.errorhandler(404)
-def server_error(error):
-	return render_template("internal_error.html"), 404
+def error_404(error):
+	return redirect(url_for('.display_error'))
+
+
+@app.route('/error')
+def display_error(error):
+	return render_template("internal_error.html"), 500
 
 
 @app.route('/auth', methods=['GET', 'POST'])
@@ -725,107 +730,111 @@ def register():
 
 @socketio.on('check in')
 def check_in(data):
-	db = db_session()
-	data['card'] = int(data['card'])
-	data['facility'] = int(data['facility'])
-	data['location'] = int(data['location'])
+	try:
+		db = db_session()
+		data['card'] = int(data['card'])
+		data['facility'] = int(data['facility'])
+		data['location'] = int(data['location'])
 
-	server_kiosk = db.query(Kiosk).filter_by(location_id=data['location'], hardware_id=data['hwid']).one_or_none()
+		server_kiosk = db.query(Kiosk).filter_by(location_id=data['location'], hardware_id=data['hwid']).one_or_none()
 
-	resp = ""
+		resp = ""
 
-	#if server_kiosk.token.decode('utf-8') != data['token']:
-	#    emit('err', {'hwid': session['hardware_id'], 'err': 'Token mismatch'})
-	#    emit('go', {'to': '/deauth', 'hwid': session['hardware_id']})
-	#    return "Token mismatch!"
+		#if server_kiosk.token.decode('utf-8') != data['token']:
+		#    emit('err', {'hwid': session['hardware_id'], 'err': 'Token mismatch'})
+		#    emit('go', {'to': '/deauth', 'hwid': session['hardware_id']})
+		#    return "Token mismatch!"
 
-	card = db.query(HawkCard).filter_by(
-		card=data['card'],
-		location_id=data['location']
-	).one_or_none()
+		card = db.query(HawkCard).filter_by(
+			card=data['card'],
+			location_id=data['location']
+		).one_or_none()
 
-	location = db.query(Location).filter_by(
-		id=data['location']
-	).one_or_none()
+		location = db.query(Location).filter_by(
+			id=data['location']
+		).one_or_none()
 
-	if not location:
-		resp = ("Location %d not found" % data['location'])
+		if not location:
+			resp = ("Location %d not found" % data['location'])
 
-	if not card:
-		# check to see if they already have a record
-		il = IITLookup(app.config['IITLOOKUPURL'], app.config['IITLOOKUPUSER'], app.config['IITLOOKUPPASS'])
-		student = il.nameIDByCard(data['card'])
-		sid = int(student['idnumber'].replace('A', ''))
+		if not card:
+			# check to see if they already have a record
+			il = IITLookup(app.config['IITLOOKUPURL'], app.config['IITLOOKUPUSER'], app.config['IITLOOKUPPASS'])
+			student = il.nameIDByCard(data['card'])
+			sid = int(student['idnumber'].replace('A', ''))
 
-		if not student:
-			# user is new and isn't in IIT's database
-			db.add(HawkCard(sid=None, card=data['card'], location_id=location.id))
+			if not student:
+				# user is new and isn't in IIT's database
+				db.add(HawkCard(sid=None, card=data['card'], location_id=location.id))
+				db.commit()
+			elif db.query(User).filter_by(sid=sid).count() > 0:
+				# user exists, has a new card
+				card = HawkCard(sid=sid, card=data['card'], location_id=location.id)
+				db.add(card)
+			else:
+				# first time in lab
+				resp = ("User for card id %d not found" % data['card'])
+				db.add(HawkCard(sid=None, card=data['card'], location_id=location.id))
+
 			db.commit()
-		elif db.query(User).filter_by(sid=sid).count() > 0:
-			# user exists, has a new card
-			card = HawkCard(sid=sid, card=data['card'], location_id=location.id)
-			db.add(card)
+
+		if not card.user:
+			# send to registration page
+			emit('go', {'to': url_for('.register', card_id=data['card']), 'hwid': data['hwid']})
+
 		else:
-			# first time in lab
-			resp = ("User for card id %d not found" % data['card'])
-			db.add(HawkCard(sid=None, card=data['card'], location_id=location.id))
+			lastIn = db.query(Access) \
+				.filter_by(location_id=location.id) \
+				.filter_by(timeOut=None) \
+				.filter_by(sid=card.sid) \
+				.one_or_none()
+			print(lastIn)
+
+			if card.user.type.level < 0:
+				resp = ("User %s (card id %d) tried to sign in at %s but is banned! (id %d, kiosk %d)" % (
+					card.user.name, data['card'], location.name, location.id, data['hwid']
+				))
+				emit('go', {'to': url_for('.banned'), 'hwid': data['hwid']})
+
+			elif lastIn:
+				# user signing out
+				resp = ("User %s (card id %d) signed out at location %s (id %d, kiosk %d)" % (
+					card.user.name, data['card'], location.name, location.id, data['hwid']
+				))
+				# sign user out and send to confirmation page
+				lastIn.timeOut = sa.func.now()
+				emit('go', {'to': url_for('.success', action='checkout', name=card.user.name), 'hwid': data['hwid']})
+				update_kiosks(location.id, except_hwid=data['hwid'])
+
+			elif card.user.waiverSigned:
+				# user signing in
+				resp = ("User %s (card id %d) is cleared for entry at location %s (id %d, kiosk %d)" % (
+					card.user.name, data['card'], location.name, location.id, data['hwid']
+				))
+				# sign user in and send to confirmation page
+				accessEntry = Access(sid=card.sid, timeIn=sa.func.now(), location_id=location.id)
+				db.add(accessEntry)
+				emit('go', {'to': url_for('.success', action='checkin', name=card.user.name), 'hwid': data['hwid']})
+				update_kiosks(location.id, except_hwid=data['hwid'])
+
+			else:
+				# user has account but hasn't signed waiver
+				resp = ("User %s (card id %d) needs to sign waiver at location %s (id %d, kiosk %d)" % (
+					card.user.name, data['card'],
+					location.name, location.id, data['hwid']
+				))
+				# present waiver page
+				emit('go', {'to': url_for('.waiver', sid=card.sid), 'hwid': data['hwid']})
+
+		logEntry = CardScan(card_id=data['card'], time=sa.func.now(), location_id=data['location'])
+		db.add(logEntry)
 
 		db.commit()
-
-	if not card.user:
-		# send to registration page
-		emit('go', {'to': url_for('.register', card_id=data['card']), 'hwid': data['hwid']})
-
-	else:
-		lastIn = db.query(Access) \
-			.filter_by(location_id=location.id) \
-			.filter_by(timeOut=None) \
-			.filter_by(sid=card.sid) \
-			.one_or_none()
-		print(lastIn)
-
-		if card.user.type.level < 0:
-			resp = ("User %s (card id %d) tried to sign in at %s but is banned! (id %d, kiosk %d)" % (
-				card.user.name, data['card'], location.name, location.id, data['hwid']
-			))
-			emit('go', {'to': url_for('.banned'), 'hwid': data['hwid']})
-
-		elif lastIn:
-			# user signing out
-			resp = ("User %s (card id %d) signed out at location %s (id %d, kiosk %d)" % (
-				card.user.name, data['card'], location.name, location.id, data['hwid']
-			))
-			# sign user out and send to confirmation page
-			lastIn.timeOut = sa.func.now()
-			emit('go', {'to': url_for('.success', action='checkout', name=card.user.name), 'hwid': data['hwid']})
-			update_kiosks(location.id, except_hwid=data['hwid'])
-
-		elif card.user.waiverSigned:
-			# user signing in
-			resp = ("User %s (card id %d) is cleared for entry at location %s (id %d, kiosk %d)" % (
-				card.user.name, data['card'], location.name, location.id, data['hwid']
-			))
-			# sign user in and send to confirmation page
-			accessEntry = Access(sid=card.sid, timeIn=sa.func.now(), location_id=location.id)
-			db.add(accessEntry)
-			emit('go', {'to': url_for('.success', action='checkin', name=card.user.name), 'hwid': data['hwid']})
-			update_kiosks(location.id, except_hwid=data['hwid'])
-
-		else:
-			# user has account but hasn't signed waiver
-			resp = ("User %s (card id %d) needs to sign waiver at location %s (id %d, kiosk %d)" % (
-				card.user.name, data['card'],
-				location.name, location.id, data['hwid']
-			))
-			# present waiver page
-			emit('go', {'to': url_for('.waiver', sid=card.sid), 'hwid': data['hwid']})
-
-	logEntry = CardScan(card_id=data['card'], time=sa.func.now(), location_id=data['location'])
-	db.add(logEntry)
-
-	db.commit()
-	print(resp)
-	return resp
+		print(resp)
+		return resp
+	except:
+		emit('go', {'to': url_for('.display_error'), 'hwid': data['hwid']})
+		return abort(500)
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='Idea Shop Check In App')

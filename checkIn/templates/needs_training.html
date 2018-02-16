@@ -1,0 +1,56 @@
+{% extends "layout.html" %}
+{% block data %}
+    <div class="col-md-10" style="margin:auto">
+        <div class="circle-warning img-circle"><i class="glyphicon glyphicon-alert"></i></div>
+        <hr/>
+        <h1 class="text-center">Safety training needed</h1>
+        <h3 class="text-center">
+            {% if 'name' in request.args %}
+            Welcome, {{ request.args.get('name') }}<br />
+            {% endif %}
+            Please contact {{ g.location.name }} staff for safety training.
+        </h3>
+        <a href="{{ url_for('.index') }}" class="btn btn-warning btn-block btn-lg">Continue</a><br />
+    </div>
+    <audio autoplay src="/static/sound/require_interaction.mp3"></audio>
+{% endblock %}
+{% block scripts %}
+    {{ super() }}
+    <script>
+        $(function () {
+            localStorage.debug = 'engine.io-client:socket';
+
+            var socket = io();
+            socket.connect();
+            socket.on('go', function (data) {
+                if (data.hwid === {{ session['hardware_id'] | tojson }}) {
+                    window.location.href = data.to;
+                }
+            });
+            socket.on('scan', function (data) {
+                if (data.hwid === {{ session['hardware_id'] | tojson }}) {
+                    //data.token = {{ session['token'] | tojson }};
+                    data.location = {{ session['location_id'] | tojson }};
+                    socket.emit('check in', data)
+                }
+            });
+        });
+    </script>
+{% endblock %}
+{% block styles %}
+    {{ super() }}
+
+    <style>
+        .circle-warning {
+            margin: 0 auto;
+            width: 256px;
+            text-align: center;
+            height: 256px;
+            font-size: 10em;
+            background: #f0ad4e;
+            color: white;
+            padding-top: 0.30em;
+        }
+    </style>
+
+{% endblock %}

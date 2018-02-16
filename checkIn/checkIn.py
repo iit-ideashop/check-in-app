@@ -426,6 +426,11 @@ def banned():
 	return render_template('banned.html')
 
 
+@app.route('/needs_training', methods=['GET'])
+def needs_training():
+	return render_template('needs_training.html')
+
+
 def _login(request):
 	error = None
 	if request.method == 'POST':
@@ -793,16 +798,16 @@ def check_in(data):
 				.filter_by(timeOut=None) \
 				.filter_by(sid=card.sid) \
 				.one_or_none()
-			print(lastIn)
 
+			# user is banned
 			if card.user.type.level < 0:
 				resp = ("User %s (card id %d) tried to sign in at %s but is banned! (id %d, kiosk %d)" % (
 					card.user.name, data['card'], location.name, location.id, data['hwid']
 				))
 				emit('go', {'to': url_for('.banned'), 'hwid': data['hwid']})
 
+			# user signing out
 			elif lastIn:
-				# user signing out
 				resp = ("User %s (card id %d) signed out at location %s (id %d, kiosk %d)" % (
 					card.user.name, data['card'], location.name, location.id, data['hwid']
 				))
@@ -811,19 +816,38 @@ def check_in(data):
 				emit('go', {'to': url_for('.success', action='checkout', name=card.user.name), 'hwid': data['hwid']})
 				update_kiosks(location.id, except_hwid=data['hwid'])
 
+			# user signing in
 			elif card.user.waiverSigned:
-				# user signing in
+				general_machine = db.query(Machine)\
+					.filter(Machine.name.ilike('General Safety Training'))\
+					.filter_by(location_id=location.id)\
+					.one_or_none()
+
+				general_training = None
+				if general_machine:
+					general_training = db.query(Training)\
+						.filter_by(machine_id=general_machine.id)\
+						.filter_by(trainee_id=card.sid)\
+						.one_or_none()
+
 				resp = ("User %s (card id %d) is cleared for entry at location %s (id %d, kiosk %d)" % (
 					card.user.name, data['card'], location.name, location.id, data['hwid']
 				))
 				# sign user in and send to confirmation page
 				accessEntry = Access(sid=card.sid, timeIn=sa.func.now(), location_id=location.id)
 				db.add(accessEntry)
-				emit('go', {'to': url_for('.success', action='checkin', name=card.user.name), 'hwid': data['hwid']})
+
+				# if user has training or there is no training required, let 'em in
+				if general_training or not general_machine:
+					emit('go', {'to': url_for('.success', action='checkin', name=card.user.name), 'hwid': data['hwid']})
+
+				else:
+					emit('go', {'to': url_for('.needs_training', name=card.user.name), 'hwid': data['hwid']})
+
 				update_kiosks(location.id, except_hwid=data['hwid'])
 
+			# user needs to sign waiver
 			else:
-				# user has account but hasn't signed waiver
 				resp = ("User %s (card id %d) needs to sign waiver at location %s (id %d, kiosk %d)" % (
 					card.user.name, data['card'],
 					location.name, location.id, data['hwid']
@@ -837,7 +861,8 @@ def check_in(data):
 		db.commit()
 		print(resp)
 		return resp
-	except:
+	except Exception as e:
+		print(e)
 		emit('go', {'to': url_for('.display_error'), 'hwid': data['hwid']})
 		return 'Internal error.'
 

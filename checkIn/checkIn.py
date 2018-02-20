@@ -601,6 +601,15 @@ def admin_add_training():
 	return redirect('/admin/lookup?sid=' + str(request.form['student_id']))
 
 
+@app.route('/admin/training/group_add', methods=['GET'])
+def admin_group_add_training():
+	if not g.admin or g.admin.location_id != session['location_id']:
+		return redirect('/')
+	db = db_session()
+	machines = db.query(Machine).filter_by(location_id=g.admin.location_id).all()
+	return render_template('admin/group_training.html', machines=machines)
+
+
 @app.route('/admin/training/remove')
 def admin_remove_training():
 	if not g.admin or g.admin.location_id != session['location_id']:

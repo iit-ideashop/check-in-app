@@ -1,0 +1,51 @@
+{% extends 'layout.html' %}
+{% block data %}
+<div class="container">
+    <div class="row">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <div class="input-group">
+                    <h5>
+                        <a href="/admin" class="btn btn-primary"><i class="glyphicon glyphicon-chevron-left"></i></a>&nbsp;&nbsp;
+                        Group Safety Training
+                    </h5>
+                </div>
+            </div>
+            <div class="panel-body">
+                <div class="alert alert-success">
+                    Adding trainings as {{ g.admin.name }}.
+                    <a href="/admin" class="btn btn-success btn-xs pull-right">Done</a>
+                </div>
+                <form>
+                    <select id="training_sel" class="form-control">
+                        {% for machine in machines %}
+                            <option value="{{ machine.id }}">{{ machine.name }}</option>
+                        {% endfor %}
+                    </select>
+                </form>
+            </div>
+            <div class="panel-footer">
+                <strong id="status"></strong>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+    {{ super() }}
+    <script>
+    var socket = io();
+    socket.connect();
+
+    socket.on('scan', function (data) {
+        if (data.hwid === {{ session['hardware_id'] | tojson }}) {
+            $.post('/admin/training/add', {
+                'student_id': data.sid,
+                'machine': $('#training_sel').val()
+            }, function(resp) {
+                $('#status').html(data.name)
+            });
+        }
+    });
+    </script>
+{% endblock %}

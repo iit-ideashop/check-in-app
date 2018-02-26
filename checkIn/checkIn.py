@@ -629,32 +629,38 @@ def admin_remove_training():
 
 @app.route('/admin/locations')
 def admin_locations():
-	pass
+	if not g.admin or g.admin.location_id != session['location_id']:
+		return redirect('/')
 
 
 @app.route('/admin/locations/remove')
 def admin_remove_location():
-	pass
+	if not g.admin or g.admin.location_id != session['location_id']:
+		return redirect('/')
 
 
 @app.route('/admin/locations/update')
 def admin_update_location():
-	pass
+	if not g.admin or g.admin.location_id != session['location_id']:
+		return redirect('/')
 
 
 @app.route('/admin/machines')
 def admin_machines():
-	pass
+	if not g.admin or g.admin.location_id != session['location_id']:
+		return redirect('/')
 
 
 @app.route('/admin/machines/remove')
 def admin_remove_machine():
-	pass
+	if not g.admin or g.admin.location_id != session['location_id']:
+		return redirect('/')
 
 
 @app.route('/admin/machines/update')
 def admin_update_machine():
-	pass
+	if not g.admin or g.admin.location_id != session['location_id']:
+		return redirect('/')
 
 
 @app.route('/admin/type/set')
@@ -917,15 +923,15 @@ if __name__ == '__main__':
 	args = parser.parse_args()
 
 	if args.admin:
-		db = db_session()
-		location = db.query(Location).filter_by(id=args.location).one_or_none()
+		_db = db_session()
+		location = _db.query(Location).filter_by(id=args.location).one_or_none()
 		if not location:
 			print('Location %d does not exist!' % args.location)
 			exit(404)
 
 		if args.secret:
 			location.set_secret(args.secret)
-			db.commit()
+			_db.commit()
 			print('Secret for %s (%d) updated.' % (location.name, location.id))
 			exit(0)
 		else:

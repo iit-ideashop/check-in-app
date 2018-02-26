@@ -778,10 +778,12 @@ def check_in(data):
 
 		if not card:
 			# check to see if they already have a record
-			il = IITLookup(app.config['IITLOOKUPURL'], app.config['IITLOOKUPUSER'], app.config['IITLOOKUPPASS'])
-			student = il.nameIDByCard(data['card'])
-			sid = int(student['idnumber'].replace('A', ''))
-
+			try:
+				il = IITLookup(app.config['IITLOOKUPURL'], app.config['IITLOOKUPUSER'], app.config['IITLOOKUPPASS'])
+				student = il.nameIDByCard(data['card'])
+				sid = int(student['idnumber'].replace('A', ''))
+			except Exception:
+				print("ERROR: IIT Lookup is offline.")
 			if not student:
 				# user is new and isn't in IIT's database
 				db.add(HawkCard(sid=None, card=data['card'], location_id=location.id))

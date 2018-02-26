@@ -699,7 +699,22 @@ def waiver():
 			user.waiverSigned = sa.func.now()
 		db.commit()
 		update_kiosks(session['location_id'], except_hwid=session['hardware_id'])
-		return redirect('/success/checkin')
+
+		db.query(Training).filter_by(trainee_id=user.sid)
+
+		general_machine = db.query(Machine) \
+			.filter(Machine.name.ilike('General Safety Training')) \
+			.filter_by(location_id=session['location_id']) \
+			.one_or_none()
+
+		general_training = None
+		if general_machine:
+			general_training = db.query(Training) \
+				.filter_by(machine_id=general_machine.id) \
+				.filter_by(trainee_id=user.sid) \
+				.one_or_none()
+
+		return redirect('/success/checkin') if general_training else redirect('/needs_training')
 	else:
 		return redirect('/')
 

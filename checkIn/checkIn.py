@@ -683,7 +683,23 @@ def admin_set_type():
 @app.route('/waiver', methods=['GET'])
 def waiver():
 	if not request.args.get('agreed'):
-		return render_template('waiver.html', sid=request.args.get('sid'))
+		db = db_session()
+
+		general_machine = db.query(Machine) \
+			.filter(Machine.name.ilike('General Safety Training')) \
+			.filter_by(location_id=session['location_id']) \
+			.one_or_none()
+
+		general_training = None
+		if general_machine:
+			general_training = db.query(Training) \
+				.filter_by(machine_id=general_machine.id) \
+				.filter_by(trainee_id=request.args.get('sid')) \
+				.one_or_none()
+
+		return render_template('waiver.html',
+							   sid=request.args.get('sid'),
+							   show_training_warning=general_training is None)
 	elif request.args.get('agreed') == 'true':
 		db = db_session()
 		db.add(Access(

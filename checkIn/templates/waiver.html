@@ -90,12 +90,14 @@
                     </button>
                 </div>
                 <div class="modal-body">
+                    {% if show_training_warning %}
                     <div class="alert alert-warning text-center">
                         <strong>
                             After accepting the user agreement, please talk to an Idea Shop staff member for safety
                             training.
                         </strong>
                     </div>
+                    {% endif %}
 
                     By entering any text in the box below, I understand that I agree to the Idea Shop User Agreement
                     each time I enter the Idea Shop and that this agreement is subject to change without notice.

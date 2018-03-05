@@ -876,7 +876,7 @@ def check_in(data):
 					general_training = db.query(Training)\
 						.filter_by(machine_id=general_machine.id)\
 						.filter_by(trainee_id=card.sid)\
-						.one_or_none()
+						.count()
 
 				resp = ("User %s (card id %d) is cleared for entry at location %s (id %d, kiosk %d)" % (
 					card.user.name, data['card'], location.name, location.id, data['hwid']
@@ -886,7 +886,7 @@ def check_in(data):
 				db.add(accessEntry)
 
 				# if user has training or there is no training required, let 'em in
-				if general_training or not general_machine:
+				if not general_machine or general_training > 0:
 					emit('go', {'to': url_for('.success', action='checkin', name=card.user.name), 'hwid': data['hwid']})
 
 				else:

@@ -499,6 +499,11 @@ def admin_change_pin():
 		return render_template('admin/change_pin.html')
 	else:
 		db = db_session()
+
+		# validate pin
+		if request.form['pin'] == '' or request.form['pin'] is None:
+			return render_template('admin/change_pin.html', error='Your PIN can not be empty!')
+
 		user = db.query(User).filter_by(sid=session['admin'], location_id=session['location_id']).one_or_none()
 		user.set_pin(request.form['pin'])
 		db.commit()

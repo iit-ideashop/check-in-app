@@ -1,11 +1,11 @@
 {% extends "layout.html" %}
 
 {% block data %}
-    <audio autoplay loop src="/static/sound/require_interaction.mp3"></audio>
+    <audio autoplay loop src="/static/sound/require_interaction.mp3" class="alertAudio"></audio>
 
     <!--<div class="panel panel-default">
         <div class="panel-heading text-center"><strong>Idea Shop User Agreement</strong></div>-->
-    <div class="container">
+    <div class="container" onclick="stopAudio('alertAudio')">
         <div class="alert alert-danger text-center">
             <strong>Any persons wishing to use equipment or perform tasks in the Idea Shop must agree to this User
                 Agreement.<br/>

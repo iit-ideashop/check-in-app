@@ -9,6 +9,7 @@ setup(
             'flask-bootstrap',
             'flask-socketio',
             'sqlalchemy',
-            'pysimplesoap'
+            'pysimplesoap',
+            'zerorpc'
             ],
 )

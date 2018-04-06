@@ -153,6 +153,7 @@
     <script>
         $(function () {
             $("#sigField").keyboard({initCaps: true});
+            $("body").click(function() { stopAudio("alertAudio"); });
 
             localStorage.debug = 'engine.io-client:socket';
 

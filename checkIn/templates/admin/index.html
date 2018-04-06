@@ -9,6 +9,9 @@
         <a href="/admin/locations" class="btn btn-lg btn-default btn-block">Manage locations</a>
         <a href="/admin/machines" class="btn btn-lg btn-default btn-block">Manage machines</a>
     {% endif %}
+    {% if g.location.announcer %}
+        <a href="/admin/announcer" class="btn btn-lg btn-default btn-block">Make announcements</a>
+    {% endif %}
     <a href="/admin/clear_lab" class="btn btn-lg btn-danger btn-block">Clear lab</a>
     <hr />
     <a href="/admin/change_pin" class="btn btn-lg btn-default btn-block">Change PIN</a>

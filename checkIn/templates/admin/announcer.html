@@ -1,0 +1,81 @@
+{% extends 'layout.html' %}
+
+{% block scripts %}
+    {{ super() }}
+    <script src="/static/js/bootstrap-datetimepicker.js"></script>
+    <script>
+    $(function() {
+        $(".form-time").val('');
+        $(".form-time").datetimepicker({
+            format: 'H:ii P',
+            showMeridian: true,
+            startView: 1,
+            autoclose: true
+        });
+
+        $(".keyboard").keyboard();
+    });
+    </script>
+{% endblock %}
+
+{% block styles %}
+    {{ super() }}
+    <link rel="stylesheet" href="/static/css/bootstrap-datetimepicker.min.css" />
+{% endblock %}
+
+{% block data %}
+<div class="container">
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <a href="/admin" class="btn btn-primary"><i class="glyphicon glyphicon-chevron-left"></i></a>
+        </div>
+        <div class="panel-body">
+            <h3>Testing</h3>
+            <a href="/admin/announcer/test" class="btn btn-success btn-block">Play test announcement</a>
+            <hr />
+            <h3>Forbid power tool use</h3>
+            <form method="post" action="/admin/announcer/power_tool">
+                <div class="input-group">
+                    <div class="input-group-addon">End at</div>
+                    <input type="text" name="endtime" class="form-control form-time" data-date-format="HH:ii P" value="" />
+                    <div class="input-group-btn">
+                        <input type="submit" class="btn btn-success btn-block" value="Start" name="endtimesub" />
+                    </div>
+                </div>
+                <br />
+                <!--<div class="input-group">
+                    <div class="input-group-addon">Or in</div>
+                    <input type="tel" name="endmins" class="form-control keyboard" data-date-format="HH:ii P" value="" />
+                    <div class="input-group-addon">minutes</div>
+                    <div class="input-group-btn">
+                        <input type="submit" class="btn btn-success btn-block" value="Start" name="endminssub" />
+                    </div>
+                </div>-->
+            </form>
+            <a class="btn btn-default btn-block" href="/admin/announcer/cancel_power_tool">Cancel prohibition</a>
+            <hr />
+            <h3>Emergency evacuation</h3>
+            <form method="post" action="/admin/announcer/evac">
+                <div class="input-group">
+                    <label>
+                        <input type="checkbox" name="emergency" />
+                        Use siren
+                    </label>
+                </div>
+                <br />
+                <div class="input-group">
+                    <label>
+                        <input type="checkbox" name="emergency_exit" />
+                        Use emergency exits
+                    </label>
+                </div>
+                <br />
+                <input type="submit" value="Start alarm" class="btn btn-danger btn-block" />
+                <br />
+                <a href="/admin/announcer/cancel_evac" class="btn btn-default btn-block">Cancel alarm</a>
+            </form>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

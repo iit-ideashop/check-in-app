@@ -7,6 +7,7 @@ import hashlib
 import hmac
 import random
 import argparse
+import zerorpc
 from flask import Flask, request, session, g, redirect, url_for, render_template, abort
 from flask_bootstrap import Bootstrap
 from flask_socketio import SocketIO, emit
@@ -38,6 +39,7 @@ class Location(Base):
 	name = sa.Column(sa.String(length=50), nullable=False)
 	secret = sa.Column(sa.Binary(length=16), nullable=False)
 	salt = sa.Column(sa.Binary(length=16), nullable=False)
+	announcer = sa.Column(sa.String(length=50), nullable=True)
 
 	def set_secret(self, secret):
 		self.salt = os.urandom(16)
@@ -510,17 +512,6 @@ def admin_change_pin():
 		return redirect('/admin')
 
 
-@app.route('/admin/clear_lab', methods=['GET'])
-def admin_clear_lab():
-	if not g.admin or g.admin.location_id != session['location_id']:
-		return redirect('/admin/login')
-
-	db = db_session()
-	db.query(Access).filter_by(timeOut=None).update({"timeOut": sa.func.now()}, synchronize_session=False)
-	db.commit()
-	session['admin'] = None
-	return redirect('/success/checkout')
-
 # Admin flow
 @app.route('/admin', methods=['GET'])
 def admin_dash():
@@ -590,6 +581,18 @@ def admin_clear_waiver():
 	user.waiverSigned = None
 	db.commit()
 	return redirect('/admin/lookup?sid=' + str(user.sid))
+
+
+@app.route('/admin/clear_lab', methods=['GET'])
+def admin_clear_lab():
+	if not g.admin or g.admin.location_id != session['location_id']:
+		return redirect('/admin/login')
+
+	db = db_session()
+	db.query(Access).filter_by(timeOut=None).update({"timeOut": sa.func.now()}, synchronize_session=False)
+	db.commit()
+	session['admin'] = None
+	return redirect('/success/checkout')
 
 
 @app.route('/admin/training/add', methods=['POST'])
@@ -691,6 +694,78 @@ def admin_set_type():
 	return redirect('/admin/lookup?sid=' + request.args['sid'])
 
 
+# Automatic announcer control
+@app.route('/admin/announcer')
+def admin_announcer():
+	if not g.admin or g.admin.location_id != session['location_id']:
+		return redirect('/')
+	return render_template("/admin/announcer.html")
+
+
+@app.route('/admin/announcer/test')
+def admin_announcer_test():
+	if not g.admin or g.admin.location_id != session['location_id']:
+		return redirect('/')
+	announcer = zerorpc.Client()
+	announcer.connect(g.location.announcer)
+	announcer.test()
+	return redirect('/admin/announcer')
+
+
+@app.route('/admin/announcer/power_tool', methods=['POST'])
+def admin_announcer_power_tool():
+	if not g.admin or g.admin.location_id != session['location_id']:
+		return redirect('/')
+	announcer = zerorpc.Client()
+	announcer.connect(g.location.announcer)
+
+	if request.form.get('endtimesub'):
+		timestr = request.form['endtime']
+		h = int(timestr.split(':')[0])
+		m = int(timestr.split(':')[1].split(' ')[0])
+		am = timestr.split(':')[1].split(' ')[1] == 'AM'
+		announcer.tools_prohibited(h, m, am)
+		return redirect('/admin/announcer')
+	#elif request.form.get('endminssub'):
+	#	announcer.tools_prohibited_rel(int(request.form['endmins']))
+	#	return redirect('/admin/announcer')
+	else:
+		return abort(500)
+
+
+@app.route('/admin/announcer/cancel_power_tool')
+def admin_announcer_cancel_power_tool():
+	if not g.admin or g.admin.location_id != session['location_id']:
+		return redirect('/')
+	announcer = zerorpc.Client()
+	announcer.connect(g.location.announcer)
+	announcer.cancel_tools_prohibited()
+	return redirect('/admin/announcer')
+
+
+@app.route('/admin/announcer/evac', methods=['POST'])
+def admin_announcer_evac():
+	if not g.admin or g.admin.location_id != session['location_id']:
+		return redirect('/')
+	announcer = zerorpc.Client()
+	announcer.connect(g.location.announcer)
+	emergency = bool(request.form.get('emergency'))
+	emergency_exit = bool(request.form.get('emergency_exit'))
+	announcer.start_evac(emergency, emergency_exit)
+	return redirect('/admin/announcer')
+
+
+@app.route('/admin/announcer/cancel_evac')
+def admin_announcer_cancel_evac():
+	if not g.admin or g.admin.location_id != session['location_id']:
+		return redirect('/')
+	announcer = zerorpc.Client()
+	announcer.connect(g.location.announcer)
+	announcer.stop_evac()
+	return redirect('/admin/announcer')
+
+
+# Card tap flow
 @app.route('/waiver', methods=['GET'])
 def waiver():
 	if not request.args.get('agreed'):

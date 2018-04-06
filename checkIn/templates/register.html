@@ -2,7 +2,7 @@
 
 {% block data %}
 <audio autoplay loop src="/static/sound/require_interaction.mp3" class="alertAudio"></audio>
-<div class="container" onclick="stopAudio('alertAudio')">
+<div class="container">
     <h1>Please verify the information below.</h1>
     <form action="/register" method="post">
         <div class="form-group form-group-lg row">
@@ -42,6 +42,7 @@
         $(function() {
             $("#sid").keyboard();
             $("#name").keyboard({initCaps: true});
+            $("body").click(function() { stopAudio("alertAudio"); });
 
             localStorage.debug = 'engine.io-client:socket';
 

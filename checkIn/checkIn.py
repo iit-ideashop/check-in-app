@@ -337,6 +337,9 @@ def deauth():
 
 @app.route('/')
 def root():
+	if 'admin' in session:
+		del session['admin']
+
 	return render_template('index.html')
 
 

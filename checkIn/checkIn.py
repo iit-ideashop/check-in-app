@@ -639,6 +639,21 @@ def admin_remove_training():
 def admin_locations():
 	if not g.admin or g.admin.location_id != session['location_id']:
 		return redirect('/')
+	db = db_session()
+	locations = db.query(Location).all()
+
+	return render_template("/admin/locations.html", locations=locations)
+
+
+@app.route('/admin/locations/<int:id>')
+def admin_location(id):
+	if not g.admin or g.admin.location_id != session['location_id']:
+		return redirect('/')
+	db = db_session()
+	location = db.query(Location).get(id)
+	machines = db.query(Machine).filter_by(location_id=id)
+
+	return render_template("/admin/location.html", location=location, machines=machines)
 
 
 @app.route('/admin/locations/remove')

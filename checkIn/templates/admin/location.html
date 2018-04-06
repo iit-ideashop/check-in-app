@@ -1,0 +1,35 @@
+{% extends "layout.html" %}
+{% block data %}
+<div class="container">
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <a href="/admin/locations" class="btn btn-primary"><i class="glyphicon glyphicon-chevron-left"></i></a>
+        </div>
+        <ul class="list-group">
+            <li class="list-group-item">
+                <h1>{{ location.name }} <small>ID {{ location.id }}</small></h1>
+            </li>
+            <li class="list-group-item">
+                <h3>Machines</h3>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for machine in machines %}
+                            <tr>
+                                <td><strong>{{ machine.id }}</strong></td>
+                                <td>{{ machine.name }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </li>
+        </ul>
+    </div>
+</div>
+
+{% endblock %}

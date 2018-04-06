@@ -1,8 +1,8 @@
 {% extends "layout.html" %}
 
 {% block data %}
-<audio autoplay loop src="/static/sound/require_interaction.mp3"></audio>
-<div class="container">
+<audio autoplay loop src="/static/sound/require_interaction.mp3" class="alertAudio"></audio>
+<div class="container" onclick="stopAudio('alertAudio')">
     <h1>Please verify the information below.</h1>
     <form action="/register" method="post">
         <div class="form-group form-group-lg row">

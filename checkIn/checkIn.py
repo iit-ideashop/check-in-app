@@ -858,7 +858,7 @@ def register():
 								   name=request.form['name'])
 		db = db_session()
 
-		existing_user = db.query(User).get(request.form['sid'], session['location_id'])
+		existing_user = db.query(User).get((request.form['sid'], session['location_id']))
 		if not existing_user:
 			# create a new user to associate the hawkcard with
 			newtype = db.query(Type) \
@@ -921,7 +921,7 @@ def check_in(data):
 				# user is new and isn't in IIT's database
 				db.add(HawkCard(sid=None, card=data['card'], location_id=location.id))
 				db.commit()
-			elif db.query(User).get(sid, location.id).count() > 0:
+			elif db.query(User).get((sid, location.id)).count() > 0:
 				# user exists, has a new card
 				card = HawkCard(sid=sid, card=data['card'], location_id=location.id)
 				db.add(card)

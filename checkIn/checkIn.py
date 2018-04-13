@@ -239,14 +239,20 @@ def close_db(error):
 	db_session.remove()
 
 
+@app.errorhandler(Exception)
+def exception_handler(error):
+	app.logger.error(error, exc_info=True)
+	return render_template("internal_error.html"), 500
+
+
 @app.errorhandler(500)
 def error_500(error):
-	return redirect(url_for('.display_error'))
+	return render_template("internal_error.html"), 500
 
 
 @app.errorhandler(404)
 def error_404(error):
-	return redirect(url_for('.display_error'))
+	return render_template("internal_error.html"), 500
 
 
 @app.route('/error')
@@ -833,7 +839,7 @@ def register():
 		sid = ""
 		# try:
 		il = IITLookup(app.config['IITLOOKUPURL'], app.config['IITLOOKUPUSER'], app.config['IITLOOKUPPASS'])
-		resp = il.nameIDByCard(request.args.get('card_id'))
+		resp = il.nameIDByCard(card_id)
 		# except:
 		#   print(sys.exc_info()[0])
 		if resp:

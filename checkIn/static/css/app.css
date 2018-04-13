@@ -1,0 +1,20 @@
+html {
+    height: 100vh;
+}
+
+#sidebar {
+    margin-top: auto;
+    margin-bottom: auto;
+    height: 90vh;
+    overflow-y: scroll;
+    overflow-x: hidden;
+}
+
+#content {
+    margin-top: auto;
+    margin-bottom: auto;
+    overflow-y: scroll;
+    overflow-x: hidden;
+    display: flex;
+    height: 90vh;
+}

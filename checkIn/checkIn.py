@@ -999,7 +999,7 @@ def check_in(data):
 		print(resp)
 		return resp
 	except Exception as e:
-		print(e)
+		app.logger.error(e, exc_info=True)
 		emit('go', {'to': url_for('.display_error'), 'hwid': data['hwid']})
 		return 'Internal error.'
 

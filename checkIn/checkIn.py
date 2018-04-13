@@ -805,7 +805,8 @@ def waiver():
 			timeOut=None
 		))
 		user = db.query(User) \
-			.filter_by(sid=request.args.get('sid')) \
+			.filter_by(sid=request.args.get('sid'),
+					   location_id=session['location_id']) \
 			.one_or_none()
 		if user:
 			user.waiverSigned = sa.func.now()
@@ -857,7 +858,7 @@ def register():
 								   name=request.form['name'])
 		db = db_session()
 
-		existing_user = db.query(User).get(request.form['sid'])
+		existing_user = db.query(User).get(request.form['sid'], session['location_id'])
 		if not existing_user:
 			# create a new user to associate the hawkcard with
 			newtype = db.query(Type) \
@@ -920,7 +921,7 @@ def check_in(data):
 				# user is new and isn't in IIT's database
 				db.add(HawkCard(sid=None, card=data['card'], location_id=location.id))
 				db.commit()
-			elif db.query(User).filter_by(sid=sid).count() > 0:
+			elif db.query(User).get(sid, location.id).count() > 0:
 				# user exists, has a new card
 				card = HawkCard(sid=sid, card=data['card'], location_id=location.id)
 				db.add(card)

@@ -351,7 +351,7 @@ def root():
 
 @app.route('/card_read/<int:hwid>', methods=['GET', 'POST'])
 def card_read(hwid):
-	resp = 'Read success: Facility %s, card %s' % (request.form['facility'], request.form['cardnum'])
+	resp = 'Read success from HWID %d: Facility %s, card %s' % (hwid, request.form['facility'], request.form['cardnum'])
 	db = db_session()
 	kiosk = db.query(Kiosk).filter_by(hardware_id=hwid).one_or_none()
 	if not kiosk:
@@ -644,6 +644,7 @@ def admin_remove_training():
 	return redirect('/admin/lookup?sid=' + str(sid))
 
 
+# TODO: implement location & machine UI
 @app.route('/admin/locations')
 def admin_locations():
 	if not g.admin or g.admin.location_id != session['location_id']:
@@ -855,17 +856,22 @@ def register():
 			return render_template('register.html', sid=request.form['sid'], card_id=request.form['card_id'],
 								   name=request.form['name'])
 		db = db_session()
-		newtype = db.query(Type) \
-			.filter_by(location_id=session['location_id']) \
-			.filter_by(level=0) \
-			.one_or_none()
 
-		db.add(User(sid=request.form['sid'],
-					name=request.form['name'].title(),
-					type_id=newtype.id,
-					waiverSigned=None,
-					location_id=session['location_id']))
+		existing_user = db.query(User).get(request.form['sid'])
+		if not existing_user:
+			# create a new user to associate the hawkcard with
+			newtype = db.query(Type) \
+				.filter_by(location_id=session['location_id']) \
+				.filter_by(level=0) \
+				.one_or_none()
 
+			db.add(User(sid=request.form['sid'],
+						name=request.form['name'].title(),
+						type_id=newtype.id,
+						waiverSigned=None,
+						location_id=session['location_id']))
+
+		# associate the hawkcard with the user that was either just created or already exists
 		card = db.query(HawkCard).filter_by(card=request.form['card_id']).one_or_none()
 		card.sid = request.form['sid']
 

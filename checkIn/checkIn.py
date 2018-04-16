@@ -911,6 +911,8 @@ def check_in(data):
 
 		if not card:
 			# check to see if they already have a record
+			student = None
+			sid = None
 			try:
 				il = IITLookup(app.config['IITLOOKUPURL'], app.config['IITLOOKUPUSER'], app.config['IITLOOKUPPASS'])
 				student = il.nameIDByCard(data['card'])
@@ -919,20 +921,24 @@ def check_in(data):
 				print("ERROR: IIT Lookup is offline.")
 			if not student:
 				# user is new and isn't in IIT's database
-				db.add(HawkCard(sid=None, card=data['card'], location_id=location.id))
+				card = HawkCard(sid=None, card=data['card'], location_id=location.id)
+				db.add(card)
 				db.commit()
 			elif db.query(User).get((sid, location.id)).count() > 0:
 				# user exists, has a new card
 				card = HawkCard(sid=sid, card=data['card'], location_id=location.id)
 				db.add(card)
+				db.commit()
 			else:
 				# first time in lab
 				resp = ("User for card id %d not found" % data['card'])
-				db.add(HawkCard(sid=None, card=data['card'], location_id=location.id))
+				card = HawkCard(sid=None, card=data['card'], location_id=location.id)
+				db.add(card)
+				db.commit()
 
 			db.commit()
 
-		if not card.user:
+		if not card or not card.user:
 			# send to registration page
 			emit('go', {'to': url_for('.register', card_id=data['card']), 'hwid': data['hwid']})
 

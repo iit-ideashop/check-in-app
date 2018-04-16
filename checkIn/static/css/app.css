@@ -1,20 +1,24 @@
-html {
-    height: 100vh;
-}
-
 #sidebar {
     margin-top: auto;
     margin-bottom: auto;
-    height: 90vh;
     overflow-y: scroll;
     overflow-x: hidden;
+    height: 92vh;
 }
 
 #content {
-    margin-top: auto;
-    margin-bottom: auto;
+    margin: auto;
     overflow-y: scroll;
     overflow-x: hidden;
+    height: 92vh;
     display: flex;
-    height: 90vh;
+    align-items: center;
+}
+
+#page {
+    overflow: hidden;
+}
+
+html {
+    height: 100vh;
 }

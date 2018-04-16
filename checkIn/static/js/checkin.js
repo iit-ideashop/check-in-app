@@ -7,3 +7,6 @@ function stopAudio(className) {
         }
     }
 }
+
+$(function() {
+});

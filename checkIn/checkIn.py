@@ -924,7 +924,7 @@ def check_in(data):
 				card = HawkCard(sid=None, card=data['card'], location_id=location.id)
 				db.add(card)
 				db.commit()
-			elif db.query(User).get((sid, location.id)).count() > 0:
+			elif db.query(User).get((sid, location.id)):
 				# user exists, has a new card
 				card = HawkCard(sid=sid, card=data['card'], location_id=location.id)
 				db.add(card)

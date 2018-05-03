@@ -541,13 +541,16 @@ def admin_lookup():
 	sid = request.args.get('sid')
 	name = request.args.get('name')
 	card_id = request.args.get('card')
-	if sid or name or card_id:
+	location_id = request.args.get('location')
+	if sid or name or card_id or location_id:
 		if sid and sid != '':
 			query = query.filter_by(sid=sid)
 		if name and name != '':
 			query = query.filter(User.name.ilike(name + '%'))
 		if card_id:
 			query = query.filter(User.cards.any(HawkCard.card == card_id))
+		if location_id:
+			query = query.filter(User.location_id == location_id)
 	else:
 		query = query.filter(User.access.any(Access.timeOut == None))
 
@@ -662,8 +665,12 @@ def admin_location(id):
 	db = db_session()
 	location = db.query(Location).get(id)
 	machines = db.query(Machine).filter_by(location_id=id)
+	staff = db.query(User)\
+		.join(User.type)\
+		.filter(User.location_id == id, Type.level > 0)\
+		.order_by(Type.level.desc())
 
-	return render_template("/admin/location.html", location=location, machines=machines)
+	return render_template("/admin/location.html", location=location, machines=machines, staff=staff)
 
 
 @app.route('/admin/locations/remove')

@@ -28,6 +28,29 @@
                     </tbody>
                 </table>
             </li>
+            <li class="list-group-item">
+                <h3>Staff</h3>
+                <table class="table">
+                    <tbody>
+                    {% for user in staff %}
+                        <tr>
+                        <td>A{{ user.sid }}</td>
+                        <td>{{ user.name }}</td>
+                        <td>
+                            <div class="label label-info" style="display: inline-block; width: 3em;">{{ user.type.level }}</div>
+                            {{ user.type.name }}
+                        </td>
+                        <td>
+                            <a href="/admin/lookup?sid={{ user.sid }}&location={{ location.id }}" class="btn btn-xs btn-default">
+                                <i class="glyphicon glyphicon-chevron-right"></i>
+                            </a>
+                        </td>
+                        </tr>
+
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </li>
         </ul>
     </div>
 </div>

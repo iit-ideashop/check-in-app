@@ -1,9 +1,7 @@
 # Idea Shop Check-in App
 A project of the Idea Shop at the Illinois Institute of Technology, this
 web app provides a sign-in system to track and manage usage of our
-machine shop. It's still very much in progress -- we plan to add support
-for multiple locations, multiple terminals for a single location, and
-general improvements to portability coming months.
+machine shop.
 
 ## Getting started
 We haven't yet figured out an optimal deployment procedure, those instructions

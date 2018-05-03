@@ -1,5 +1,8 @@
 {% extends 'layout.html' %}
 {% block data %}
+<audio src="/static/sound/check_in.mp3" id="sound-ok" hidden></audio>
+<audio src="/static/sound/require_interaction.mp3" id="sound-unregistered" hidden></audio>
+
 <div class="container">
     <div class="row">
         <div class="panel panel-default">
@@ -34,18 +37,60 @@
 {% block scripts %}
     {{ super() }}
     <script>
-    var socket = io();
-    socket.connect();
+    let socket = io();
+    let connected = false;
+    let trained = [];
 
-    socket.on('scan', function (data) {
-        if (data.hwid === {{ session['hardware_id'] | tojson }}) {
-            $.post('/admin/training/add', {
-                'student_id': data.sid,
-                'machine': $('#training_sel').val()
-            }, function(resp) {
-                $('#status').html(data.name)
+    function updateTrained() {
+        let status = $('#status');
+        if (trained.length === 0) {
+            if (connected) {
+                status.html('Ready');
+            } else {
+                status.html('Please wait...');
+            }
+        } else {
+            status.html('');
+            trained.forEach((value, index) => {
+                status.append(value);
+                if (index !== trained.length - 1) {
+                    status.append(', ')
+                }
             });
         }
+    }
+
+    socket.connect();
+
+    socket.on('connect', function () {
+        connected = true;
+        updateTrained();
+    });
+
+    socket.on('scan', function (data) {
+        console.log(JSON.stringify(data));
+        if (data.hwid === {{ session['hardware_id'] | tojson }}) {
+            if (typeof(data.sid) !== "undefined" && data.sid !== null)
+                $.post('/admin/training/add', {
+                    'student_id': data.sid,
+                    'machine': parseInt($('#training_sel').val())
+                }, function(resp) {
+                    document.getElementById('sound-ok').play();
+                    trained.push(data.name);
+                    updateTrained();
+                });
+            else {
+                document.getElementById('sound-unregistered').play();
+                $('#status').html('This student is not registered!');
+            }
+        }
+    });
+
+    $(function() {
+        $('#training_sel').change(function() {
+            trained = [];
+            updateTrained();
+        });
     });
     </script>
 {% endblock %}

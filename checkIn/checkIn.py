@@ -239,14 +239,20 @@ def close_db(error):
 	db_session.remove()
 
 
+@app.errorhandler(Exception)
+def exception_handler(error):
+	app.logger.error(error, exc_info=True)
+	return render_template("internal_error.html"), 500
+
+
 @app.errorhandler(500)
 def error_500(error):
-	return redirect(url_for('.display_error'))
+	return render_template("internal_error.html"), 500
 
 
 @app.errorhandler(404)
 def error_404(error):
-	return redirect(url_for('.display_error'))
+	return render_template("internal_error.html"), 500
 
 
 @app.route('/error')
@@ -337,12 +343,15 @@ def deauth():
 
 @app.route('/')
 def root():
+	if 'admin' in session:
+		del session['admin']
+
 	return render_template('index.html')
 
 
 @app.route('/card_read/<int:hwid>', methods=['GET', 'POST'])
 def card_read(hwid):
-	resp = 'Read success: Facility %s, card %s' % (request.form['facility'], request.form['cardnum'])
+	resp = 'Read success from HWID %d: Facility %s, card %s' % (hwid, request.form['facility'], request.form['cardnum'])
 	db = db_session()
 	kiosk = db.query(Kiosk).filter_by(hardware_id=hwid).one_or_none()
 	if not kiosk:
@@ -635,6 +644,7 @@ def admin_remove_training():
 	return redirect('/admin/lookup?sid=' + str(sid))
 
 
+# TODO: implement location & machine UI
 @app.route('/admin/locations')
 def admin_locations():
 	if not g.admin or g.admin.location_id != session['location_id']:
@@ -810,7 +820,8 @@ def waiver():
 			timeOut=None
 		))
 		user = db.query(User) \
-			.filter_by(sid=request.args.get('sid')) \
+			.filter_by(sid=request.args.get('sid'),
+					   location_id=session['location_id']) \
 			.one_or_none()
 		if user:
 			user.waiverSigned = sa.func.now()
@@ -845,7 +856,7 @@ def register():
 		sid = ""
 		# try:
 		il = IITLookup(app.config['IITLOOKUPURL'], app.config['IITLOOKUPUSER'], app.config['IITLOOKUPPASS'])
-		resp = il.nameIDByCard(request.args.get('card_id'))
+		resp = il.nameIDByCard(card_id)
 		# except:
 		#   print(sys.exc_info()[0])
 		if resp:
@@ -861,17 +872,22 @@ def register():
 			return render_template('register.html', sid=request.form['sid'], card_id=request.form['card_id'],
 								   name=request.form['name'])
 		db = db_session()
-		newtype = db.query(Type) \
-			.filter_by(location_id=session['location_id']) \
-			.filter_by(level=0) \
-			.one_or_none()
 
-		db.add(User(sid=request.form['sid'],
-					name=request.form['name'].title(),
-					type_id=newtype.id,
-					waiverSigned=None,
-					location_id=session['location_id']))
+		existing_user = db.query(User).get((request.form['sid'], session['location_id']))
+		if not existing_user:
+			# create a new user to associate the hawkcard with
+			newtype = db.query(Type) \
+				.filter_by(location_id=session['location_id']) \
+				.filter_by(level=0) \
+				.one_or_none()
 
+			db.add(User(sid=request.form['sid'],
+						name=request.form['name'].title(),
+						type_id=newtype.id,
+						waiverSigned=None,
+						location_id=session['location_id']))
+
+		# associate the hawkcard with the user that was either just created or already exists
 		card = db.query(HawkCard).filter_by(card=request.form['card_id']).one_or_none()
 		card.sid = request.form['sid']
 
@@ -910,6 +926,8 @@ def check_in(data):
 
 		if not card:
 			# check to see if they already have a record
+			student = None
+			sid = None
 			try:
 				il = IITLookup(app.config['IITLOOKUPURL'], app.config['IITLOOKUPUSER'], app.config['IITLOOKUPPASS'])
 				student = il.nameIDByCard(data['card'])
@@ -918,20 +936,24 @@ def check_in(data):
 				print("ERROR: IIT Lookup is offline.")
 			if not student:
 				# user is new and isn't in IIT's database
-				db.add(HawkCard(sid=None, card=data['card'], location_id=location.id))
+				card = HawkCard(sid=None, card=data['card'], location_id=location.id)
+				db.add(card)
 				db.commit()
-			elif db.query(User).filter_by(sid=sid).count() > 0:
+			elif db.query(User).get((sid, location.id)):
 				# user exists, has a new card
 				card = HawkCard(sid=sid, card=data['card'], location_id=location.id)
 				db.add(card)
+				db.commit()
 			else:
 				# first time in lab
 				resp = ("User for card id %d not found" % data['card'])
-				db.add(HawkCard(sid=None, card=data['card'], location_id=location.id))
+				card = HawkCard(sid=None, card=data['card'], location_id=location.id)
+				db.add(card)
+				db.commit()
 
 			db.commit()
 
-		if not card.user:
+		if not card or not card.user:
 			# send to registration page
 			emit('go', {'to': url_for('.register', card_id=data['card']), 'hwid': data['hwid']})
 
@@ -1005,7 +1027,7 @@ def check_in(data):
 		print(resp)
 		return resp
 	except Exception as e:
-		print(e)
+		app.logger.error(e, exc_info=True)
 		emit('go', {'to': url_for('.display_error'), 'hwid': data['hwid']})
 		return 'Internal error.'
 

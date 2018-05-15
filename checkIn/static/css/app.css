@@ -13,7 +13,7 @@
     overflow-x: hidden;
     height: 92vh;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
 }
 
 #page {

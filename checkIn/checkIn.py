@@ -249,11 +249,6 @@ def exception_handler(error):
 	return render_template("internal_error.html"), 500
 
 
-@app.errorhandler(500)
-def error_500(error):
-	return render_template("internal_error.html"), 500
-
-
 @app.errorhandler(404)
 def error_404(error):
 	return render_template("internal_error.html"), 500
@@ -341,8 +336,19 @@ def auth():
 def deauth():
 	db = db_session()
 	db.query(Kiosk).filter_by(location_id=session['location_id'], hardware_id=session['hardware_id']).delete()
-	session.clear()
+	db.commit()
 	return redirect('/auth')
+
+
+@app.route('/deauth/<int:loc>/<int:hwid>')
+def deauth_other(loc, hwid):
+	if not g.admin or g.admin.location_id != session['location_id'] or g.admin.type.level < 90:
+		return redirect('/')
+
+	db = db_session()
+	db.query(Kiosk).filter_by(location_id=loc, hardware_id=hwid).delete()
+	db.commit()
+	return redirect('/admin/locations/' + str(loc))
 
 
 @app.route('/')

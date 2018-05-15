@@ -716,6 +716,21 @@ def admin_add_location():
 		return redirect('/admin/locations/' + str(loc.id))
 
 
+@app.route('/admin/locations/set_secret/<int:id>', methods=['POST'])
+def admin_set_location_secret(id):
+	if not g.admin or g.admin.location_id != session['location_id']:
+		return redirect('/')
+	if g.admin.type.level < 90:
+		return redirect('/admin')
+
+	db = db_session()
+	loc = db.query(Location).get(id)
+	loc.set_secret(request.form['newsecret'])
+	db.commit()
+
+	return redirect('/admin/locations/' + str(id))
+
+
 @app.route('/admin/machines')
 def admin_machines():
 	if not g.admin or g.admin.location_id != session['location_id']:

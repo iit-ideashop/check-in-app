@@ -84,6 +84,28 @@
                     </tbody>
                 </table>
             </li>
+            {% if g.admin.type.level >= 90 %}
+                <li class="list-group-item list-group-item-danger">
+                    <h3>Danger zone</h3>
+                    <form action="/admin/locations/set_secret/{{ location.id }}" method="POST">
+                        <div class="form-group">
+                            <label for="new-secret-field">Change location shared secret</label>
+                            <div class="input-group">
+                                <input type="password" name="newsecret" id="new-secret-field" class="form-control" />
+                                <div class="input-group-btn">
+                                    <input type="submit" class="btn btn-danger" value="Change secret" />
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+
+                    <p>
+                        <strong>Deleting a location from the UI is not supported because it is an incredibly destructive
+                            operation</strong> -- doing so would delete <strong>all</strong> data associated with it.
+                        In order to delete a location, you must do so manually from the database.
+                    </p>
+                </li>
+            {% endif %}
         </ul>
     </div>
 </div>

@@ -696,10 +696,24 @@ def admin_update_location():
 		return redirect('/')
 
 
-@app.route('/admin/locations/add')
+@app.route('/admin/locations/add', methods=['GET', 'POST'])
 def admin_add_location():
 	if not g.admin or g.admin.location_id != session['location_id']:
 		return redirect('/')
+
+	if request.method == 'GET':
+		return render_template('/admin/add_location.html')
+
+	elif request.method == 'POST':
+		db = db_session()
+
+		loc = Location(name=request.form['name'])
+		loc.set_secret(request.form['secret'])
+
+		db.add(loc)
+		db.commit()
+
+		return redirect('/admin/locations/' + str(loc.id))
 
 
 @app.route('/admin/machines')

@@ -30,7 +30,9 @@ card reader, compatible with our school-issued RFID cards.
 2. Fill in config.cfg with database and university lookup credentials.
 The `DB` field should be filled out according to [the SQLAlchemy documentation](http://docs.sqlalchemy.org/en/latest/core/engines.html#database-urls)
 3. `pip install` your database driver of choice. The Idea Shop's installation
-uses pymysql.
+uses pymysql. (For MySQL, we highly recommend **not** using the default MySQL Connector for Python, because it returns all
+strings as byte arrays and neither SQLAlchemy nor our program is set up to handle that, leading to every string stored in the 
+database being displayed in the app as `b'string'`.)
 4. To start the app, run `python (or python3) checkIn.py`. The database
 tables will be automatically generated.
 

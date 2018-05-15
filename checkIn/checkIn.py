@@ -206,8 +206,12 @@ def before_request():
 	if 'location_id' not in session and request.endpoint != 'auth' and request.endpoint != 'card_read':
 		return redirect(url_for('auth'))
 
+	db = db_session()
+	kiosk = db.query(Kiosk).get((session['location_id'], session['hardware_id']))
+	kiosk.last_seen = sa.func.now()
+	db.commit()
+
 	if request.endpoint != 'card_read':
-		db = db_session()
 		in_lab = db.query(Access) \
 			.filter_by(timeOut=None) \
 			.filter_by(location_id=session['location_id']) \
@@ -669,8 +673,9 @@ def admin_location(id):
 		.join(User.type)\
 		.filter(User.location_id == id, Type.level > 0)\
 		.order_by(Type.level.desc())
+	kiosks = db.query(Kiosk).filter_by(location_id=id)
 
-	return render_template("/admin/location.html", location=location, machines=machines, staff=staff)
+	return render_template("/admin/location.html", location=location, machines=machines, staff=staff, kiosks=kiosks)
 
 
 @app.route('/admin/locations/remove')
@@ -681,6 +686,12 @@ def admin_remove_location():
 
 @app.route('/admin/locations/update')
 def admin_update_location():
+	if not g.admin or g.admin.location_id != session['location_id']:
+		return redirect('/')
+
+
+@app.route('/admin/locations/add')
+def admin_add_location():
 	if not g.admin or g.admin.location_id != session['location_id']:
 		return redirect('/')
 

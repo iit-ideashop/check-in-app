@@ -51,6 +51,25 @@
                     </tbody>
                 </table>
             </li>
+            <li class="list-group-item">
+                <h3>Kiosks</h3>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>HWID</th>
+                            <th>Last seen</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for kiosk in kiosks %}
+                        <tr>
+                        <td>{{ kiosk.hardware_id }}</td>
+                        <td>{{ kiosk.last_seen }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </li>
         </ul>
     </div>
 </div>

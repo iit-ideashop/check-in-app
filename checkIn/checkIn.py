@@ -111,6 +111,7 @@ class Machine(Base):
 	location_id = sa.Column(sa.Integer, sa.ForeignKey('locations.id'), nullable=False)
 
 	location = relationship('Location')
+	trained_users = relationship('Training')
 
 	def __repr__(self):
 		return "<Machine %s>" % self.name
@@ -732,22 +733,22 @@ def admin_set_location_secret(id):
 	return redirect('/admin/locations/' + str(id))
 
 
-@app.route('/admin/machines')
-def admin_machines():
+@app.route('/admin/locations/add_machine/<int:id>', methods=['GET', 'POST'])
+def admin_add_machine(id):
 	if not g.admin or g.admin.location_id != session['location_id']:
 		return redirect('/')
+	if g.admin.type.level < 90:
+		return redirect('/admin')
 
+	if request.method == 'GET':
+		return render_template('/admin/add_machine.html', location_id=id)
 
-@app.route('/admin/machines/remove')
-def admin_remove_machine():
-	if not g.admin or g.admin.location_id != session['location_id']:
-		return redirect('/')
+	db = db_session()
+	machine = Machine(name=request.form['name'], location_id=id)
+	db.add(machine)
+	db.commit()
 
-
-@app.route('/admin/machines/update')
-def admin_update_machine():
-	if not g.admin or g.admin.location_id != session['location_id']:
-		return redirect('/')
+	return redirect('/admin/locations/' + str(id))
 
 
 @app.route('/admin/type/set')

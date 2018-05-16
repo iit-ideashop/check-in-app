@@ -16,6 +16,14 @@
                         <tr>
                             <th>ID</th>
                             <th>Name</th>
+                            <th>Trained users</th>
+                            <th>
+                                {% if g.admin.type.level >= 90 %}
+                                <a href="/admin/locations/add_machine/{{ location.id }}" class="btn btn-xs btn-success pull-right">
+                                    <i class="glyphicon glyphicon-plus"></i>
+                                </a>
+                                {% endif %}
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
@@ -23,6 +31,8 @@
                             <tr>
                                 <td><strong>{{ machine.id }}</strong></td>
                                 <td>{{ machine.name }}</td>
+                                <td>{{ machine.trained_users | length }}</td>
+                                <td></td>
                             </tr>
                         {% endfor %}
                     </tbody>

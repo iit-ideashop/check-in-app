@@ -25,6 +25,7 @@ socketio = SocketIO(app, manage_session=True)
 app.config.from_object(__name__)
 app.config.from_pyfile('config.cfg')
 app.config.from_envvar('FLASKR_SETTINGS', silent=True)
+app.config['BOOTSTRAP_SERVE_LOCAL'] = True
 
 Bootstrap(app)
 
@@ -206,12 +207,12 @@ def before_request():
 	if 'location_id' not in session and request.endpoint != 'auth' and request.endpoint != 'card_read':
 		return redirect(url_for('auth'))
 
-	db = db_session()
-	kiosk = db.query(Kiosk).get((session['location_id'], session['hardware_id']))
-	kiosk.last_seen = sa.func.now()
-	db.commit()
-
 	if request.endpoint != 'card_read':
+		db = db_session()
+		kiosk = db.query(Kiosk).get((session['location_id'], session['hardware_id']))
+		kiosk.last_seen = sa.func.now()
+		db.commit()
+
 		in_lab = db.query(Access) \
 			.filter_by(timeOut=None) \
 			.filter_by(location_id=session['location_id']) \

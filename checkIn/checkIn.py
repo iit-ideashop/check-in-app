@@ -206,7 +206,9 @@ def before_request():
 	if 'location_id' not in session and request.endpoint != 'auth' and request.endpoint != 'card_read':
 		return redirect(url_for('auth'))
 
-	if request.endpoint != 'card_read':
+	if request.endpoint != 'card_read' and \
+					'socket.io' not in request.endpoint and \
+					'static' not in request.endpoint:
 		db = db_session()
 		in_lab = db.query(Access) \
 			.filter_by(timeOut=None) \
@@ -221,6 +223,22 @@ def before_request():
 		g.staff.sort(key=lambda x: x.type.level, reverse=True)
 		g.admin = db.query(User).filter_by(sid=session['admin']).one_or_none() if 'admin' in session else None
 		g.version = version
+
+		general_machine = db.query(Machine) \
+			.filter(Machine.name.ilike('General Safety Training')) \
+			.filter_by(location_id=session['location_id']) \
+			.one_or_none() \
+			if 'location_id' in session else None
+
+		for student in g.students:
+			student.general_training = None
+			if general_machine:
+				for training in student.trainings:
+					print(training)
+					if training.machine_id == general_machine.id:
+						print('Match!')
+						student.general_training = training
+
 
 
 def update_kiosks(location, except_hwid=None):

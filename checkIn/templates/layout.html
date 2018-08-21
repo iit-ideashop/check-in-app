@@ -85,7 +85,7 @@
                         <th></th>
                     </tr>
                     {% for student in g.students %}
-                        <tr {% if student.type.level < 0 %} class="danger" {% endif %}>
+                    <tr {% if not student.general_training %} class="danger" {% endif %}>
                             <td style="vertical-align:middle">
                                 <span class="glyphicon glyphicon-user" aria-hidden="true">&nbsp;</span>
                                 {{ student.name }}

@@ -234,9 +234,7 @@ def before_request():
 			student.general_training = None
 			if general_machine:
 				for training in student.trainings:
-					print(training)
 					if training.machine_id == general_machine.id:
-						print('Match!')
 						student.general_training = training
 
 

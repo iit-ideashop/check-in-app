@@ -25,6 +25,7 @@ socketio = SocketIO(app, manage_session=True)
 app.config.from_object(__name__)
 app.config.from_pyfile('config.cfg')
 app.config.from_envvar('FLASKR_SETTINGS', silent=True)
+app.config['BOOTSTRAP_SERVE_LOCAL'] = True
 
 Bootstrap(app)
 
@@ -110,6 +111,7 @@ class Machine(Base):
 	location_id = sa.Column(sa.Integer, sa.ForeignKey('locations.id'), nullable=False)
 
 	location = relationship('Location')
+	trained_users = relationship('Training')
 
 	def __repr__(self):
 		return "<Machine %s>" % self.name
@@ -210,6 +212,10 @@ def before_request():
 					'socket.io' not in request.endpoint and \
 					'static' not in request.endpoint:
 		db = db_session()
+		kiosk = db.query(Kiosk).get((session['location_id'], session['hardware_id']))
+		kiosk.last_seen = sa.func.now()
+		db.commit()
+
 		in_lab = db.query(Access) \
 			.filter_by(timeOut=None) \
 			.filter_by(location_id=session['location_id']) \
@@ -258,11 +264,6 @@ def close_db(error):
 @app.errorhandler(Exception)
 def exception_handler(error):
 	app.logger.error(error, exc_info=True)
-	return render_template("internal_error.html"), 500
-
-
-@app.errorhandler(500)
-def error_500(error):
 	return render_template("internal_error.html"), 500
 
 
@@ -353,8 +354,19 @@ def auth():
 def deauth():
 	db = db_session()
 	db.query(Kiosk).filter_by(location_id=session['location_id'], hardware_id=session['hardware_id']).delete()
-	session.clear()
+	db.commit()
 	return redirect('/auth')
+
+
+@app.route('/deauth/<int:loc>/<int:hwid>')
+def deauth_other(loc, hwid):
+	if not g.admin or g.admin.location_id != session['location_id'] or g.admin.type.level < 90:
+		return redirect('/')
+
+	db = db_session()
+	db.query(Kiosk).filter_by(location_id=loc, hardware_id=hwid).delete()
+	db.commit()
+	return redirect('/admin/locations/' + str(loc))
 
 
 @app.route('/')
@@ -557,13 +569,16 @@ def admin_lookup():
 	sid = request.args.get('sid')
 	name = request.args.get('name')
 	card_id = request.args.get('card')
-	if sid or name or card_id:
+	location_id = request.args.get('location')
+	if sid or name or card_id or location_id:
 		if sid and sid != '':
 			query = query.filter_by(sid=sid)
 		if name and name != '':
 			query = query.filter(User.name.ilike(name + '%'))
 		if card_id:
 			query = query.filter(User.cards.any(HawkCard.card == card_id))
+		if location_id:
+			query = query.filter(User.location_id == location_id)
 	else:
 		query = query.filter(User.access.any(Access.timeOut == None))
 
@@ -665,6 +680,26 @@ def admin_remove_training():
 def admin_locations():
 	if not g.admin or g.admin.location_id != session['location_id']:
 		return redirect('/')
+	db = db_session()
+	locations = db.query(Location).all()
+
+	return render_template("/admin/locations.html", locations=locations)
+
+
+@app.route('/admin/locations/<int:id>')
+def admin_location(id):
+	if not g.admin or g.admin.location_id != session['location_id']:
+		return redirect('/')
+	db = db_session()
+	location = db.query(Location).get(id)
+	machines = db.query(Machine).filter_by(location_id=id)
+	staff = db.query(User)\
+		.join(User.type)\
+		.filter(User.location_id == id, Type.level > 0)\
+		.order_by(Type.level.desc())
+	kiosks = db.query(Kiosk).filter_by(location_id=id)
+
+	return render_template("/admin/location.html", location=location, machines=machines, staff=staff, kiosks=kiosks)
 
 
 @app.route('/admin/locations/remove')
@@ -679,22 +714,57 @@ def admin_update_location():
 		return redirect('/')
 
 
-@app.route('/admin/machines')
-def admin_machines():
+@app.route('/admin/locations/add', methods=['GET', 'POST'])
+def admin_add_location():
 	if not g.admin or g.admin.location_id != session['location_id']:
 		return redirect('/')
 
+	if request.method == 'GET':
+		return render_template('/admin/add_location.html')
 
-@app.route('/admin/machines/remove')
-def admin_remove_machine():
+	elif request.method == 'POST':
+		db = db_session()
+
+		loc = Location(name=request.form['name'])
+		loc.set_secret(request.form['secret'])
+
+		db.add(loc)
+		db.commit()
+
+		return redirect('/admin/locations/' + str(loc.id))
+
+
+@app.route('/admin/locations/set_secret/<int:id>', methods=['POST'])
+def admin_set_location_secret(id):
 	if not g.admin or g.admin.location_id != session['location_id']:
 		return redirect('/')
+	if g.admin.type.level < 90:
+		return redirect('/admin')
+
+	db = db_session()
+	loc = db.query(Location).get(id)
+	loc.set_secret(request.form['newsecret'])
+	db.commit()
+
+	return redirect('/admin/locations/' + str(id))
 
 
-@app.route('/admin/machines/update')
-def admin_update_machine():
+@app.route('/admin/locations/add_machine/<int:id>', methods=['GET', 'POST'])
+def admin_add_machine(id):
 	if not g.admin or g.admin.location_id != session['location_id']:
 		return redirect('/')
+	if g.admin.type.level < 90:
+		return redirect('/admin')
+
+	if request.method == 'GET':
+		return render_template('/admin/add_machine.html', location_id=id)
+
+	db = db_session()
+	machine = Machine(name=request.form['name'], location_id=id)
+	db.add(machine)
+	db.commit()
+
+	return redirect('/admin/locations/' + str(id))
 
 
 @app.route('/admin/type/set')

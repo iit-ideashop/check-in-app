@@ -1,0 +1,123 @@
+{% extends "layout.html" %}
+{% block data %}
+<div class="container">
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <a href="/admin/locations" class="btn btn-primary"><i class="glyphicon glyphicon-chevron-left"></i></a>
+        </div>
+        <ul class="list-group">
+            <li class="list-group-item">
+                <h1>{{ location.name }} <small>ID {{ location.id }}</small></h1>
+            </li>
+            <li class="list-group-item">
+                <h3>Machines</h3>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Trained users</th>
+                            <th>
+                                {% if g.admin.type.level >= 90 %}
+                                <a href="/admin/locations/add_machine/{{ location.id }}" class="btn btn-xs btn-success pull-right">
+                                    <i class="glyphicon glyphicon-plus"></i>
+                                </a>
+                                {% endif %}
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for machine in machines %}
+                            <tr>
+                                <td><strong>{{ machine.id }}</strong></td>
+                                <td>{{ machine.name }}</td>
+                                <td>{{ machine.trained_users | length }}</td>
+                                <td></td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </li>
+            <li class="list-group-item">
+                <h3>Staff</h3>
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th>SID</th>
+                        <th>Name</th>
+                        <th>Role</th>
+                        <th></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for user in staff %}
+                        <tr>
+                        <td>A{{ user.sid }}</td>
+                        <td>{{ user.name }}</td>
+                        <td>
+                            <div class="label label-info" style="display: inline-block; width: 3em;">{{ user.type.level }}</div>
+                            {{ user.type.name }}
+                        </td>
+                        <td>
+                            <a href="/admin/lookup?sid={{ user.sid }}&location={{ location.id }}" class="btn btn-xs btn-default pull-right">
+                                <i class="glyphicon glyphicon-chevron-right"></i>
+                            </a>
+                        </td>
+                        </tr>
+
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </li>
+            <li class="list-group-item">
+                <h3>Kiosks</h3>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>HWID</th>
+                            <th>Last seen</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for kiosk in kiosks %}
+                        <tr>
+                        <td>{{ kiosk.hardware_id }}</td>
+                        <td>{{ kiosk.last_seen }}</td>
+                        <td>
+                            <a href="/deauth/{{ location.id }}/{{ kiosk.hardware_id }}" class="btn btn-danger btn-xs pull-right">
+                                <i class="glyphicon glyphicon-remove"></i>
+                            </a>
+                        </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </li>
+            {% if g.admin.type.level >= 90 %}
+                <li class="list-group-item list-group-item-danger">
+                    <h3>Danger zone</h3>
+                    <form action="/admin/locations/set_secret/{{ location.id }}" method="POST">
+                        <div class="form-group">
+                            <label for="new-secret-field">Change location shared secret</label>
+                            <div class="input-group">
+                                <input type="password" name="newsecret" id="new-secret-field" class="form-control" />
+                                <div class="input-group-btn">
+                                    <input type="submit" class="btn btn-danger" value="Change secret" />
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+
+                    <p>
+                        <strong>Deleting a location from the UI is not supported because it is an incredibly destructive
+                            operation</strong> -- doing so would delete <strong>all</strong> data associated with it.
+                        In order to delete a location, you must do so manually from the database.
+                    </p>
+                </li>
+            {% endif %}
+        </ul>
+    </div>
+</div>
+
+{% endblock %}

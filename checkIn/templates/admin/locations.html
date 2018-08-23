@@ -1,4 +1,23 @@
 {% extends "layout.html" %}
-{% block content %}
+{% block data %}
+<div class="container">
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <a href="/admin" class="btn btn-primary"><i class="glyphicon glyphicon-chevron-left"></i></a>
+            <a href="/admin/locations/add" class="btn btn-success pull-right"><i class="glyphicon glyphicon-plus"></i></a>
+        </div>
+        <ul class="list-group">
+            {% for location in locations %}
+            <li class="list-group-item
+                 {{ "active" if location == g.location else "" }}">
+                {{ location.name }}
+                <a href="/admin/locations/{{ location.id }}" class="btn btn-default btn-xs pull-right">
+                    <i class="glyphicon glyphicon-chevron-right"></i>
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
 
 {% endblock %}

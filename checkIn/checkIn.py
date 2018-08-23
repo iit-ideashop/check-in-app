@@ -213,8 +213,9 @@ def before_request():
 					'static' not in request.endpoint:
 		db = db_session()
 		kiosk = db.query(Kiosk).get((session['location_id'], session['hardware_id']))
-		kiosk.last_seen = sa.func.now()
-		db.commit()
+        if kiosk:
+            kiosk.last_seen = sa.func.now()
+            db.commit()
 
 		in_lab = db.query(Access) \
 			.filter_by(timeOut=None) \

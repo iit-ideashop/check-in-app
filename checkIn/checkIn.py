@@ -959,6 +959,11 @@ def register():
                 .filter_by(level=0) \
                 .one_or_none()
 
+            if not newtype:
+                newtype = Type(level=0, location_id=session['location_id'], name='Users')
+                db.add(newtype)
+                db.commit()
+
             db.add(User(sid=request.form['sid'],
                         name=request.form['name'].title(),
                         type_id=newtype.id,

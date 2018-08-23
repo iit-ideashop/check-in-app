@@ -56,68 +56,6 @@ class Location(Base):
         return "<Location %s>" % self.name
 
 
-class Kiosk(Base):
-    __tablename__ = 'kiosks'
-    location_id = sa.Column(sa.Integer, sa.ForeignKey('locations.id'), primary_key=True, nullable=False)
-    hardware_id = sa.Column(sa.Integer, primary_key=True, nullable=False)
-    token = sa.Column(sa.String(length=65), nullable=False)
-    last_seen = sa.Column(sa.DateTime, default=sa.func.now())
-
-    location = relationship('Location')
-
-
-class Type(Base):
-    __tablename__ = 'types'
-    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-    level = sa.Column(sa.Integer, nullable=False)
-    name = sa.Column(sa.String(length=50), nullable=False)
-    location_id = sa.Column(sa.Integer, sa.ForeignKey('locations.id'), nullable=False)
-
-    def __repr__(self):
-        return "<Type %s>" % self.name
-
-
-class Access(Base):
-    __tablename__ = 'access'
-    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-    sid = sa.Column(sa.BigInteger, sa.ForeignKey('users.sid'))
-    timeIn = sa.Column(sa.DateTime, nullable=False)
-    timeOut = sa.Column(sa.DateTime, default=None)
-    location_id = sa.Column(sa.Integer, sa.ForeignKey('locations.id'), nullable=False)
-
-    user = relationship('User')
-    location = relationship('Location')
-
-    def __repr__(self):
-        return "<Access %s(%s-%s)>" % (self.user.name, str(self.timeIn), str(self.timeOut))
-
-
-class HawkCard(Base):
-    __tablename__ = 'hawkcards'
-    sid = sa.Column(sa.BigInteger, sa.ForeignKey('users.sid'))
-    card = sa.Column(sa.BigInteger, primary_key=True)
-    location_id = sa.Column(sa.Integer, sa.ForeignKey('locations.id'), primary_key=True)
-
-    user = relationship('User')
-    location = relationship('Location')
-
-    def __repr__(self):
-        return "<HawkCard %d (A%d)>" % (self.card, self.sid)
-
-
-class Machine(Base):
-    __tablename__ = 'machines'
-    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-    name = sa.Column(sa.String(length=50))
-    location_id = sa.Column(sa.Integer, sa.ForeignKey('locations.id'), nullable=False)
-
-    location = relationship('Location')
-    trained_users = relationship('Training')
-
-    def __repr__(self):
-        return "<Machine %s>" % self.name
-
-
 class Training(Base):
     __tablename__ = 'safetyTraining'
     id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
@@ -168,18 +106,101 @@ class User(Base):
         return "<User A%d (%s)>" % (self.sid, self.name)
 
 
+class Kiosk(Base):
+    __tablename__ = 'kiosks'
+    location_id = sa.Column(sa.Integer, sa.ForeignKey('locations.id'), primary_key=True, nullable=False)
+    hardware_id = sa.Column(sa.Integer, primary_key=True, nullable=False)
+    token = sa.Column(sa.String(length=65), nullable=False)
+    last_seen = sa.Column(sa.DateTime, default=sa.func.now())
+
+    location = relationship('Location')
+
+
+class Type(Base):
+    __tablename__ = 'types'
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
+    level = sa.Column(sa.Integer, nullable=False)
+    name = sa.Column(sa.String(length=50), nullable=False)
+    location_id = sa.Column(sa.Integer, sa.ForeignKey('locations.id'), nullable=False)
+
+    def __repr__(self):
+        return "<Type %s>" % self.name
+
+
+class Access(Base):
+    __tablename__ = 'access'
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
+    sid = sa.Column(sa.BigInteger)
+    timeIn = sa.Column(sa.DateTime, nullable=False)
+    timeOut = sa.Column(sa.DateTime, default=None)
+    location_id = sa.Column(sa.Integer, nullable=False)
+
+    user = relationship('User')
+    location = relationship('Location', foreign_keys=[location_id], viewonly=True)
+
+    __table_args__ = (
+        sa.ForeignKeyConstraint([sid, location_id], [User.sid, User.location_id]),
+        sa.ForeignKeyConstraint([location_id], [Location.id])
+    )
+
+    def __repr__(self):
+        return "<Access %s(%s-%s)>" % (self.user.name, str(self.timeIn), str(self.timeOut))
+
+
+class HawkCard(Base):
+    __tablename__ = 'hawkcards'
+    sid = sa.Column(sa.BigInteger)
+    card = sa.Column(sa.BigInteger, primary_key=True)
+    location_id = sa.Column(sa.Integer, primary_key=True)
+
+    user = relationship('User')
+    location = relationship('Location', foreign_keys=[location_id], viewonly=True)
+
+    __table_args__ = (
+        sa.ForeignKeyConstraint([sid, location_id], [User.sid, User.location_id]),
+        sa.ForeignKeyConstraint([location_id], [Location.id])
+    )
+
+    def __repr__(self):
+        return "<HawkCard %d (A%d)>" % (self.card, self.sid)
+
+
+class Machine(Base):
+    __tablename__ = 'machines'
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
+    name = sa.Column(sa.String(length=50))
+    location_id = sa.Column(sa.Integer, sa.ForeignKey('locations.id'), nullable=False)
+
+    location = relationship('Location')
+    trained_users = relationship('Training')
+
+    def __repr__(self):
+        return "<Machine %s>" % self.name
+
+
+
+
+
+
+
 class AdminLog(Base):
     __tablename__ = 'adminLog'
     id = sa.Column(sa.BigInteger, primary_key=True, autoincrement=True)
-    admin_id = sa.Column(sa.BigInteger, sa.ForeignKey('users.sid'))
+    admin_id = sa.Column(sa.BigInteger)
     action = sa.Column(sa.String(length=50))
-    target_id = sa.Column(sa.BigInteger, sa.ForeignKey('users.sid'))
+    target_id = sa.Column(sa.BigInteger)
     data = sa.Column(sa.Text)
-    location_id = sa.Column(sa.Integer, sa.ForeignKey('locations.id'))
+    location_id = sa.Column(sa.Integer)
 
     admin = relationship('User', foreign_keys=[admin_id])
     target = relationship('User', foreign_keys=[target_id])
-    location = relationship('Location')
+    location = relationship('Location', foreign_keys=[location_id], viewonly=True)
+
+    __table_args__ = (
+        sa.ForeignKeyConstraint([admin_id, location_id], [User.sid, User.location_id]),
+        sa.ForeignKeyConstraint([target_id, location_id], [User.sid, User.location_id]),
+        sa.ForeignKeyConstraint([location_id], [Location.id])
+    )
 
     def __repr__(self):
         return "<AdminLog %s (%s) %s, data=%s>" % (self.admin.name, self.action, self.target.name, self.data)
@@ -188,12 +209,17 @@ class AdminLog(Base):
 class CardScan(Base):
     __tablename__ = 'scanLog'
     id = sa.Column(sa.BigInteger, primary_key=True, autoincrement=True)
-    card_id = sa.Column(sa.BigInteger, sa.ForeignKey('hawkcards.card'), nullable=False)
+    card_id = sa.Column(sa.BigInteger, nullable=False)
     time = sa.Column(sa.DateTime)
-    location_id = sa.Column(sa.Integer, sa.ForeignKey('locations.id'), nullable=False)
+    location_id = sa.Column(sa.Integer, nullable=False)
 
     card = relationship('HawkCard')
-    location = relationship('Location')
+    location = relationship('Location', foreign_keys=[location_id], viewonly=True)
+
+    __table_args__ = (
+        sa.ForeignKeyConstraint([card_id, location_id], [HawkCard.card, HawkCard.location_id]),
+        sa.ForeignKeyConstraint([location_id], [Location.id])
+    )
 
     def __repr__(self):
         return "<CardScan %d at %s>" % (self.card, self.time)
@@ -211,7 +237,8 @@ def before_request():
 
     if request.endpoint and request.endpoint != 'card_read' and \
                     'socket.io' not in request.endpoint and \
-                    'static' not in request.endpoint:
+                    'static' not in request.endpoint and \
+                    'auth' not in request.endpoint:
         db = db_session()
         kiosk = db.query(Kiosk).get((session['location_id'], session['hardware_id']))
         if kiosk:
@@ -229,7 +256,8 @@ def before_request():
         g.students = [a.user for a in in_lab if a.user.type.level <= 0]
         g.staff = [a.user for a in in_lab if a.user.type.level > 0]
         g.staff.sort(key=lambda x: x.type.level, reverse=True)
-        g.admin = db.query(User).filter_by(sid=session['admin']).one_or_none() if 'admin' in session else None
+        g.admin = db.query(User).filter_by(sid=session['admin'], location_id=session[
+            'location_id']).one_or_none() if 'admin' in session else None
         g.version = version
 
         general_machine = db.query(Machine) \
@@ -568,16 +596,15 @@ def admin_lookup():
     sid = request.args.get('sid')
     name = request.args.get('name')
     card_id = request.args.get('card')
-    location_id = request.args.get('location')
-    if sid or name or card_id or location_id:
+    location_id = request.args.get('location') if 'location' in request.args else session['location_id']
+    query = query.filter(User.location_id == location_id)
+    if sid or name or card_id:
         if sid and sid != '':
             query = query.filter_by(sid=sid)
         if name and name != '':
             query = query.filter(User.name.ilike(name + '%'))
         if card_id:
             query = query.filter(User.cards.any(HawkCard.card == card_id))
-        if location_id:
-            query = query.filter(User.location_id == location_id)
     else:
         query = query.filter(User.access.any(Access.timeOut == None))
 
@@ -932,11 +959,11 @@ def register():
         card_id = request.args.get('card_id')
         name = ""
         sid = ""
-        # try:
-        il = IITLookup(app.config['IITLOOKUPURL'], app.config['IITLOOKUPUSER'], app.config['IITLOOKUPPASS'])
-        resp = il.nameIDByCard(card_id)
-        # except:
-        #   print(sys.exc_info()[0])
+        try:
+            il = IITLookup(app.config['IITLOOKUPURL'], app.config['IITLOOKUPUSER'], app.config['IITLOOKUPPASS'])
+            resp = il.nameIDByCard(card_id)
+        except:
+            print(sys.exc_info()[0])
         if resp:
             sid = resp['idnumber'][1:]
             name = ("%s %s") % (resp['first_name'], resp['last_name'])

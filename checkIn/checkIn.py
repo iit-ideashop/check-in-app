@@ -96,7 +96,7 @@ class HawkCard(Base):
     __tablename__ = 'hawkcards'
     sid = sa.Column(sa.BigInteger, sa.ForeignKey('users.sid'))
     card = sa.Column(sa.BigInteger, primary_key=True)
-    location_id = sa.Column(sa.Integer, sa.ForeignKey('locations.id'))
+    location_id = sa.Column(sa.Integer, sa.ForeignKey('locations.id'), primary_key=True)
 
     user = relationship('User')
     location = relationship('Location')
@@ -957,7 +957,8 @@ def register():
                         location_id=session['location_id']))
 
         # associate the hawkcard with the user that was either just created or already exists
-        card = db.query(HawkCard).filter_by(card=request.form['card_id']).one_or_none()
+        card = db.query(HawkCard).filter_by(card=request.form['card_id'],
+                                            location_id=session['location_id']).one_or_none()
         card.sid = request.form['sid']
 
         db.commit()

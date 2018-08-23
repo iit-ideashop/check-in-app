@@ -209,7 +209,7 @@ def before_request():
     if 'location_id' not in session and request.endpoint != 'auth' and request.endpoint != 'card_read':
         return redirect(url_for('auth'))
 
-    if request.endpoint != 'card_read' and \
+    if request.endpoint and request.endpoint != 'card_read' and \
                     'socket.io' not in request.endpoint and \
                     'static' not in request.endpoint:
         db = db_session()
@@ -727,6 +727,15 @@ def admin_add_location():
         loc.set_secret(request.form['secret'])
 
         db.add(loc)
+
+        db.commit()
+
+        default_type = Type(level=0, location_id=loc.id, name='Users')
+        db.add(default_type)
+
+        default_training = Machine(location_id=loc.id, name='General Safety Training')
+        db.add(default_training)
+
         db.commit()
 
         return redirect('/admin/locations/' + str(loc.id))

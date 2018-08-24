@@ -105,15 +105,15 @@
                 <div class="modal-footer">
                     <form method="get" action="/waiver">
                         <div class="form-row">
-                            <div class="col-sm-12">
+                            <div class="col-sm-12" style="text-align: center">
 {#                                <input type="text" name="name" id="sigField"#}
 {#                                       class="keyboard keyboard-default form-control" placeholder="Sign here"/>#}
-                                <canvas id="signaturePad" style="width: 100%; height: 150px; border: 1px solid black;"></canvas>
+                                <canvas id="signaturePad" width="400px" height="150px" style="border: 1px solid black;"></canvas>
                             </div>
                             <input type="hidden" name="agreed" value="true"/>
                             <input type="hidden" name="sid" value="{{ sid }}"/>
                             <div class="col-sm-2">
-                                <button type="submit" class="btn btn-success">Submit</button>
+                                <button id="submitButton" type="submit" class="btn btn-success">Submit</button>
                             </div>
                         </div>
                     </form>
@@ -157,10 +157,17 @@
             {#$("#sigField").keyboard({initCaps: true});#}
             var padElement = document.getElementById("signaturePad");
             var signaturePad = new SignaturePad(padElement);
-            padElement.width = padElement.offsetWidth;
-            padElement.height = padElement.offsetHeight;
+            var submitButton = $("#submitButton");
              
-            $("body").click(function() { stopAudio("alertAudio"); });
+            $("body").click(function() { 
+                stopAudio("alertAudio");
+                if (signaturePad.isEmpty()) {
+                    submitButton.addClass("disabled");
+                }
+                else {
+                    submitButton.removeClass("disabled");
+                }
+            });
 
             localStorage.debug = 'engine.io-client:socket';
 

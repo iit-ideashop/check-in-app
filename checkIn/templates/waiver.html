@@ -105,10 +105,11 @@
                 <div class="modal-footer">
                     <form method="get" action="/waiver">
                         <div class="form-row">
-                            <div class="col-sm-10">
-                                <input type="text" name="name" id="sigField"
-                                       class="keyboard keyboard-default form-control" placeholder="Sign here"/>
-                            </div>
+{#                            <div class="col-sm-10">#}
+{#                                <input type="text" name="name" id="sigField"#}
+{#                                       class="keyboard keyboard-default form-control" placeholder="Sign here"/>#}
+{#                            </div>#}
+                            <canvas id="signaturePad" width="100%"></canvas>
                             <input type="hidden" name="agreed" value="true"/>
                             <input type="hidden" name="sid" value="{{ sid }}"/>
                             <div class="col-sm-2">
@@ -150,9 +151,11 @@
 
 {% block scripts %}
     {{ super() }}
+    <script type="text/javascript" src="/static/js/signature_pad.min.js" />
     <script>
         $(function () {
-            $("#sigField").keyboard({initCaps: true});
+            {#$("#sigField").keyboard({initCaps: true});#}
+            var signaturePad = new SignaturePad(document.getElementById("signaturePad"));
             $("body").click(function() { stopAudio("alertAudio"); });
 
             localStorage.debug = 'engine.io-client:socket';

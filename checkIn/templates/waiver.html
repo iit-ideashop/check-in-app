@@ -162,7 +162,7 @@
             $("body").click(function() { 
                 stopAudio("alertAudio");
                 if (signaturePad.isEmpty()) {
-                    submitButton.setAttribute("disabled");
+                    submitButton.setAttribute("disabled", "");
                 }
                 else {
                     submitButton.removeAttribute("disabled");

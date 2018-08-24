@@ -157,15 +157,15 @@
             {#$("#sigField").keyboard({initCaps: true});#}
             var padElement = document.getElementById("signaturePad");
             var signaturePad = new SignaturePad(padElement);
-            var submitButton = $("#submitButton");
+            var submitButton = document.getElementById("submitButton");
              
             $("body").click(function() { 
                 stopAudio("alertAudio");
                 if (signaturePad.isEmpty()) {
-                    submitButton.addClass("disabled");
+                    submitButton.setAttribute("disabled");
                 }
                 else {
-                    submitButton.removeClass("disabled");
+                    submitButton.removeAttribute("disabled");
                 }
             });
 

@@ -1,25 +1,37 @@
 #sidebar {
-    margin-top: 0;
-    margin-bottom: auto;
-    overflow-y: scroll;
+    margin: auto;
+    overflow-y: auto;
     overflow-x: hidden;
-    height: 92vh;
+    height: 100%;
 }
 
 #content {
-    margin-top: 0;
-    margin-bottom: auto;
-    overflow-y: scroll;
+    overflow-y: auto;
     overflow-x: hidden;
-    height: 92vh;
+    height: 100%;
     display: flex;
     align-items: flex-start;
+
+    padding-top: 20px;
+    padding-bottom: 20px;
+}
+
+#content > * {
+    margin: auto;
 }
 
 #page {
+    position: absolute;
     overflow: hidden;
+    top: 50px;
+    bottom: 0px;
+    width: 100vw;
 }
 
-html {
+html, body {
     height: 100vh;
+}
+
+.navbar {
+    margin-bottom: 0;
 }

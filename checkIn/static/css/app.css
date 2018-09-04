@@ -35,3 +35,22 @@ html, body {
 .navbar {
     margin-bottom: 0;
 }
+
+.modal {
+    text-align: center
+}
+
+.modal:before {
+    display: inline-block;
+    vertical-align: middle;
+    content: " ";
+    height: 100%;
+    text-align: center;
+}
+
+.modal-dialog {
+    display: inline-block;
+    vertical-align: middle;
+    horizontal-align: middle;
+    text-align: left;
+}

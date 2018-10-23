@@ -803,7 +803,7 @@ def admin_set_type():
 		return redirect('/')
 	db = db_session()
 	type = db.query(Type).filter_by(id=request.args['tid'], location_id=session['location_id']).one_or_none()
-	user = db.query(User).filter_by(sid=request.args['sid']).one_or_none()
+	user = db.query(User).filter_by(sid=request.args['sid'], location_id=session['location_id']).one_or_none()
 	if not type:
 		return redirect('/admin/lookup?sid=' + request.args['sid'] + "&error=Type does not exist.")
 	if not user:

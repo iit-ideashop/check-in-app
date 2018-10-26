@@ -808,10 +808,10 @@ def admin_set_type():
 		return redirect('/admin/lookup?sid=' + request.args['sid'] + "&error=Type does not exist.")
 	if not user:
 		return redirect('/admin/lookup?sid=' + request.args['sid'] + "&error=User does not exist.")
-	elif g.admin.type.level < type.level:
+	elif g.admin.type.level <= type.level:
 		return redirect(
 			'/admin/lookup?sid=' + request.args['sid'] + "&error=You don't have permission to set that type.")
-	elif user.type.level > g.admin.type.level:
+	elif user.type.level >= g.admin.type.level:
 		return redirect(
 			'/admin/lookup?sid=' + request.args['sid'] + "&error=You don't have permission to modify that user.")
 

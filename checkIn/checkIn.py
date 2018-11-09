@@ -101,6 +101,7 @@ class User(Base):
 	trainings = relationship('Training', foreign_keys=[Training.trainee_id])
 	access = relationship('Access', order_by='Access.timeIn')
 	cards = relationship('HawkCard')
+	warnings = relationship("Warning", back_populates="warnee")
 
 	def __repr__(self):
 		return "<User A%d (%s)>" % (self.sid, self.name)
@@ -218,6 +219,17 @@ class CardScan(Base):
 
 	def __repr__(self):
 		return "<CardScan %d at %s>" % (self.card, self.time)
+
+class Warning(Base):
+	__tablename__ = 'warnings'
+	id = sa.Column(sa.BigInteger, primary_key=True, autoincrement=True)
+	warner_id = sa.Column(sa.BigInteger, sa.ForeignKey("users.sid"), nullable=False)
+	warnee_id = sa.Column(sa.BigInteger, sa.ForeignKey("users.sid"), nullable=False)
+	time = sa.Column(sa.DateTime, nullable=False, server_default=sa.func.now())
+	reason = sa.Column(sa.Text, nullable=False)
+
+	warner = relationship("User")
+	warnee = relationship("User", back_populates="warnings")
 
 
 # create tables if they don't exist

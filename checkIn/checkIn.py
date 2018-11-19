@@ -441,7 +441,7 @@ def checkout():
 				.filter_by(location_id=location.id) \
 				.filter_by(timeOut=None) \
 				.filter_by(sid=int(request.args['sid'])) \
-				.one_or_none()
+				.one()
 		elif 'aid' in request.args:
 			lastIn = db.query(Access).get(int(request.args['aid']))
 

@@ -108,7 +108,7 @@ class User(Base):
 
 class Kiosk(Base):
 	__tablename__ = 'kiosks'
-	location_id = sa.Column(sa.Integer, sa.ForeignKey('locations.id'), primary_key=True, nullable=False)
+	location_id = sa.Column(sa.Integer, sa.ForeignKey('locations.id'), nullable=False)
 	hardware_id = sa.Column(sa.Integer, primary_key=True, nullable=False)
 	token = sa.Column(sa.String(length=65), nullable=False)
 	last_seen = sa.Column(sa.DateTime, default=sa.func.now())
@@ -307,7 +307,6 @@ def auth():
 	if request.method == 'GET':
 		return render_template('auth.html', locations=locations)
 	else:
-
 		# random_utf8_seq adapted from https://stackoverflow.com/a/1477572
 		def byte_range(first, last):
 			return list(range(first, last + 1))
@@ -352,11 +351,17 @@ def auth():
 
 		new_token = random_utf8_str(32)
 		kiosk = db.query(Kiosk) \
-			.filter_by(location_id=request.form['location'], hardware_id=request.form['hwid']) \
+			.filter_by(hardware_id=request.form['hwid']) \
 			.one_or_none()
 
 		if kiosk:
+			# deauthorize any existing kiosks with that ID
+			socketio.emit('go', {'to': url_for('.deauth'), 'hwid': kiosk.hardware_id})
+
 			kiosk.token = new_token
+			kiosk.location_id = request.form['location']
+			kiosk.last_seen = sa.func.now()
+
 		else:
 			kiosk = Kiosk(location_id=request.form['location'],
 						  hardware_id=request.form['hwid'],
@@ -385,6 +390,8 @@ def deauth():
 def deauth_other(loc, hwid):
 	if not g.admin or g.admin.location_id != session['location_id'] or g.admin.type.level < 90:
 		return redirect('/')
+
+	socketio.emit('go', {'to': url_for('.deauth'), 'hwid': hwid})
 
 	db = db_session()
 	db.query(Kiosk).filter_by(location_id=loc, hardware_id=hwid).delete()

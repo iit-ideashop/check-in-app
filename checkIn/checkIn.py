@@ -235,7 +235,7 @@ def before_request():
 					'static' not in request.endpoint and \
 					'auth' not in request.endpoint:
 		db = db_session()
-		kiosk = db.query(Kiosk).get((session['location_id'], session['hardware_id']))
+		kiosk = db.query(Kiosk).get(session['hardware_id'])
 		if kiosk:
 			kiosk.last_seen = sa.func.now()
 			db.commit()

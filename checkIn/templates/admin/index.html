@@ -11,7 +11,9 @@
     {% if g.location.announcer %}
         <a href="/admin/announcer" class="btn btn-lg btn-default btn-block">Make announcements</a>
     {% endif %}
-    <a href="/admin/clear_lab" class="btn btn-lg btn-danger btn-block">Clear lab</a>
+    <button type="button" class="btn btn-lg btn-danger btn-block" data-toggle="modal" data-target="#clearLabModal">
+        Clear Lab
+    </button>
     <hr />
     <button type="button" class="btn btn-lg btn-danger btn-block" data-toggle="modal" data-target="#deauthModal">
         Deauthorize this kiosk
@@ -21,6 +23,28 @@
     <a href="/admin/logout" class="btn btn-lg btn-danger btn-block">Sign out</a>
 </div>
 
+<div class="modal fade" id="clearLabModal" tabindex="-1" role="dialog" aria-labelledby="clearLabModalLabel"
+     aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" id="clearLabModalLabel">Are you sure?</span>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to clear the lab of all users?
+            </div>
+            <div class="modal-footer">
+                <a href="/admin/clear_lab">
+                    <button type="button" class="btn btn-danger">Yes</button>
+                </a>
+                <button type="button" class="btn btn-default" data-dismiss="modal">No</button>
+            </div>
+        </div>
+    </div>
+</div>
 <div class="modal fade" id="deauthModal" tabindex="-1" role="dialog" aria-labelledby="deauthModalLabel"
      aria-hidden="true">
     <div class="modal-dialog" role="document">

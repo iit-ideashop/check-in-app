@@ -657,7 +657,7 @@ def admin_clear_lab():
 		return redirect('/admin/login')
 
 	db = db_session()
-	db.query(Access).filter_by(timeOut=None).update({"timeOut": sa.func.now()}, synchronize_session=False)
+	db.query(Access).filter_by(timeOut=None, location_id=g.admin.location_id).update({"timeOut": sa.func.now()}, synchronize_session=False)
 	db.commit()
 	session['admin'] = None
 	return redirect('/success/checkout')

@@ -42,6 +42,7 @@ class Location(Base):
 	secret = sa.Column(sa.Binary(length=16), nullable=False)
 	salt = sa.Column(sa.Binary(length=16), nullable=False)
 	announcer = sa.Column(sa.String(length=50), nullable=True)
+	capacity = sa.Column(sa.Integer, nullable=True)
 
 	def set_secret(self, secret):
 		self.salt = os.urandom(16)
@@ -493,6 +494,11 @@ def success(action):
 @app.route('/banned', methods=['GET'])
 def banned():
 	return render_template('banned.html')
+
+
+@app.route('/over_capacity', methods=['GET'])
+def over_capacity():
+	return render_template('over_capacity.html')
 
 
 @app.route('/needs_training', methods=['GET'])
@@ -1036,6 +1042,7 @@ def check_in(data):
 		#    emit('go', {'to': '/deauth', 'hwid': session['hardware_id']})
 		#    return "Token mismatch!"
 
+
 		card = db.query(HawkCard).filter_by(
 			card=data['card'],
 			location_id=data['location']
@@ -1044,6 +1051,16 @@ def check_in(data):
 		location = db.query(Location).filter_by(
 			id=data['location']
 		).one_or_none()
+
+		# before we do anything, make sure there's room in the location
+		present_count = db.query(Access).filter_by(
+			location_id=data['location'],
+			timeOut=None
+		).count()
+
+		if location.capacity and present_count >= location.capacity:
+			emit('go', {'to': url_for('.over_capacity'), 'hwid': data['hwid']})
+			return
 
 		if not location:
 			resp = ("Location %d not found" % data['location'])

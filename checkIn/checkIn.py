@@ -1052,6 +1052,23 @@ def check_in(data):
 			id=data['location']
 		).one_or_none()
 
+		# check to see if user is already signed in; if so sign them out
+		lastIn = db.query(Access) \
+			.filter_by(location_id=location.id) \
+			.filter_by(timeOut=None) \
+			.filter_by(sid=card.sid) \
+			.one_or_none()
+
+		if lastIn:
+			resp = ("User %s (card id %d) signed out at location %s (id %d, kiosk %d)" % (
+				card.user.name, data['card'], location.name, location.id, data['hwid']
+			))
+			# sign user out and send to confirmation page
+			lastIn.timeOut = sa.func.now()
+			emit('go', {'to': url_for('.success', action='checkout', name=card.user.name), 'hwid': data['hwid']})
+			update_kiosks(location.id, except_hwid=data['hwid'])
+
+
 		# before we do anything, make sure there's room in the location
 		present_count = db.query(Access).filter_by(
 			location_id=data['location'],
@@ -1127,15 +1144,6 @@ def check_in(data):
 				))
 				emit('go', {'to': url_for('.banned'), 'hwid': data['hwid']})
 
-			# user signing out
-			elif lastIn:
-				resp = ("User %s (card id %d) signed out at location %s (id %d, kiosk %d)" % (
-					card.user.name, data['card'], location.name, location.id, data['hwid']
-				))
-				# sign user out and send to confirmation page
-				lastIn.timeOut = sa.func.now()
-				emit('go', {'to': url_for('.success', action='checkout', name=card.user.name), 'hwid': data['hwid']})
-				update_kiosks(location.id, except_hwid=data['hwid'])
 
 			# user signing in
 			elif card.user.waiverSigned:

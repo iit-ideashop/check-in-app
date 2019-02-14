@@ -4,16 +4,15 @@
         <div class="circle-danger img-circle"><i class="glyphicon glyphicon-remove"></i></div>
         <hr/>
         <h1 class="text-center">Over capacity</h1>
-        <h3 class="text-center">The lab is at or over its maximum capacity right now. Please come back later.</h3>
+        <h3 class="text-center">
+            The lab is at or over its maximum staff-to-student ratio. Please wait here for a staff member.
+        </h3>
     </div>
-    <audio autoplay loop src="/static/sound/banned_user.mp3"></audio>
+    <audio autoplay loop src="/static/sound/require_interaction.mp3"></audio>
 {% endblock %}
 {% block scripts %}
     {{ super() }}
     <script>
-        window.setTimeout(function () {
-            window.location.replace("/");
-        }, 5000);
         $(function () {
             localStorage.debug = 'engine.io-client:socket';
 

@@ -9,11 +9,12 @@ import hmac
 import random
 import argparse
 import zerorpc
+import math
 from flask import Flask, request, session, g, redirect, url_for, render_template, abort
 from flask_bootstrap import Bootstrap
 from flask_socketio import SocketIO, emit
 import sqlalchemy as sa
-from sqlalchemy.orm import relationship, scoped_session, sessionmaker
+from sqlalchemy.orm import relationship, scoped_session, sessionmaker, joinedload
 from sqlalchemy.ext.declarative import declarative_base
 from iitlookup import IITLookup
 from collections import defaultdict
@@ -43,6 +44,7 @@ class Location(Base):
     salt = sa.Column(sa.Binary(length=16), nullable=False)
     announcer = sa.Column(sa.String(length=50), nullable=True)
     capacity = sa.Column(sa.Integer, nullable=True)
+    staff_ratio = sa.Column(sa.Float, nullable=True)
 
     def set_secret(self, secret):
         self.salt = os.urandom(16)
@@ -97,7 +99,7 @@ class User(Base):
     def __repr__(self):
         return "<Location %s>" % self.name
 
-    type = relationship('Type')
+    type = relationship('Type', lazy='joined')
     location = relationship('Location')
     trainings = relationship('Training', foreign_keys=[Training.trainee_id])
     access = relationship('Access', order_by='Access.timeIn')
@@ -154,8 +156,8 @@ class HawkCard(Base):
     card = sa.Column(sa.BigInteger, primary_key=True)
     location_id = sa.Column(sa.Integer, primary_key=True)
 
-    user = relationship('User')
-    location = relationship('Location', foreign_keys=[location_id], viewonly=True)
+    user = relationship('User', lazy='joined')
+    location = relationship('Location', foreign_keys=[location_id], viewonly=True, lazy='joined')
 
     __table_args__ = (
         sa.ForeignKeyConstraint([sid, location_id], [User.sid, User.location_id]),
@@ -244,6 +246,7 @@ def before_request():
         in_lab = db.query(Access) \
             .filter_by(timeOut=None) \
             .filter_by(location_id=session['location_id']) \
+            .options(joinedload(Access.user)) \
             .all() \
             if 'location_id' in session else list()
 
@@ -496,9 +499,14 @@ def banned():
     return render_template('banned.html')
 
 
-@app.route('/over_capacity', methods=['GET'])
-def over_capacity():
-    return render_template('over_capacity.html')
+@app.route('/over_fire_capacity', methods=['GET'])
+def over_fire_capacity():
+    return render_template('over_fire_capacity.html')
+
+
+@app.route('/over_staff_capacity', methods=['GET'])
+def over_staff_capacity():
+    return render_template('over_staff_capacity.html')
 
 
 @app.route('/needs_training', methods=['GET'])
@@ -1052,6 +1060,11 @@ def check_in(data):
             id=data['location']
         ).one_or_none()
 
+        if not location:
+            resp = ("Location %d not found" % data['location'])
+            print(resp)
+            return resp
+
         # check to see if user is already signed in; if so sign them out
         if card:
             lastIn = db.query(Access) \
@@ -1071,19 +1084,36 @@ def check_in(data):
                 db.commit()
                 return
 
+        # check fire code capacity
+        in_lab = db.query(Access) \
+            .filter_by(timeOut=None) \
+            .filter_by(location_id=session['location_id']) \
+            .options(joinedload(Access.user)) \
+            .all() \
 
-        # before we do anything, make sure there's room in the location
-        present_count = db.query(Access).filter_by(
-            location_id=data['location'],
-            timeOut=None
-        ).count()
+        total_count = len(in_lab)
 
-        if location.capacity and present_count >= location.capacity:
-            emit('go', {'to': url_for('.over_capacity'), 'hwid': data['hwid']})
+        if location.capacity and total_count >= location.capacity:
+            emit('go', {'to': url_for('.over_fire_capacity'), 'hwid': data['hwid']})
             return
 
-        if not location:
-            resp = ("Location %d not found" % data['location'])
+        student_count = staff_count = 0
+        for a in in_lab: #type: Access
+            if a.user.type.level > 0:
+                staff_count += 1
+            else:
+                student_count += 1
+
+        # check that:
+        # - card doesn't exist, user never finished the form, or card belongs to a student
+        # - staff ratio is set
+        # - floor(ratio * staff) <= student_count
+        # if true then lab is over capacity
+        if (not card or not card.user or (card.user and card.user.type.level == 0)) \
+                and location.staff_ratio \
+                and math.floor(location.staff_ratio * staff_count) <= student_count:
+            emit('go', {'to': url_for('.over_staff_capacity'), 'hwid': data['hwid']})
+            return
 
         if not card:
             # check to see if we already have their sid

@@ -55,29 +55,31 @@
                     <div class="panel-heading text-center">
                         Staff
                     </div>
-                    <div class="list-group">
+                    <table class="table table-bordered">
+                    <tbody>
                         {% for staffRow in g.staff | batch(2) %}
-                            <div class="list-group-item" style="min-height: 95px;">
-                            {% for staffMember in staffRow%}
-                                <div class="col-sm-6">
-                                    <div class="pull-right">
-                                        {% if staffMember.photo %}
-                                            <img src="{{ staffMember.photo }}" style="max-height: 75px;"
-                                                 class="img-circle"/>
-                                        {% else %}
-                                            <img src="/static/images/placeholder.png" style="max-height: 75px;"
-                                                 class="img-circle"/>
-                                        {% endif %}
-                                    </div>
-                                    
-				    <h4>{{ staffMember.name }}<br>
-                                        <small>{{ staffMember.type.name }}</small>
-				    </h4>
-                                </div>
-                            {% endfor %}
-                            </div>
+                            <tr>
+                                {% for staffMember in staffRow %}
+                                    <td style="padding: 8px 16px;">
+                                        <div class="pull-right">
+                                            {% if staffMember.photo %}
+                                                <img src="{{ staffMember.photo }}" style="max-height: 75px;"
+                                                     class="img-circle"/>
+                                            {% else %}
+                                                <img src="/static/images/placeholder.png" style="max-height: 75px;"
+                                                     class="img-circle"/>
+                                            {% endif %}
+                                        </div>
+                                        <h4>
+                                            {{ staffMember.name }}<br>
+                                            <small>{{ staffMember.type.name }}</small>
+                                        </h4>
+                                    </td>
+                                {% endfor %}
+                            </tr>
                         {% endfor %}
-                    </div>
+                    </tbody>
+                    </table>
                 </div>
             </div>
             <div class="panel panel-default">

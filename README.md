@@ -48,7 +48,7 @@ Any additional fields are discarded for the time being.
 
 ## License
 This project is licensed under the GNU Affero General Public License,
-version 3. Please see README.md for the full text.
+version 3. Please see LICENSE.md for the full text.
 
-Interaction required sound effects are copyright (c) soundeffects+.
+Interaction required sound effect is copyright (c) soundeffects+.  
 Banned user sound effect is from [AdamWeeden on freesound.org](https://freesound.org/people/AdamWeeden/sounds/255181/), licensed CC-BY 3.0

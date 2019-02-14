@@ -50,4 +50,5 @@ Any additional fields are discarded for the time being.
 This project is licensed under the GNU Affero General Public License,
 version 3. Please see README.md for the full text.
 
-Banned user and interaction required sound effects are copyright (c) soundeffects+.
+Interaction required sound effects are copyright (c) soundeffects+.
+Banned user sound effect is from [AdamWeeden on freesound.org](https://freesound.org/people/AdamWeeden/sounds/255181/), licensed CC-BY 3.0

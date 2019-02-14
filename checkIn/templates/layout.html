@@ -56,20 +56,25 @@
                         Staff
                     </div>
                     <div class="list-group">
-                        {% for staffMember in g.staff %}
-                            <div class="list-group-item" style="min-height: 70px;">
-                                <div class="pull-right">
-                                    {% if staffMember.photo %}
-                                        <img src="{{ staffMember.photo }}" style="max-height: 50px;"
-                                             class="img-circle"/>
-                                    {% else %}
-                                        <img src="/static/images/placeholder.png" style="max-height: 50px;"
-                                             class="img-circle"/>
-                                    {% endif %}
+                        {% for staffRow in g.staff | batch(2) %}
+                            <div class="list-group-item" style="min-height: 80px;">
+                            {% for staffMember in staffRow%}
+                                <div class="col-sm-6">
+                                    <div class="pull-right">
+                                        {% if staffMember.photo %}
+                                            <img src="{{ staffMember.photo }}" style="max-height: 75px;"
+                                                 class="img-circle"/>
+                                        {% else %}
+                                            <img src="/static/images/placeholder.png" style="max-height: 75px;"
+                                                 class="img-circle"/>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <h4>{{ staffMember.name }}
+                                        <small>{{ staffMember.type.name }}</small>
+                                    </h4>
                                 </div>
-                                <h4>{{ staffMember.name }}
-                                    <small>{{ staffMember.type.name }}</small>
-                                </h4>
+                            {% endfor %}
                             </div>
                         {% endfor %}
                     </div>

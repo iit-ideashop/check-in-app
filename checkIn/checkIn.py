@@ -613,8 +613,6 @@ def admin_warn(sid):
 	if not reason:
 		return render_template('admin/warnings.html', warnee=warnee, warnings=warnings, admin=g.admin, error="You must input a reason for your warning")
 
-	print(f"Adding warning {reason} to user {warnee.name}")
-
 	warning = Warning(warner_id=g.admin.sid, warnee_id=sid, reason=reason)
 	db.add(warning)
 	db.commit()

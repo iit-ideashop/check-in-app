@@ -101,7 +101,8 @@ class User(Base):
 	trainings = relationship('Training', foreign_keys=[Training.trainee_id])
 	access = relationship('Access', order_by='Access.timeIn')
 	cards = relationship('HawkCard')
-	warnings = relationship("Warning", back_populates="warnee")
+	warnings = relationship("Warning", foreign_keys="Warning.warnee_id", back_populates="warnee")
+	warningsGiven = relationship("Warning", foreign_keys="Warning.warner_id", back_populates="warner")
 
 	def __repr__(self):
 		return "<User A%d (%s)>" % (self.sid, self.name)
@@ -225,11 +226,11 @@ class Warning(Base):
 	id = sa.Column(sa.BigInteger, primary_key=True, autoincrement=True)
 	warner_id = sa.Column(sa.BigInteger, sa.ForeignKey("users.sid"), nullable=False)
 	warnee_id = sa.Column(sa.BigInteger, sa.ForeignKey("users.sid"), nullable=False)
-	time = sa.Column(sa.DateTime, nullable=False, server_default=sa.func.now())
+	time = sa.Column(sa.DateTime, nullable=False, default=sa.func.now())
 	reason = sa.Column(sa.Text, nullable=False)
 
-	warner = relationship("User")
-	warnee = relationship("User", back_populates="warnings")
+	warner = relationship("User", foreign_keys=warner_id, back_populates="warningsGiven")
+	warnee = relationship("User", foreign_keys=warnee_id, back_populates="warnings")
 
 
 # create tables if they don't exist
@@ -341,13 +342,13 @@ def auth():
 				return bytes([first, random.choice(trailing_values), random.choice(trailing_values)])
 			elif first == 0xF0:
 				return bytes([first, random.choice(byte_range(0x90, 0xBF)), random.choice(trailing_values),
-							  random.choice(trailing_values)])
+				              random.choice(trailing_values)])
 			elif first <= 0xF3:
 				return bytes([first, random.choice(trailing_values), random.choice(trailing_values),
-							  random.choice(trailing_values)])
+				              random.choice(trailing_values)])
 			elif first == 0xF4:
 				return bytes([first, random.choice(byte_range(0x80, 0x8F)), random.choice(trailing_values),
-							  random.choice(trailing_values)])
+				              random.choice(trailing_values)])
 
 		def random_utf8_str(length):
 			return "".join(str(random_utf8_seq(), "utf-8") for i in range(length))
@@ -371,9 +372,9 @@ def auth():
 			kiosk.token = new_token
 		else:
 			kiosk = Kiosk(location_id=request.form['location'],
-						  hardware_id=request.form['hwid'],
-						  token=bytes(new_token, 'utf-8'),
-						  last_seen=sa.func.now())
+			              hardware_id=request.form['hwid'],
+			              token=bytes(new_token, 'utf-8'),
+			              last_seen=sa.func.now())
 			db.add(kiosk)
 
 		db.commit()
@@ -590,6 +591,33 @@ def admin_dash():
 		return render_template('admin/index.html')
 	else:
 		return redirect('/')
+
+
+@app.route('/admin/warnings/<int:sid>', methods=["GET", "POST"])
+def admin_warn(sid):
+	if not g.admin or g.admin.location_id != session['location_id']:
+		return redirect('/')
+
+	db = db_session()
+
+	warnee = db.query(User).filter_by(sid=sid, location_id=session['location_id']).one_or_none()
+
+	if warnee is None:
+		return render_template('internal_error.html'), 500
+
+	if request.method == 'GET':
+		return render_template('admin/warnings.html', warnee=warnee, admin=g.admin)
+
+	reason = request.form.get('reason')
+	if not reason:
+		return render_template('admin/warnings.html', warnee=warnee, admin=g.admin, error="You must input a reason for your warning")
+
+	print(f"Adding warning {reason} to user {warnee.name}")
+
+	warning = Warning(warner_id=g.admin.sid, warnee_id=sid, reason=reason)
+	db.add(warning)
+	db.commit()
+	return redirect('/admin')
 
 
 @app.route('/admin/lookup', methods=['GET'])

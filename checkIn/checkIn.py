@@ -601,16 +601,17 @@ def admin_warn(sid):
 	db = db_session()
 
 	warnee = db.query(User).filter_by(sid=sid, location_id=session['location_id']).one_or_none()
+	warnings = db.query(Warning).filter_by(warnee_id=sid).order_by(sa.desc(Warning.time)).all()
 
 	if warnee is None:
 		return render_template('internal_error.html'), 500
 
 	if request.method == 'GET':
-		return render_template('admin/warnings.html', warnee=warnee, admin=g.admin)
+		return render_template('admin/warnings.html', warnee=warnee, warnings=warnings, admin=g.admin)
 
 	reason = request.form.get('reason')
 	if not reason:
-		return render_template('admin/warnings.html', warnee=warnee, admin=g.admin, error="You must input a reason for your warning")
+		return render_template('admin/warnings.html', warnee=warnee, warnings=warnings, admin=g.admin, error="You must input a reason for your warning")
 
 	print(f"Adding warning {reason} to user {warnee.name}")
 

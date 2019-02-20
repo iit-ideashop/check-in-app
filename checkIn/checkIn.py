@@ -1071,7 +1071,7 @@ def check_in(data):
 				.filter_by(location_id=location.id) \
 				.filter_by(timeOut=None) \
 				.filter_by(sid=card.sid) \
-				.one_or_none()
+				.first()
 
 			if lastIn:
 				resp = ("User %s (card id %d) signed out at location %s (id %d, kiosk %d)" % (
@@ -1168,7 +1168,7 @@ def check_in(data):
 				.filter_by(location_id=location.id) \
 				.filter_by(timeOut=None) \
 				.filter_by(sid=card.sid) \
-				.one_or_none()
+				.first()
 
 			# user is banned
 			if card.user.type.level < 0:

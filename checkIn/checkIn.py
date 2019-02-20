@@ -231,15 +231,15 @@ Base.metadata.create_all(engine)
 @app.before_request
 def before_request():
     if 'location_id' not in session \
-        and request.endpoint != 'auth' \
-        and request.endpoint != 'card_read' \
-        and str(request.path[0:7]) != '/static':
-            return redirect(url_for('auth'))
+            and request.endpoint != 'auth' \
+            and request.endpoint != 'card_read' \
+            and str(request.path[0:7]) != '/static':
+        return redirect(url_for('auth'))
 
     if request.endpoint and request.endpoint != 'card_read' and \
-                    'socket.io' not in request.path and \
-                    'static' not in request.path and \
-                    'auth' not in request.path:
+            'socket.io' not in request.path and \
+            'static' not in request.path and \
+            'auth' not in request.path:
         db = db_session()
         kiosk = db.query(Kiosk).get(session['hardware_id'])
         if kiosk:
@@ -521,7 +521,7 @@ def _login(request):
     error = None
     if request.method == 'POST':
         if (request.form['username'] != app.config['USERNAME']
-            or request.form['password'] != app.config['PASSWORD']):
+                or request.form['password'] != app.config['PASSWORD']):
             error = 'Authentication failure'
         else:
             session['logged_in'] = True
@@ -674,7 +674,8 @@ def admin_clear_lab():
         return redirect('/admin/login')
 
     db = db_session()
-    db.query(Access).filter_by(timeOut=None, location_id=g.admin.location_id).update({"timeOut": sa.func.now()}, synchronize_session=False)
+    db.query(Access).filter_by(timeOut=None, location_id=g.admin.location_id).update({"timeOut": sa.func.now()},
+                                                                                     synchronize_session=False)
     db.commit()
     session['admin'] = None
     return redirect('/success/checkout')
@@ -1053,7 +1054,6 @@ def check_in(data):
         #    emit('go', {'to': '/deauth', 'hwid': session['hardware_id']})
         #    return "Token mismatch!"
 
-
         card = db.query(HawkCard).filter_by(
             card=data['card'],
             location_id=data['location']
@@ -1074,7 +1074,7 @@ def check_in(data):
                 .filter_by(location_id=location.id) \
                 .filter_by(timeOut=None) \
                 .filter_by(sid=card.sid) \
-                .one_or_none()
+                .first()
 
             if lastIn:
                 resp = ("User %s (card id %d) signed out at location %s (id %d, kiosk %d)" % (
@@ -1093,7 +1093,7 @@ def check_in(data):
             .filter_by(location_id=session['location_id']) \
             .options(joinedload(Access.user)) \
             .all() \
-
+ \
         total_count = len(in_lab)
 
         if location.capacity and total_count >= location.capacity:
@@ -1101,7 +1101,7 @@ def check_in(data):
             return
 
         student_count = staff_count = 0
-        for a in in_lab: #type: Access
+        for a in in_lab:  # type: Access
             if a.user.type.level > 0:
                 staff_count += 1
             else:
@@ -1125,7 +1125,7 @@ def check_in(data):
                 card=data['card']
             ).all()
             for c in cards:
-                if c.sid:   # got data, now copy it under the new location
+                if c.sid:  # got data, now copy it under the new location
                     card = HawkCard(sid=None, card=data['card'], location_id=location.id)
                     db.add(card)
                     db.commit()
@@ -1171,7 +1171,7 @@ def check_in(data):
                 .filter_by(location_id=location.id) \
                 .filter_by(timeOut=None) \
                 .filter_by(sid=card.sid) \
-                .one_or_none()
+                .first()
 
             # user is banned
             if card.user.type.level < 0:

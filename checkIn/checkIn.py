@@ -228,6 +228,7 @@ class Warning(Base):
 	warnee_id = sa.Column(sa.BigInteger, sa.ForeignKey("users.sid"), nullable=False)
 	time = sa.Column(sa.DateTime, nullable=False, default=sa.func.now())
 	reason = sa.Column(sa.Text, nullable=False)
+	banned = sa.Column(sa.Boolean, nullable=False)
 
 	warner = relationship("User", foreign_keys=warner_id, back_populates="warningsGiven")
 	warnee = relationship("User", foreign_keys=warnee_id, back_populates="warnings")
@@ -603,20 +604,38 @@ def admin_warn(sid):
 	warnee = db.query(User).filter_by(sid=sid, location_id=session['location_id']).one_or_none()
 	warnings = db.query(Warning).filter_by(warnee_id=sid).order_by(sa.desc(Warning.time)).all()
 
+	ban_type = db.query(Type).filter_by(location_id=session['location_id']) \
+		.filter(Type.level < 0) \
+		.first()
+
 	if warnee is None:
 		return render_template('internal_error.html'), 500
 
+	canBan = True
+	try:
+		check_set_type(userInfo=warnee, typeInfo=ban_type)
+	except ProcessingError:
+		canBan = False
+
 	if request.method == 'GET':
-		return render_template('admin/warnings.html', warnee=warnee, warnings=warnings, admin=g.admin)
+		return render_template('admin/warnings.html', warnee=warnee, warnings=warnings, admin=g.admin, canBan=canBan)
 
 	reason = request.form.get('reason')
 	if not reason:
-		return render_template('admin/warnings.html', warnee=warnee, warnings=warnings, admin=g.admin, error="You must input a reason for your warning")
+		return render_template('admin/warnings.html', warnee=warnee, warnings=warnings, admin=g.admin, canBan=canBan, error="You must input a reason for your warning")
 
-	warning = Warning(warner_id=g.admin.sid, warnee_id=sid, reason=reason)
+	shouldBan = "ban" in request.form
+	if shouldBan:
+
+		try:
+			set_type(userID=sid, typeID=ban_type.id)
+		except ProcessingError as error:
+			return render_template('admin/warnings.html', warnee=warnee, warnings=warnings, admin=g.admin, reason=reason, canBan=False, error=error.message)
+
+	warning = Warning(warner_id=g.admin.sid, warnee_id=sid, reason=reason, banned=shouldBan)
 	db.add(warning)
 	db.commit()
-	return redirect('/admin')
+	return render_template('admin/warnings.html', warnee=warnee, warnings=[warning] + warnings, canBan=canBan, admin=g.admin)
 
 
 @app.route('/admin/lookup', methods=['GET'])
@@ -836,26 +855,41 @@ def admin_add_machine(id):
 	return redirect('/admin/locations/' + str(id))
 
 
+class ProcessingError(BaseException):
+	def __init__(self, message):
+		self.message = message
+
+
+def check_set_type(userInfo, typeInfo):
+	if not typeInfo:
+		raise ProcessingError("Type does not exist.")
+	if not userInfo:
+		raise ProcessingError("User does not exist.")
+	if g.admin.type.level <= typeInfo.level:
+		raise ProcessingError("You don't have permission to set that type.")
+	if userInfo.type.level >= g.admin.type.level:
+		raise ProcessingError("You don't have permission to modify that user.")
+
+
+def set_type(userID, typeID):
+	db = db_session()
+	type = db.query(Type).filter_by(id=typeID, location_id=session['location_id']).one_or_none()
+	user = db.query(User).filter_by(sid=userID, location_id=session['location_id']).one_or_none()
+	check_set_type(user, type)
+	user.type_id = typeID
+	db.commit()
+
+
 @app.route('/admin/type/set')
 def admin_set_type():
 	if not g.admin or g.admin.location_id != session['location_id']:
 		return redirect('/')
-	db = db_session()
-	type = db.query(Type).filter_by(id=request.args['tid'], location_id=session['location_id']).one_or_none()
-	user = db.query(User).filter_by(sid=request.args['sid'], location_id=session['location_id']).one_or_none()
-	if not type:
-		return redirect('/admin/lookup?sid=' + request.args['sid'] + "&error=Type does not exist.")
-	if not user:
-		return redirect('/admin/lookup?sid=' + request.args['sid'] + "&error=User does not exist.")
-	elif g.admin.type.level <= type.level:
-		return redirect(
-			'/admin/lookup?sid=' + request.args['sid'] + "&error=You don't have permission to set that type.")
-	elif user.type.level >= g.admin.type.level:
-		return redirect(
-			'/admin/lookup?sid=' + request.args['sid'] + "&error=You don't have permission to modify that user.")
 
-	user.type_id = request.args['tid']
-	db.commit()
+	try:
+		set_type(request.args["sid"], request.args["tid"])
+	except ProcessingError as error:
+		return redirect("/admin/lookup?sid=" + request.args["sid"] + "&error=" + error.message)
+
 	return redirect('/admin/lookup?sid=' + request.args['sid'])
 
 

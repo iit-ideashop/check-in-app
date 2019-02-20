@@ -155,8 +155,7 @@
                     <div class="pull-right">
                         {% if g.admin.type.level >= 75 %}
                         <!--<a href="javascript:void(0);" class="btn btn-danger">Delete user</a> <!-- TODO: delete user flow -->
-                            <a href="/admin/warnings/{{ results[0].sid }}" class="btn btn-warning">Add Warning</a>
-                            <a href="/admin/type/set?sid={{ results[0].sid }}&tid={{ ban_type.id }}" class="btn btn-danger">Ban from lab</a>
+                            <a href="/admin/warnings/{{ results[0].sid }}" class="btn">Warn / Ban</a>
                             {% if types %}
                                 <div class="btn-group">
                                     <a href="javascript:void(0);" class="btn btn-success dropdown-toggle" data-toggle="dropdown">

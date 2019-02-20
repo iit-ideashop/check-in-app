@@ -1,50 +1,60 @@
 {% extends "layout.html" %}
 {% block data %}
 <div class="container">
-    <div class="panel panel-default">
-        <div class="panel-heading">
-            <a href="javascript:history.back()" class="btn btn-primary"><i class="glyphicon glyphicon-chevron-left"></i></a>
+	{% if error %}
+        <div class="row">
+            <div class="alert alert-danger text-center">
+                <strong>{{ error }}</strong>
+            </div>
         </div>
-        <ul class="list-group">
-            <li class="list-group-item">
-	            <h3>Warn {{ warnee.name }}</h3>
-	            <form action="/admin/warnings/{{ warnee.sid }}" method="post">
-					<label for="reasonInput">Reason</label>
-		            <textarea name="reason" class="form-control" id="reasonInput" rows="3"></textarea>
-		            <input type="submit" class="btn btn-warning" value="Warn" />
-	            </form>
-            </li>
-            <li class="list-group-item">
-	            <h3>{{ warnee.name }}'s previous warnings ({{ warnings|length }})</h3>
-	            <table class="table">
-		            <thead>
-		            <tr>
-			            <th>Warner</th>
-			            <th>Time</th>
-			            <th>Reason</th>
-		            </tr>
-		            </thead>
-		            <tbody>
-		            {% for warning in warnings %}
+    {% endif %}
+	<div class="row">
+	    <div class="panel panel-default">
+	        <div class="panel-heading">
+	            <a href="javascript:history.back()" class="btn btn-primary"><i class="glyphicon glyphicon-chevron-left"></i></a>
+	        </div>
+	        <ul class="list-group">
+	            <li class="list-group-item">
+		            <h3>Warn {{ warnee.name }}</h3>
+		            <form action="/admin/warnings/{{ warnee.sid }}" method="post">
+						<label for="reasonInput">Reason</label>
+			            <textarea name="reason" class="form-control" id="reasonInput" rows="3">{{ reason if reason is defined }}</textarea>
+			            <input type="submit" name="warn" class="btn btn-warning" value="Warn" />
+			            <input type="submit" name="ban" class="btn btn-danger" value="Ban" {% if not canBan %}disabled=""{% endif %}/>
+		            </form>
+	            </li>
+	            <li class="list-group-item">
+		            <h3>{{ warnee.name }}'s previous warnings ({{ warnings|length }})</h3>
+		            <table class="table">
+			            <thead>
 			            <tr>
-			            <td>{{ warning.warner.name }}</td>
-			            <td>{{ warning.time }}</td>
-			            <td>{{ warning.reason }}</td>
+				            <th>Warner</th>
+				            <th>Time</th>
+				            <th>Reason</th>
 			            </tr>
-		            {% endfor %}
-		            </tbody>
+			            </thead>
+			            <tbody>
+			            {% for warning in warnings %}
+				            <tr style="{{ "background-color: #fcc" if warning.banned }}">
+				            <td>{{ warning.warner.name }}</td>
+				            <td>{{ warning.time }}</td>
+				            <td>{{ warning.reason }}</td>
+				            </tr>
+			            {% endfor %}
+			            </tbody>
 
-	            </table>
-            </li>
-            {% for warning in locations %}
-            <li class="list-group-item {{ "active" if location == g.location else "" }}">
-                {{ location.name }}
-                <a href="/admin/locations/{{ location.id }}" class="btn btn-default btn-xs pull-right">
-                    <i class="glyphicon glyphicon-chevron-right"></i>
-                </a>
-            </li>
-            {% endfor %}
-        </ul>
-    </div>
+		            </table>
+	            </li>
+	            {% for warning in locations %}
+	            <li class="list-group-item {{ "active" if location == g.location else "" }}">
+	                {{ location.name }}
+	                <a href="/admin/locations/{{ location.id }}" class="btn btn-default btn-xs pull-right">
+	                    <i class="glyphicon glyphicon-chevron-right"></i>
+	                </a>
+	            </li>
+	            {% endfor %}
+	        </ul>
+	    </div>
+	</div>
 </div>
 {% endblock %}

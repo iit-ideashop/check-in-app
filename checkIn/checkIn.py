@@ -230,13 +230,16 @@ Base.metadata.create_all(engine)
 
 @app.before_request
 def before_request():
-    if 'location_id' not in session and request.endpoint != 'auth' and request.endpoint != 'card_read':
-        return redirect(url_for('auth'))
+    if 'location_id' not in session \
+        and request.endpoint != 'auth' \
+        and request.endpoint != 'card_read' \
+        and str(request.path[0:7]) != '/static':
+            return redirect(url_for('auth'))
 
     if request.endpoint and request.endpoint != 'card_read' and \
-                    'socket.io' not in request.endpoint and \
-                    'static' not in request.endpoint and \
-                    'auth' not in request.endpoint:
+                    'socket.io' not in request.path and \
+                    'static' not in request.path and \
+                    'auth' not in request.path:
         db = db_session()
         kiosk = db.query(Kiosk).get(session['hardware_id'])
         if kiosk:

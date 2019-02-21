@@ -14,8 +14,6 @@
 $(function() {
     localStorage.debug = 'engine.io-client:socket';
 
-    var socket = io();
-    socket.connect();
     socket.on('go', function (data) {
         if (data.hwid === {{ session['hardware_id'] | tojson }}) {
             window.location.href = data.to;

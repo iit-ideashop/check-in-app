@@ -12,7 +12,7 @@ import zerorpc
 import math
 from flask import Flask, request, session, g, redirect, url_for, render_template, abort
 from flask_bootstrap import Bootstrap
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO, emit, send
 import sqlalchemy as sa
 from sqlalchemy.orm import relationship, scoped_session, sessionmaker, joinedload
 from sqlalchemy.ext.declarative import declarative_base
@@ -1035,6 +1035,11 @@ def register():
 
 		db.commit()
 		return redirect(url_for('.waiver', sid=request.form['sid']))
+
+
+@socketio.on('ping')
+def ping(data):
+	send('pong')
 
 
 @socketio.on('check in')

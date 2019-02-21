@@ -8,5 +8,22 @@ function stopAudio(className) {
     }
 }
 
+socket = io();
+
 $(function() {
+    const reconnected = function () {
+        $('#disconnect-alert').hide();
+    };
+
+    const disconnected = function () {
+        $('#disconnect-alert').show();
+    };
+
+    socket.on('connect', reconnected);
+    socket.on('reconnect', reconnected);
+
+    socket.on('reconnect_failed', disconnected);
+    socket.on('connect_error', disconnected);
+
+    socket.connect();
 });

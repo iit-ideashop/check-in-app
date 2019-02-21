@@ -19,8 +19,6 @@
 $(function() {
     localStorage.debug = '*';
 
-    var socket = io();
-    socket.connect();
     socket.on('scan', function (data) {
         if (data.hwid === {{ session['hardware_id'] | tojson }})
             window.location.assign("/admin/login?sid=" + data.sid + "&cardnum=" + data.card);

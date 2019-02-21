@@ -37,14 +37,12 @@
 {% block scripts %}
     {{ super() }}
     <script>
-    let socket = io();
-    let connected = false;
     let trained = [];
 
     function updateTrained() {
         let status = $('#status');
         if (trained.length === 0) {
-            if (connected) {
+            if (socket.connected) {
                 status.html('Ready');
             } else {
                 status.html('Please wait...');
@@ -60,10 +58,7 @@
         }
     }
 
-    socket.connect();
-
     socket.on('connect', function () {
-        connected = true;
         updateTrained();
     });
 

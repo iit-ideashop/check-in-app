@@ -219,8 +219,6 @@
         $("#card").keyboard();
         $("#name").keyboard();
 
-        var socket = io();
-        socket.connect();
         socket.on('scan', function (data) {
             if (data.hwid === {{ session['hardware_id'] | tojson }})
                 window.location.assign("/admin/lookup?sid=" + data.sid + "&card=" + data.card + "&name=" + data.name);

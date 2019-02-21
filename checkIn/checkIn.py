@@ -1092,9 +1092,8 @@ def check_in(data):
 			.filter_by(timeOut=None) \
 			.filter_by(location_id=session['location_id']) \
 			.options(joinedload(Access.user)) \
-			.all() \
- \
-				total_count = len(in_lab)
+			.all()
+		total_count = len(in_lab)
 
 		if location.capacity and total_count >= location.capacity:
 			emit('go', {'to': url_for('.over_fire_capacity'), 'hwid': data['hwid']})

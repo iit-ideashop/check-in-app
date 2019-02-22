@@ -8,9 +8,9 @@ function stopAudio(className) {
     }
 }
 
-socket = io();
+var socket = io();
 
-$(function() {
+//$(function() {
     const reconnected = function () {
         $('#disconnect-alert').hide();
     };
@@ -22,8 +22,9 @@ $(function() {
     socket.on('connect', reconnected);
     socket.on('reconnect', reconnected);
 
+    socket.on('disconnect', disconnected);
     socket.on('reconnect_failed', disconnected);
     socket.on('connect_error', disconnected);
 
     socket.connect();
-});
+//});

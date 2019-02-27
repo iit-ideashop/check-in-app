@@ -38,6 +38,8 @@ Bootstrap(app)
 engine = sa.create_engine(app.config['DB'], pool_recycle=3600, encoding='utf-8')
 Base = declarative_base()
 
+DBStudentIDType = sa.Integer
+DBCardType = sa.Integer
 
 # New schema
 class Location(Base):
@@ -66,8 +68,8 @@ class Location(Base):
 class Training(Base):
 	__tablename__ = 'safetyTraining'
 	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-	trainee_id = sa.Column(sa.BigInteger, sa.ForeignKey('users.sid'))
-	trainer_id = sa.Column(sa.BigInteger, sa.ForeignKey('users.sid'))
+	trainee_id = sa.Column(DBStudentIDType, sa.ForeignKey('users.sid'))
+	trainer_id = sa.Column(DBStudentIDType, sa.ForeignKey('users.sid'))
 	machine_id = sa.Column(sa.Integer, sa.ForeignKey('machines.id'))
 	date = sa.Column(sa.DateTime)
 
@@ -82,7 +84,7 @@ class Training(Base):
 
 class User(Base):
 	__tablename__ = 'users'
-	sid = sa.Column(sa.BigInteger, primary_key=True)
+	sid = sa.Column(DBStudentIDType, primary_key=True)
 	name = sa.Column(sa.String(length=100), nullable=False)
 	type_id = sa.Column(sa.Integer, sa.ForeignKey('types.id'))
 	waiverSigned = sa.Column(sa.DateTime)
@@ -140,7 +142,7 @@ class Type(Base):
 class Access(Base):
 	__tablename__ = 'access'
 	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-	sid = sa.Column(sa.BigInteger)
+	sid = sa.Column(DBStudentIDType)
 	timeIn = sa.Column(sa.DateTime, nullable=False)
 	timeOut = sa.Column(sa.DateTime, default=None)
 	location_id = sa.Column(sa.Integer, nullable=False)
@@ -159,8 +161,8 @@ class Access(Base):
 
 class HawkCard(Base):
 	__tablename__ = 'hawkcards'
-	sid = sa.Column(sa.BigInteger)
-	card = sa.Column(sa.BigInteger, primary_key=True)
+	sid = sa.Column(DBStudentIDType)
+	card = sa.Column(DBCardType, primary_key=True)
 	location_id = sa.Column(sa.Integer, primary_key=True)
 
 	user = relationship('User', lazy='joined')
@@ -190,10 +192,10 @@ class Machine(Base):
 
 class AdminLog(Base):
 	__tablename__ = 'adminLog'
-	id = sa.Column(sa.BigInteger, primary_key=True, autoincrement=True)
-	admin_id = sa.Column(sa.BigInteger)
+	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
+	admin_id = sa.Column(DBStudentIDType)
 	action = sa.Column(sa.String(length=50))
-	target_id = sa.Column(sa.BigInteger)
+	target_id = sa.Column(DBStudentIDType)
 	data = sa.Column(sa.Text)
 	location_id = sa.Column(sa.Integer)
 
@@ -213,8 +215,8 @@ class AdminLog(Base):
 
 class CardScan(Base):
 	__tablename__ = 'scanLog'
-	id = sa.Column(sa.BigInteger, primary_key=True, autoincrement=True)
-	card_id = sa.Column(sa.BigInteger, nullable=False)
+	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
+	card_id = sa.Column(DBCardType, nullable=False)
 	time = sa.Column(sa.DateTime)
 	location_id = sa.Column(sa.Integer, nullable=False)
 
@@ -232,8 +234,8 @@ class CardScan(Base):
 class Warning(Base):
 	__tablename__ = 'warnings'
 	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-	warner_id = sa.Column(sa.BigInteger, sa.ForeignKey("users.sid"), nullable=False)
-	warnee_id = sa.Column(sa.BigInteger, sa.ForeignKey("users.sid"), nullable=False)
+	warner_id = sa.Column(DBStudentIDType, sa.ForeignKey("users.sid"), nullable=False)
+	warnee_id = sa.Column(DBStudentIDType, sa.ForeignKey("users.sid"), nullable=False)
 	time = sa.Column(sa.DateTime, nullable=False, default=sa.func.now())
 	reason = sa.Column(sa.Text, nullable=False)
 	location_id = sa.Column(sa.Integer, sa.ForeignKey("locations.id"), nullable=False)

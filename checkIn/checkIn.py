@@ -223,7 +223,7 @@ class CardScan(Base):
 
 class Warning(Base):
 	__tablename__ = 'warnings'
-	id = sa.Column(sa.BigInteger, primary_key=True, autoincrement=True)
+	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
 	warner_id = sa.Column(sa.BigInteger, sa.ForeignKey("users.sid"), nullable=False)
 	warnee_id = sa.Column(sa.BigInteger, sa.ForeignKey("users.sid"), nullable=False)
 	time = sa.Column(sa.DateTime, nullable=False, default=sa.func.now())

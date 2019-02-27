@@ -11,16 +11,22 @@
 	<div class="row">
 	    <div class="panel panel-default">
 	        <div class="panel-heading">
-	            <a href="javascript:history.back()" class="btn btn-primary"><i class="glyphicon glyphicon-chevron-left"></i></a>
+	            <a href="/admin/lookup?sid={{ warnee.sid }}" class="btn btn-primary"><i class="glyphicon glyphicon-chevron-left"></i></a>
 	        </div>
 	        <ul class="list-group">
 	            <li class="list-group-item">
 		            <h3>Warn {{ warnee.name }}</h3>
 		            <form action="/admin/warnings/{{ warnee.sid }}" method="post">
 						<label for="reasonInput">Reason</label>
-			            <textarea name="reason" class="form-control" id="reasonInput" rows="3">{{ reason if reason is defined }}</textarea>
+		                <select name="category" id="category">
+							<option value=""{% if category != "Other" %} selected{% endif %} disabled hidden>Please select a category</option>
+			                <option value="Brought Prohibited Items">Brought Prohibited Items</option>
+			                <option value="Disorderly Conduct">Disorderly Conduct</option>
+			                <option value="Other"{% if category == "Other" %} selected{% endif %}>Other</option>
+		                </select>
+			            <textarea name="reason" class="form-control" id="reasonInput" rows="3" placeholder="Other Comments">{{ reason if reason }}</textarea>
 			            <input type="submit" name="warn" class="btn btn-warning" value="Warn" />
-			            <input type="submit" name="ban" class="btn btn-danger" value="Ban" {% if not canBan %}disabled=""{% endif %}/>
+			            <input type="submit" name="ban" class="btn btn-danger" value="Ban"{% if not canBan %} disabled{% endif %}/>
 		            </form>
 	            </li>
 	            <li class="list-group-item">
@@ -38,7 +44,7 @@
 				            <tr style="{{ "background-color: #fcc" if warning.banned }}">
 				            <td>{{ warning.warner.name }}</td>
 				            <td>{{ warning.time }}</td>
-				            <td>{{ warning.reason }}</td>
+				            <td>{{ warning.category if warning.category != "Other" }}{{ ": " if warning.category != "Other" and warning.reason }}{{ warning.reason if warning.reason }}</td>
 				            </tr>
 			            {% endfor %}
 			            </tbody>
@@ -57,4 +63,13 @@
 	    </div>
 	</div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script>
+    $(function() {
+        $("#reasonInput").keyboard();
+    });
+    </script>
 {% endblock %}

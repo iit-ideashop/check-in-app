@@ -47,14 +47,16 @@
                                 <td>ID</td>
                                 <td>Name</td>
                                 <td>Position</td>
+	                            <td>Warnings</td>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for u in results %}
+                            {% for (u, warnings) in results %}
                                 <tr>
                                     <td><a href="/admin/lookup?sid={{ u.sid }}" class="btn btn-xs btn-primary">A{{ u.sid }}</a></td>
                                     <td>{{ u.name }}</td>
                                     <td>{{ u.type.name }}</td>
+                                    <td>{{ warnings }}</td>
                                 </tr>
                             {% endfor %}
                         </tbody>
@@ -62,19 +64,19 @@
                 </div>
                 {% elif results and results | length == 1 %}
                 <div class="panel-body">
-                    {% if results[0].photo %}
-     				    <img src="{{ results[0].photo }}" height="75" width="75" class="img-circle pull-right" />
+                    {% if results[0][0].photo %}
+     				    <img src="{{ results[0][0].photo }}" height="75" width="75" class="img-circle pull-right" />
 					{% else %}
 						<img src="/static/images/placeholder.png" height="75" width="75" class="img-circle pull-right" />
                     {% endif %}
                     <h1>
-                        {{ results[0].name }} <small>{{ results[0].type.name }}</small>
+                        {{ results[0][0].name }} <small>{{ results[0][0].type.name }}</small>
                     </h1>
                     <hr />
-                    {% if results[0].waiverSigned %}
+                    {% if results[0][0].waiverSigned %}
                         <div class="alert alert-success">
-                            Accepted user agreement on {{ results[0].waiverSigned }}.
-                            <a href="/admin/clear_waiver?sid={{ results[0].sid }}">
+                            Accepted user agreement on {{ results[0][0].waiverSigned }}.
+                            <a href="/admin/clear_waiver?sid={{ results[0][0].sid }}">
                                 <button class="btn btn-xs btn-success pull-right">
                                     Require another signature
                                 </button>
@@ -97,14 +99,14 @@
                                     <th>On date</th>
                                 </tr>
                             </thead>
-                            {% for t in results[0].trainings %}
+                            {% for t in results[0][0].trainings %}
 			    	{% if t.machine.location_id == g.location.id %}
                                 <tr>
                                     <td>{{ t.machine.name }}</td>
                                     <td>{{ t.trainer.name }}</td>
                                     <td>{{ t.date }}</td>
                                     <td>
-                                        <a href="/admin/training/remove?sid={{ results[0].sid }}&id={{ t.id }}" class="btn btn-danger btn-xs">
+                                        <a href="/admin/training/remove?sid={{ results[0][0].sid }}&id={{ t.id }}" class="btn btn-danger btn-xs">
                                             <i class="glyphicon glyphicon-remove"></i>
                                         </a>
                                     </td>
@@ -155,7 +157,7 @@
                     <div class="pull-right">
                         {% if g.admin.type.level >= 75 %}
                         <!--<a href="javascript:void(0);" class="btn btn-danger">Delete user</a> --><!-- TODO: delete user flow -->
-                            <a href="/admin/warnings/{{ results[0].sid }}" class="btn btn-primary">Warn / Ban</a>
+                            <a href="/admin/warnings/{{ results[0][0].sid }}" class="btn btn-primary">Warn / Ban</a>
                             {% if types %}
                                 <div class="btn-group">
                                     <a href="javascript:void(0);" class="btn btn-success dropdown-toggle" data-toggle="dropdown">
@@ -163,7 +165,7 @@
                                     </a>
                                     <ul class="dropdown-menu">
                                         {% for type in types %}
-                                            <li><a href="/admin/type/set?sid={{ results[0].sid }}&tid={{ type.id }}">{{ type.name }} ({{ type.level }})</a></li>
+                                            <li><a href="/admin/type/set?sid={{ results[0][0].sid }}&tid={{ type.id }}">{{ type.name }} ({{ type.level }})</a></li>
                                         {% endfor %}
                                     </ul>
                                 </div>
@@ -182,7 +184,7 @@
                                 </div>
                                 <div class="modal-body">
                                     <input type="hidden" name="admin_id" value="{{ g.admin.sid }}" />
-                                    <input type="hidden" name="student_id" value="{{ results[0].sid }}" />
+                                    <input type="hidden" name="student_id" value="{{ results[0][0].sid }}" />
                                     <select class="form-control" name="machine">
                                         {% for m in machines %}
                                             <option value="{{ m.id }}">{{ m.name }}</option>

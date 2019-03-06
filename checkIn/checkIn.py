@@ -18,6 +18,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from iitlookup import IITLookup
 from collections import defaultdict
 from datetime import datetime
+from typing import Optional, Tuple, List
 
 version = "1.0.0"
 
@@ -642,6 +643,31 @@ def admin_warn(sid):
 	return render_template('admin/warnings.html', warnee=warnee, warnings=[warning] + warnings, canBan=canBan, admin=g.admin)
 
 
+def lookupQuery(db: sa.orm.session.Session, location_id: int, sid: Optional[int], name: Optional[str], card_no: Optional[int]) -> List[Tuple[User, int]]:
+	warningCounts = db.query(
+		Warning.warnee_id,
+		sa.func.count(Warning.warnee_id).label("warningCount")
+	).group_by(Warning.warnee_id).subquery("warningCounts")
+	query = db.query(
+		User,
+		sa.func.coalesce(warningCounts.c.warningCount, sa.literal_column("0"))
+	)\
+		.select_from(User)\
+		.outerjoin(warningCounts, User.sid == warningCounts.c.warnee_id)\
+		.filter(User.location_id == location_id)
+
+	if sid or name or card_no:
+		if sid:
+			query = query.filter(User.sid == sid)
+		if name:
+			query = query.filter(User.name.ilike(name + "%"))
+		if card_no:
+			query = query.join(HawkCard, User.sid == HawkCard.sid).filter(HawkCard.card == card_no)
+	else:
+		query = query.filter(User.access.any(Access.timeOut == None))
+	return query.limit(20).all()
+
+
 @app.route('/admin/lookup', methods=['GET'])
 def admin_lookup():
 	if not g.admin or g.admin.location_id != session['location_id']:
@@ -651,19 +677,14 @@ def admin_lookup():
 	query = db.query(User)
 
 	sid = request.args.get('sid')
+	try: sid = int(sid)
+	except (TypeError, ValueError): sid = None
 	name = request.args.get('name')
 	card_id = request.args.get('card')
+	try: card_id = int(card_id)
+	except (TypeError, ValueError): card_id = None
+
 	location_id = request.args.get('location') if 'location' in request.args else session['location_id']
-	query = query.filter(User.location_id == location_id)
-	if sid or name or card_id:
-		if sid and sid != '':
-			query = query.filter_by(sid=sid)
-		if name and name != '':
-			query = query.filter(User.name.ilike(name + '%'))
-		if card_id:
-			query = query.filter(User.cards.any(HawkCard.card == card_id))
-	else:
-		query = query.filter(User.access.any(Access.timeOut == None))
 
 	access_log = None
 	machines = None
@@ -671,17 +692,17 @@ def admin_lookup():
 	ban_type = None
 	trainings = None
 
-	results = query.limit(20).all()
+	results = lookupQuery(db, location_id, sid, name, card_id)
 
 	if len(results) == 1:
 		machines = db.query(Machine).filter_by(location_id=session['location_id']).all()
 		# if found user has lower rank than admin user
-		if results[0].type.level < g.admin.type.level:
+		if results[0][0].type.level < g.admin.type.level:
 			types = db.query(Type).filter_by(location_id=session['location_id']) \
 				.filter(Type.level <= g.admin.type.level) \
 				.all()
 		access_log = db.query(Access) \
-			.filter_by(sid=results[0].sid, location_id=session['location_id']) \
+			.filter_by(sid=results[0][0].sid, location_id=session['location_id']) \
 			.order_by(Access.timeIn.desc()).limit(10).all()
 		ban_type = db.query(Type).filter_by(location_id=session['location_id']) \
 			.filter(Type.level < 0) \

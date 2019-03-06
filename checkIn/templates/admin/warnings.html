@@ -16,17 +16,38 @@
 	        <ul class="list-group">
 	            <li class="list-group-item">
 		            <h3>Warn {{ warnee.name }}</h3>
-		            <form action="/admin/warnings/{{ warnee.sid }}" method="post">
-						<label for="reasonInput">Reason</label>
-		                <select name="category" id="category">
-							<option value=""{% if category != "Other" %} selected{% endif %} disabled hidden>Please select a category</option>
-			                <option value="Brought Prohibited Items">Brought Prohibited Items</option>
-			                <option value="Disorderly Conduct">Disorderly Conduct</option>
-			                <option value="Other"{% if category == "Other" %} selected{% endif %}>Other</option>
-		                </select>
-			            <textarea name="reason" class="form-control" id="reasonInput" rows="3" placeholder="Other Comments">{{ reason if reason }}</textarea>
-			            <input type="submit" name="warn" class="btn btn-warning" value="Warn" />
-			            <input type="submit" name="ban" class="btn btn-danger" value="Ban"{% if not canBan %} disabled{% endif %}/>
+		            <form class="form-horizontal" action="/admin/warnings/{{ warnee.sid }}" method="post">
+		                <div class="form-group">
+							<label for="category" class="control-label col-sm-1">Reason</label>
+		                    <div class="col-sm-11">
+				                <select name="category" id="category" class="form-control" onchange="updateCommentOptionality()">
+									<option value=""{% if category != "Other" %} selected{% endif %} disabled hidden>Please select a category</option>
+					                <option value="Disorderly conduct">Disorderly Conduct</option>
+					                <option value="Brought prohibited items">Brought Prohibited Items</option>
+				                    <option value="Safety glasses violation">Safety Glasses Violation</option>
+				                    <option value="Improper tool use">Improper Tool Use</option>
+				                    <option value="Food or drink in lab">Food or Drink in Lab</option>
+				                    <option value="User agreement violation">User Agreement Violation</option>
+				                    <option value="Blocking path of egress">Blocking Path of Egress</option>
+				                    <option value="Damaging equipment/supplies">Damaging Equipment/Supplies</option>
+				                    <option value="Littering">Littering</option>
+				                    <option value="Improper attire">Improper Attire</option>
+					                <option value="Other"{% if category == "Other" %} selected{% endif %}>Other</option>
+				                </select>
+		                    </div>
+		                </div>
+		                <div class="form-group">
+			                <label for="reason" id="commentsLabel" class="control-label col-sm-1">Comments (optional)</label>
+			                <div class="col-sm-11">
+			                    <textarea name="reason" class="form-control" id="reasonInput" rows="3" placeholder="Other Comments">{{ reason if reason }}</textarea>
+			                </div>
+		                </div>
+		                <div class="form-group">
+		                    <div class="col-sm-offset-1 col-sm-11">
+					            <input type="submit" name="warn" class="btn btn-warning" value="Warn" />
+					            <input type="submit" name="ban" class="btn btn-danger" value="Ban"{% if not canBan %} disabled{% endif %}/>
+		                    </div>
+		                </div>
 		            </form>
 	            </li>
 	            <li class="list-group-item">
@@ -48,7 +69,6 @@
 				            </tr>
 			            {% endfor %}
 			            </tbody>
-
 		            </table>
 	            </li>
 	            {% for warning in locations %}
@@ -71,5 +91,12 @@
     $(function() {
         $("#reasonInput").keyboard();
     });
+
+    function updateCommentOptionality() {
+	    var reason = document.getElementById("category");
+	    var reasonLabel = document.getElementById("commentsLabel");
+	    reasonLabel.innerText = "Comments " + (reason.value === "Other" ? "(required)" : "(optional)");
+    }
+    updateCommentOptionality();
     </script>
 {% endblock %}

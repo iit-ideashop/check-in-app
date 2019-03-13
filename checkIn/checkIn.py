@@ -68,10 +68,10 @@ class Location(Base):
 class Training(Base):
 	__tablename__ = 'safetyTraining'
 	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-	trainee_id = sa.Column(DBStudentIDType, sa.ForeignKey('users.sid'))
-	trainer_id = sa.Column(DBStudentIDType, sa.ForeignKey('users.sid'))
-	machine_id = sa.Column(sa.Integer, sa.ForeignKey('machines.id'))
-	date = sa.Column(sa.DateTime)
+	trainee_id = sa.Column(DBStudentIDType, sa.ForeignKey('users.sid'), nullable=False)
+	trainer_id = sa.Column(DBStudentIDType, sa.ForeignKey('users.sid'), nullable=False)
+	machine_id = sa.Column(sa.Integer, sa.ForeignKey('machines.id'), nullable=False)
+	date = sa.Column(sa.DateTime, default=sa.func.now, nullable=False)
 
 	trainee = relationship('User', foreign_keys=[trainee_id], back_populates='trainings')
 	trainer = relationship('User', foreign_keys=[trainer_id])
@@ -122,7 +122,7 @@ class Kiosk(Base):
 	location_id = sa.Column(sa.Integer, sa.ForeignKey('locations.id'), nullable=False)
 	hardware_id = sa.Column(sa.Integer, primary_key=True, nullable=False)
 	token = sa.Column(sa.String(length=65), nullable=False)
-	last_seen = sa.Column(sa.DateTime, default=sa.func.now())
+	last_seen = sa.Column(sa.DateTime, default=sa.func.now(), nullable=False)
 	last_ip = sa.Column(sa.String(length=16), nullable=True)
 
 	location = relationship('Location')
@@ -180,7 +180,7 @@ class HawkCard(Base):
 class Machine(Base):
 	__tablename__ = 'machines'
 	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-	name = sa.Column(sa.String(length=50))
+	name = sa.Column(sa.String(length=50), nullable=False)
 	location_id = sa.Column(sa.Integer, sa.ForeignKey('locations.id'), nullable=False)
 
 	location = relationship('Location')
@@ -217,7 +217,7 @@ class CardScan(Base):
 	__tablename__ = 'scanLog'
 	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
 	card_id = sa.Column(DBCardType, nullable=False)
-	time = sa.Column(sa.DateTime)
+	time = sa.Column(sa.DateTime, nullable=False)
 	location_id = sa.Column(sa.Integer, nullable=False)
 
 	card = relationship('HawkCard')

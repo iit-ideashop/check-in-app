@@ -18,10 +18,10 @@
 					<h3>Warn {{ warnee.name }}</h3>
 					<form class="form-horizontal" action="/admin/warnings/{{ warnee.sid }}" method="post">
 						<div class="form-group">
-							<label for="category" class="control-label col-sm-1">Reason</label>
+							<label for="reason" class="control-label col-sm-1">Reason</label>
 							<div class="col-sm-11">
-								<select name="category" id="category" class="form-control" onchange="updateCommentOptionality()">
-									<option value=""{% if category != "Other" %} selected{% endif %} disabled hidden>Please select a category</option>
+								<select name="reason" id="reason" class="form-control" onchange="updateCommentOptionality()">
+									<option value=""{% if reason != "Other" %} selected{% endif %} disabled hidden>Please select a reason</option>
 									<option value="Disorderly conduct">Disorderly Conduct</option>
 									<option value="Brought prohibited items">Brought Prohibited Items</option>
 									<option value="Safety glasses violation">Safety Glasses Violation</option>
@@ -32,14 +32,14 @@
 									<option value="Damaging equipment/supplies">Damaging Equipment/Supplies</option>
 									<option value="Littering">Littering</option>
 									<option value="Improper attire">Improper Attire</option>
-									<option value="Other"{% if category == "Other" %} selected{% endif %}>Other</option>
+									<option value="Other"{% if reason == "Other" %} selected{% endif %}>Other</option>
 								</select>
 							</div>
 						</div>
 						<div class="form-group">
-							<label for="reason" id="commentsLabel" class="control-label col-sm-1">Comments (optional)</label>
+							<label for="comments" id="commentsLabel" class="control-label col-sm-1">Comments (optional)</label>
 							<div class="col-sm-11">
-								<textarea name="reason" class="form-control" id="reasonInput" rows="3" placeholder="Other Comments">{{ reason if reason }}</textarea>
+								<textarea name="comments" class="form-control" id="commentsInput" rows="3" placeholder="Other Comments">{{ comments if comments }}</textarea>
 							</div>
 						</div>
 						<div class="form-group">
@@ -65,7 +65,7 @@
 							<tr style="{{ "background-color: #fcc" if warning.banned }}">
 								<td>{{ warning.warner.name }}</td>
 								<td>{{ warning.time }}</td>
-								<td>{{ warning.category if warning.category != "Other" }}{{ ": " if warning.category != "Other" and warning.reason }}{{ warning.reason if warning.reason }}</td>
+								<td>{{ warning.reason if warning.reason != "Other" }}{{ ": " if warning.reason != "Other" and warning.comments }}{{ warning.comments if warning.comments }}</td>
 							</tr>
 						{% endfor %}
 						</tbody>
@@ -89,13 +89,13 @@
 	{{ super() }}
 	<script>
 		$(function () {
-			$("#reasonInput").keyboard();
+			$("#commentsInput").keyboard();
 		});
 
 		function updateCommentOptionality() {
-			var reason = document.getElementById("category");
-			var reasonLabel = document.getElementById("commentsLabel");
-			reasonLabel.innerText = "Comments " + (reason.value === "Other" ? "(required)" : "(optional)");
+			var reason = document.getElementById("reason");
+			var commentsLabel = document.getElementById("commentsLabel");
+			commentsLabel.innerText = "Comments " + (reason.value === "Other" ? "(required)" : "(optional)");
 		}
 
 		updateCommentOptionality();

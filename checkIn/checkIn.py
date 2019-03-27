@@ -228,9 +228,9 @@ class Warning(Base):
 	warner_id = sa.Column(sa.BigInteger, sa.ForeignKey("users.sid"), nullable=False)
 	warnee_id = sa.Column(sa.BigInteger, sa.ForeignKey("users.sid"), nullable=False)
 	time = sa.Column(sa.DateTime, nullable=False, default=sa.func.now())
-	category = sa.Column(sa.Text, nullable=False)
+	reason = sa.Column(sa.Text, nullable=False)
 	location_id = sa.Column(sa.Integer, sa.ForeignKey("locations.id"), nullable=False)
-	reason = sa.Column(sa.Text, nullable=True)
+	comments = sa.Column(sa.Text, nullable=True)
 	banned = sa.Column(sa.Boolean, nullable=False)
 
 	warner = relationship("User", foreign_keys=warner_id, back_populates="warningsGiven", viewonly=True)
@@ -624,20 +624,20 @@ def admin_warn(sid):
 	if request.method == 'GET':
 		return render_template('admin/warnings.html', warnee=warnee, warnings=warnings, admin=g.admin, canBan=canBan)
 
-	category = request.form.get('category')
 	reason = request.form.get('reason')
-	reason = reason if reason else None
+	comments = request.form.get('comments')
+	comments = comments if comments else None
 	shouldBan = "ban" in request.form
-	if not category or (category == "Other" and not reason):
-		return render_template('admin/warnings.html', warnee=warnee, warnings=warnings, admin=g.admin, category=category, reason=reason, canBan=canBan, error="You must input a reason for your " + ("ban" if shouldBan else "warning"))
+	if not reason or (reason == "Other" and not comments):
+		return render_template('admin/warnings.html', warnee=warnee, warnings=warnings, admin=g.admin, reason=reason, comments=comments, canBan=canBan, error="You must input a reason for your " + ("ban" if shouldBan else "warning"))
 
 	if shouldBan:
 		try:
 			set_type(userID=sid, typeID=ban_type.id)
 		except ProcessingError as error:
-			return render_template('admin/warnings.html', warnee=warnee, warnings=warnings, admin=g.admin, category=category, reason=reason, canBan=False, error=error.message)
+			return render_template('admin/warnings.html', warnee=warnee, warnings=warnings, admin=g.admin, reason=reason, comments=comments, canBan=False, error=error.message)
 
-	warning = Warning(warner_id=g.admin.sid, warnee_id=sid, location_id=session["location_id"], category=category, reason=reason, banned=shouldBan)
+	warning = Warning(warner_id=g.admin.sid, warnee_id=sid, location_id=session["location_id"], reason=reason, comments=comments, banned=shouldBan)
 	db.add(warning)
 	db.commit()
 	return render_template('admin/warnings.html', warnee=warnee, warnings=[warning] + warnings, canBan=canBan, admin=g.admin)

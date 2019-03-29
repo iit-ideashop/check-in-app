@@ -751,14 +751,24 @@ def admin_clear_waiver():
 	return redirect('/admin/lookup?sid=' + str(user.sid))
 
 
-@app.route('/admin/clear_lab', methods=['GET'])
+@app.route('/admin/clear_lab', methods=['GET', 'POST'])
 def admin_clear_lab():
 	if not g.admin or g.admin.location_id != session['location_id']:
 		return redirect('/admin/login')
 
 	db = db_session()
-	db.query(Access).filter_by(timeOut=None, location_id=g.admin.location_id).update({"timeOut": sa.func.now()},
-	                                                                                 synchronize_session=False)
+	query = db.query(Access).filter_by(timeOut=None, location_id=g.admin.location_id)
+
+	if 'warn' in request.form:
+		in_lab = query.all()
+		for user in in_lab: #type: User
+			db.add(Warning(warner_id=g.admin.sid,
+			               warnee_id=user.sid,
+			               reason='Failed to tap out',
+			               location_id=g.admin.location_id,
+			               banned=False))
+
+	query.update({"timeOut": sa.func.now()}, synchronize_session=False)
 	db.commit()
 	session['admin'] = None
 	return redirect('/success/checkout')

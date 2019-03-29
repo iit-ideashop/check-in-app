@@ -56,7 +56,14 @@
                                     <td><a href="/admin/lookup?sid={{ u.sid }}" class="btn btn-xs btn-primary">A{{ u.sid }}</a></td>
                                     <td>{{ u.name }}</td>
                                     <td>{{ u.type.name }}</td>
-                                    <td>{{ warnings }}</td>
+                                    <td>
+                                        {% if warnings > 0 %}
+                                            <a class="btn btn-danger btn-xs" href="/admin/warnings/{{ u.sid }}">
+                                                <i class="glyphicon glyphicon-exclamation-sign"></i>
+                                                <strong>{{ warnings }}</strong>
+                                            </a>
+                                        {% endif %}
+                                    </td>
                                 </tr>
                             {% endfor %}
                         </tbody>
@@ -87,6 +94,15 @@
                             Has not yet accepted user agreement.
                         </div>
                     {% endif %}
+                    {% if results[0][0].warnings | length > 0 %}
+                        <div class="alert alert-warning">
+                            <i class="glyphicon glyphicon-exclamation-sign"></i>
+                            This user has been warned {{ results[0][0].warnings | length }} time{{ 's' if results[0][0].warnings | length != 1 }}.
+                            <a href="/admin/warnings/{{ results[0][0].sid }}" class="btn btn-warning btn-xs pull-right">
+                                Manage warnings
+                            </a>
+                        </div>
+                    {% endif %}
 
                 </div>
                 <div class="list-group">
@@ -97,6 +113,7 @@
                                     <th>Safety Training</th>
                                     <th>Trained by</th>
                                     <th>On date</th>
+                                    <th></th>
                                 </tr>
                             </thead>
                             {% for t in results[0][0].trainings %}

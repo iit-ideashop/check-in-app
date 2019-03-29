@@ -15,9 +15,11 @@
         Clear Lab
     </button>
     <hr />
+    {% if g.admin.type.level >= 90 %}
     <button type="button" class="btn btn-lg btn-danger btn-block" data-toggle="modal" data-target="#deauthModal">
         Deauthorize this kiosk
     </button>
+    {% endif %}
     <hr />
     <a href="/admin/change_pin" class="btn btn-lg btn-default btn-block">Change PIN</a>
     <a href="/admin/logout" class="btn btn-lg btn-danger btn-block">Sign out</a>

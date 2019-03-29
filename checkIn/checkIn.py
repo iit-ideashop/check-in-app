@@ -19,6 +19,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from iitlookup import IITLookup
 from collections import defaultdict
 from datetime import datetime
+from typing import Optional, Tuple, List
 
 version = "1.0.0"
 
@@ -104,6 +105,8 @@ class User(Base):
 	trainings = relationship('Training', foreign_keys=[Training.trainee_id])
 	access = relationship('Access', order_by='Access.timeIn')
 	cards = relationship('HawkCard')
+	warnings = relationship("Warning", foreign_keys="Warning.warnee_id", back_populates="warnee")
+	warningsGiven = relationship("Warning", foreign_keys="Warning.warner_id", back_populates="warner")
 
 	def __repr__(self):
 		return "<User A%d (%s)>" % (self.sid, self.name)
@@ -221,6 +224,21 @@ class CardScan(Base):
 
 	def __repr__(self):
 		return "<CardScan %d at %s>" % (self.card, self.time)
+
+class Warning(Base):
+	__tablename__ = 'warnings'
+	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
+	warner_id = sa.Column(sa.BigInteger, sa.ForeignKey("users.sid"), nullable=False)
+	warnee_id = sa.Column(sa.BigInteger, sa.ForeignKey("users.sid"), nullable=False)
+	time = sa.Column(sa.DateTime, nullable=False, default=sa.func.now())
+	reason = sa.Column(sa.Text, nullable=False)
+	location_id = sa.Column(sa.Integer, sa.ForeignKey("locations.id"), nullable=False)
+	comments = sa.Column(sa.Text, nullable=True)
+	banned = sa.Column(sa.Boolean, nullable=False)
+
+	warner = relationship("User", foreign_keys=warner_id, back_populates="warningsGiven", viewonly=True)
+	warnee = relationship("User", foreign_keys=warnee_id, back_populates="warnings", viewonly=True)
+	location = relationship("Location", viewonly=True)
 
 
 # create tables if they don't exist
@@ -604,6 +622,76 @@ def admin_dash():
 		return redirect('/')
 
 
+@app.route('/admin/warnings/<int:sid>', methods=["GET", "POST"])
+def admin_warn(sid):
+	if not g.admin or g.admin.location_id != session['location_id']:
+		return redirect('/')
+
+	db = db_session()
+
+	warnee = db.query(User).filter_by(sid=sid, location_id=session['location_id']).one_or_none()
+	warnings = db.query(Warning).filter_by(warnee_id=sid).order_by(sa.desc(Warning.time)).all()
+
+	ban_type = db.query(Type).filter_by(location_id=session['location_id']) \
+		.filter(Type.level < 0) \
+		.first()
+
+	if warnee is None:
+		return render_template('internal_error.html'), 500
+
+	canBan = True
+	try:
+		check_set_type(userInfo=warnee, typeInfo=ban_type)
+	except ProcessingError:
+		canBan = False
+
+	if request.method == 'GET':
+		return render_template('admin/warnings.html', warnee=warnee, warnings=warnings, admin=g.admin, canBan=canBan)
+
+	reason = request.form.get('reason')
+	comments = request.form.get('comments')
+	comments = comments if comments else None
+	shouldBan = "ban" in request.form
+	if not reason or (reason == "Other" and not comments):
+		return render_template('admin/warnings.html', warnee=warnee, warnings=warnings, admin=g.admin, reason=reason, comments=comments, canBan=canBan, error="You must input a reason for your " + ("ban" if shouldBan else "warning"))
+
+	if shouldBan:
+		try:
+			set_type(userID=sid, typeID=ban_type.id)
+		except ProcessingError as error:
+			return render_template('admin/warnings.html', warnee=warnee, warnings=warnings, admin=g.admin, reason=reason, comments=comments, canBan=False, error=error.message)
+
+	warning = Warning(warner_id=g.admin.sid, warnee_id=sid, location_id=session["location_id"], reason=reason, comments=comments, banned=shouldBan)
+	db.add(warning)
+	db.commit()
+	return render_template('admin/warnings.html', warnee=warnee, warnings=[warning] + warnings, canBan=canBan, admin=g.admin)
+
+
+def lookupQuery(db: sa.orm.session.Session, location_id: int, sid: Optional[int], name: Optional[str], card_no: Optional[int]) -> List[Tuple[User, int]]:
+	warningCounts = db.query(
+		Warning.warnee_id,
+		sa.func.count(Warning.warnee_id).label("warningCount")
+	).group_by(Warning.warnee_id).subquery("warningCounts")
+	query = db.query(
+		User,
+		sa.func.coalesce(warningCounts.c.warningCount, sa.literal_column("0"))
+	)\
+		.select_from(User)\
+		.outerjoin(warningCounts, User.sid == warningCounts.c.warnee_id)\
+		.filter(User.location_id == location_id)
+
+	if sid or name or card_no:
+		if sid:
+			query = query.filter(User.sid == sid)
+		if name:
+			query = query.filter(User.name.ilike(name + "%"))
+		if card_no:
+			query = query.join(HawkCard, User.sid == HawkCard.sid).filter(HawkCard.card == card_no)
+	else:
+		query = query.filter(User.access.any(Access.timeOut == None))
+	return query.limit(20).all()
+
+
 @app.route('/admin/lookup', methods=['GET'])
 def admin_lookup():
 	if not g.admin or g.admin.location_id != session['location_id']:
@@ -613,19 +701,14 @@ def admin_lookup():
 	query = db.query(User)
 
 	sid = request.args.get('sid')
+	try: sid = int(sid)
+	except (TypeError, ValueError): sid = None
 	name = request.args.get('name')
 	card_id = request.args.get('card')
+	try: card_id = int(card_id)
+	except (TypeError, ValueError): card_id = None
+
 	location_id = request.args.get('location') if 'location' in request.args else session['location_id']
-	query = query.filter(User.location_id == location_id)
-	if sid or name or card_id:
-		if sid and sid != '':
-			query = query.filter_by(sid=sid)
-		if name and name != '':
-			query = query.filter(User.name.ilike(name + '%'))
-		if card_id:
-			query = query.filter(User.cards.any(HawkCard.card == card_id))
-	else:
-		query = query.filter(User.access.any(Access.timeOut == None))
 
 	access_log = None
 	machines = None
@@ -633,17 +716,17 @@ def admin_lookup():
 	ban_type = None
 	trainings = None
 
-	results = query.limit(20).all()
+	results = lookupQuery(db, location_id, sid, name, card_id)
 
 	if len(results) == 1:
 		machines = db.query(Machine).filter_by(location_id=session['location_id']).all()
 		# if found user has lower rank than admin user
-		if results[0].type.level < g.admin.type.level:
+		if results[0][0].type.level < g.admin.type.level:
 			types = db.query(Type).filter_by(location_id=session['location_id']) \
 				.filter(Type.level <= g.admin.type.level) \
 				.all()
 		access_log = db.query(Access) \
-			.filter_by(sid=results[0].sid, location_id=session['location_id']) \
+			.filter_by(sid=results[0][0].sid, location_id=session['location_id']) \
 			.order_by(Access.timeIn.desc()).limit(10).all()
 		ban_type = db.query(Type).filter_by(location_id=session['location_id']) \
 			.filter(Type.level < 0) \
@@ -822,26 +905,41 @@ def admin_add_machine(id):
 	return redirect('/admin/locations/' + str(id))
 
 
+class ProcessingError(BaseException):
+	def __init__(self, message):
+		self.message = message
+
+
+def check_set_type(userInfo, typeInfo):
+	if not typeInfo:
+		raise ProcessingError("Type does not exist.")
+	if not userInfo:
+		raise ProcessingError("User does not exist.")
+	if g.admin.type.level <= typeInfo.level:
+		raise ProcessingError("You don't have permission to set that type.")
+	if userInfo.type.level >= g.admin.type.level:
+		raise ProcessingError("You don't have permission to modify that user.")
+
+
+def set_type(userID, typeID):
+	db = db_session()
+	type = db.query(Type).filter_by(id=typeID, location_id=session['location_id']).one_or_none()
+	user = db.query(User).filter_by(sid=userID, location_id=session['location_id']).one_or_none()
+	check_set_type(user, type)
+	user.type_id = typeID
+	db.commit()
+
+
 @app.route('/admin/type/set')
 def admin_set_type():
 	if not g.admin or g.admin.location_id != session['location_id']:
 		return redirect('/')
-	db = db_session()
-	type = db.query(Type).filter_by(id=request.args['tid'], location_id=session['location_id']).one_or_none()
-	user = db.query(User).filter_by(sid=request.args['sid'], location_id=session['location_id']).one_or_none()
-	if not type:
-		return redirect('/admin/lookup?sid=' + request.args['sid'] + "&error=Type does not exist.")
-	if not user:
-		return redirect('/admin/lookup?sid=' + request.args['sid'] + "&error=User does not exist.")
-	elif g.admin.type.level <= type.level:
-		return redirect(
-			'/admin/lookup?sid=' + request.args['sid'] + "&error=You don't have permission to set that type.")
-	elif user.type.level >= g.admin.type.level:
-		return redirect(
-			'/admin/lookup?sid=' + request.args['sid'] + "&error=You don't have permission to modify that user.")
 
-	user.type_id = request.args['tid']
-	db.commit()
+	try:
+		set_type(request.args["sid"], request.args["tid"])
+	except ProcessingError as error:
+		return redirect("/admin/lookup?sid=" + request.args["sid"] + "&error=" + error.message)
+
 	return redirect('/admin/lookup?sid=' + request.args['sid'])
 
 

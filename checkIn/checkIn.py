@@ -86,10 +86,7 @@ class User(Base):
 	__tablename__ = 'users'
 	sid = sa.Column(DBStudentIDType, primary_key=True)
 	name = sa.Column(sa.String(length=100), nullable=False)
-	type_id = sa.Column(sa.Integer, sa.ForeignKey('types.id'))
-	waiverSigned = sa.Column(sa.DateTime)
 	photo = sa.Column(sa.String(length=100), default='')
-	location_id = sa.Column(sa.INTEGER, sa.ForeignKey('locations.id'), nullable=False, primary_key=True)
 	pin = sa.Column(sa.Binary(length=16))
 	pin_salt = sa.Column(sa.Binary(length=16))
 
@@ -102,19 +99,52 @@ class User(Base):
 		digest = hashlib.pbkdf2_hmac('sha256', bytearray(attempt, 'utf-8'), self.pin_salt, 100000)
 		return hmac.compare_digest(self.pin, digest)
 
-	def __repr__(self):
-		return "<Location %s>" % self.name
+	def locationSpecific(self, location_id: int) -> "UserLocation":
+		return self.userLocation.filter(location_id=location_id).one_or_none()
 
-	type = relationship('Type', lazy='joined')
-	location = relationship('Location')
+	userLocation = relationship('UserLocation', lazy="dynamic")
 	trainings = relationship('Training', foreign_keys=[Training.trainee_id])
-	access = relationship('Access', order_by='Access.timeIn')
 	cards = relationship('HawkCard')
 	warnings = relationship("Warning", foreign_keys="Warning.warnee_id", back_populates="warnee")
 	warningsGiven = relationship("Warning", foreign_keys="Warning.warner_id", back_populates="warner")
 
 	def __repr__(self):
 		return "<User A%d (%s)>" % (self.sid, self.name)
+
+
+class UserLocation(Base):
+	__tablename__ = "userLocation"
+	sid = sa.Column(DBStudentIDType, sa.ForeignKey('users.sid'), primary_key=True)
+	location_id = sa.Column(sa.Integer, sa.ForeignKey('locations.id'), primary_key=True)
+	type_id = sa.Column(sa.Integer, sa.ForeignKey('types.id'))
+	waiverSigned = sa.Column(sa.DateTime)
+
+	def verify_pin(self, attempt):
+		return self.user.verify_pin(attempt)
+
+	@property
+	def name(self):
+		return self.user.name
+
+	@property
+	def photo(self):
+		return self.user.photo
+
+	@property
+	def pin(self):
+		return self.user.pin
+
+	@property
+	def pin_salt(self):
+		return self.user.pin_salt
+
+	user = relationship('User', lazy="joined")
+	location = relationship('Location')
+	access = relationship('Access', order_by='Access.timeIn')
+	type = relationship('Type', lazy="joined")
+
+
+g.admin: Optional[UserLocation]
 
 
 class Kiosk(Base):
@@ -133,7 +163,6 @@ class Type(Base):
 	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
 	level = sa.Column(sa.Integer, nullable=False)
 	name = sa.Column(sa.String(length=50), nullable=False)
-	location_id = sa.Column(sa.Integer, sa.ForeignKey('locations.id'), nullable=False)
 
 	def __repr__(self):
 		return "<Type %s>" % self.name
@@ -147,11 +176,11 @@ class Access(Base):
 	timeOut = sa.Column(sa.DateTime, default=None)
 	location_id = sa.Column(sa.Integer, nullable=False)
 
-	user = relationship('User')
+	user = relationship('UserLocation')
 	location = relationship('Location', foreign_keys=[location_id], viewonly=True)
 
 	__table_args__ = (
-		sa.ForeignKeyConstraint([sid, location_id], [User.sid, User.location_id]),
+		sa.ForeignKeyConstraint([sid, location_id], [UserLocation.sid, UserLocation.location_id]),
 		sa.ForeignKeyConstraint([location_id], [Location.id])
 	)
 
@@ -161,17 +190,10 @@ class Access(Base):
 
 class HawkCard(Base):
 	__tablename__ = 'hawkcards'
-	sid = sa.Column(DBStudentIDType)
 	card = sa.Column(DBCardType, primary_key=True)
-	location_id = sa.Column(sa.Integer, primary_key=True)
+	sid = sa.Column(DBStudentIDType, sa.ForeignKey(User.sid))
 
 	user = relationship('User', lazy='joined')
-	location = relationship('Location', foreign_keys=[location_id], viewonly=True, lazy='joined')
-
-	__table_args__ = (
-		sa.ForeignKeyConstraint([sid, location_id], [User.sid, User.location_id]),
-		sa.ForeignKeyConstraint([location_id], [Location.id])
-	)
 
 	def __repr__(self):
 		return "<HawkCard %d (A%d)>" % (self.card, self.sid)
@@ -193,21 +215,15 @@ class Machine(Base):
 class AdminLog(Base):
 	__tablename__ = 'adminLog'
 	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-	admin_id = sa.Column(DBStudentIDType)
+	admin_id = sa.Column(DBStudentIDType, sa.ForeignKey(User.sid))
 	action = sa.Column(sa.String(length=50))
-	target_id = sa.Column(DBStudentIDType)
+	target_id = sa.Column(DBStudentIDType, sa.ForeignKey(User.sid))
 	data = sa.Column(sa.Text)
-	location_id = sa.Column(sa.Integer)
+	location_id = sa.Column(sa.Integer, sa.ForeignKey(Location.id))
 
 	admin = relationship('User', foreign_keys=[admin_id])
 	target = relationship('User', foreign_keys=[target_id])
 	location = relationship('Location', foreign_keys=[location_id], viewonly=True)
-
-	__table_args__ = (
-		sa.ForeignKeyConstraint([admin_id, location_id], [User.sid, User.location_id]),
-		sa.ForeignKeyConstraint([target_id, location_id], [User.sid, User.location_id]),
-		sa.ForeignKeyConstraint([location_id], [Location.id])
-	)
 
 	def __repr__(self):
 		return "<AdminLog %s (%s) %s, data=%s>" % (self.admin.name, self.action, self.target.name, self.data)
@@ -216,20 +232,16 @@ class AdminLog(Base):
 class CardScan(Base):
 	__tablename__ = 'scanLog'
 	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-	card_id = sa.Column(DBCardType, nullable=False)
+	card_id = sa.Column(DBCardType, sa.ForeignKey(HawkCard.card), nullable=False)
 	time = sa.Column(sa.DateTime, nullable=False)
-	location_id = sa.Column(sa.Integer, nullable=False)
+	location_id = sa.Column(sa.Integer, sa.ForeignKey(Location.id), nullable=False)
 
 	card = relationship('HawkCard')
 	location = relationship('Location', foreign_keys=[location_id], viewonly=True)
 
-	__table_args__ = (
-		sa.ForeignKeyConstraint([card_id, location_id], [HawkCard.card, HawkCard.location_id]),
-		sa.ForeignKeyConstraint([location_id], [Location.id])
-	)
-
 	def __repr__(self):
 		return "<CardScan %d at %s>" % (self.card, self.time)
+
 
 class Warning(Base):
 	__tablename__ = 'warnings'
@@ -251,6 +263,20 @@ class Warning(Base):
 db_session = scoped_session(sessionmaker(bind=engine))
 Base.metadata.create_all(engine)
 
+def get_types() -> Tuple[Type, Type]:
+	db = db_session()
+	ban_type = db.query(Type).filter(Type.level < 0).first()
+	if not ban_type:
+		ban_type = Type(level=-10, name="Banned")
+		db.add(ban_type)
+		db.commit()
+	default_type = db.query(Type).filter(Type.level == 0).first()
+	if not default_type:
+		default_type = Type(level=0, name="Users")
+		db.add(default_type)
+		db.commit()
+	return default_type, ban_type
+default_type, ban_type = get_types()
 
 @app.before_request
 def before_request():
@@ -283,8 +309,7 @@ def before_request():
 		g.students = [a.user for a in in_lab if a.user.type.level <= 0]
 		g.staff = [a.user for a in in_lab if a.user.type.level > 0]
 		g.staff.sort(key=lambda x: x.type.level, reverse=True)
-		g.admin = db.query(User).filter_by(sid=session['admin'], location_id=session[
-			'location_id']).one_or_none() if 'admin' in session else None
+		g.admin = db.query(UserLocation).filter_by(sid=session['admin'], location_id=session['location_id']).one_or_none() if 'admin' in session else None
 		g.version = version
 		g.kiosk = kiosk
 
@@ -448,9 +473,7 @@ def card_read(hwid):
 	if not kiosk:
 		return abort(403)
 
-	dbcard = db.query(HawkCard) \
-		.filter_by(card=request.form['cardnum'], location_id=kiosk.location_id) \
-		.one_or_none()
+	dbcard = db.query(HawkCard).filter_by(card=request.form['cardnum']).one_or_none()
 	user = dbcard.user if dbcard else None
 	socketio.emit('scan', {
 		'facility': request.form['facility'],
@@ -566,7 +589,7 @@ def admin_login():
 
 		# check to see if user has a pin
 		db = db_session()
-		user = db.query(User).filter_by(sid=request.args.get('sid'), location_id=session['location_id']).one_or_none()
+		user = db.query(UserLocation).filter_by(sid=request.args.get('sid'), location_id=session['location_id']).one_or_none()
 
 		if not user.pin and user.type.level > 0:
 			session['admin'] = user.sid
@@ -584,7 +607,7 @@ def admin_auth():
 	# sanity checks
 	db = db_session()
 	# check for sufficient permission
-	user = db.query(User).filter_by(sid=request.form['sid'], location_id=session['location_id']).one_or_none()
+	user = db.query(UserLocation).filter_by(sid=request.form['sid'], location_id=session['location_id']).one_or_none()
 	if user.type.level <= 0:
 		return render_template('admin/login_cardtap.html',
 		                       error='Insufficient permission! This incident will be reported.')
@@ -615,7 +638,7 @@ def admin_change_pin():
 		if request.form['pin'] == '' or request.form['pin'] is None:
 			return render_template('admin/change_pin.html', error='Your PIN can not be empty!')
 
-		user = db.query(User).filter_by(sid=session['admin'], location_id=session['location_id']).one_or_none()
+		user = db.query(User).filter_by(sid=session['admin']).one_or_none()
 		user.set_pin(request.form['pin'])
 		db.commit()
 		return redirect('/admin')
@@ -637,12 +660,8 @@ def admin_warn(sid):
 
 	db = db_session()
 
-	warnee = db.query(User).filter_by(sid=sid, location_id=session['location_id']).one_or_none()
+	warnee = db.query(User).filter_by(sid=sid).one_or_none()
 	warnings = db.query(Warning).filter_by(warnee_id=sid).order_by(sa.desc(Warning.time)).all()
-
-	ban_type = db.query(Type).filter_by(location_id=session['location_id']) \
-		.filter(Type.level < 0) \
-		.first()
 
 	if warnee is None:
 		return render_template('internal_error.html'), 500
@@ -681,12 +700,13 @@ def lookupQuery(db: sa.orm.session.Session, location_id: int, sid: Optional[int]
 		sa.func.count(Warning.warnee_id).label("warningCount")
 	).group_by(Warning.warnee_id).subquery("warningCounts")
 	query = db.query(
-		User,
+		UserLocation,
 		sa.func.coalesce(warningCounts.c.warningCount, sa.literal_column("0"))
 	)\
-		.select_from(User)\
-		.outerjoin(warningCounts, User.sid == warningCounts.c.warnee_id)\
-		.filter(User.location_id == location_id)
+		.select_from(UserLocation)\
+		.join(User, UserLocation.sid == User.sid)\
+		.outerjoin(warningCounts, UserLocation.sid == warningCounts.c.warnee_id)\
+		.filter(UserLocation.location_id == location_id)
 
 	if sid or name or card_no:
 		if sid:
@@ -696,7 +716,7 @@ def lookupQuery(db: sa.orm.session.Session, location_id: int, sid: Optional[int]
 		if card_no:
 			query = query.join(HawkCard, User.sid == HawkCard.sid).filter(HawkCard.card == card_no)
 	else:
-		query = query.filter(User.access.any(Access.timeOut == None))
+		query = query.filter(UserLocation.access.any(Access.timeOut == None))
 	return query.limit(20).all()
 
 
@@ -706,7 +726,6 @@ def admin_lookup():
 		return redirect('/')
 
 	db = db_session()
-	query = db.query(User)
 
 	sid = request.args.get('sid')
 	try: sid = int(sid)
@@ -721,7 +740,6 @@ def admin_lookup():
 	access_log = None
 	machines = None
 	types = None
-	ban_type = None
 	trainings = None
 
 	results = lookupQuery(db, location_id, sid, name, card_id)
@@ -730,15 +748,10 @@ def admin_lookup():
 		machines = db.query(Machine).filter_by(location_id=session['location_id']).all()
 		# if found user has lower rank than admin user
 		if results[0][0].type.level < g.admin.type.level:
-			types = db.query(Type).filter_by(location_id=session['location_id']) \
-				.filter(Type.level <= g.admin.type.level) \
-				.all()
+			types = db.query(Type).filter(Type.level <= g.admin.type.level).all()
 		access_log = db.query(Access) \
 			.filter_by(sid=results[0][0].sid, location_id=session['location_id']) \
 			.order_by(Access.timeIn.desc()).limit(10).all()
-		ban_type = db.query(Type).filter_by(location_id=session['location_id']) \
-			.filter(Type.level < 0) \
-			.first()
 
 	return render_template('admin/lookup.html', results=results, machines=machines, types=types, access_log=access_log,
 	                       now=datetime.now(), ban_type=ban_type, error=request.args.get('error'))
@@ -752,7 +765,7 @@ def admin_clear_waiver():
 		return redirect('/admin/lookup')
 
 	db = db_session()
-	user = db.query(User).filter_by(sid=request.args.get('sid'),
+	user = db.query(UserLocation).filter_by(sid=request.args.get('sid'),
 	                                location_id=session['location_id']).one_or_none()
 	user.waiverSigned = None
 	db.commit()
@@ -840,9 +853,9 @@ def admin_location(id):
 	db = db_session()
 	location = db.query(Location).get(id)
 	machines = db.query(Machine).filter_by(location_id=id)
-	staff = db.query(User) \
-		.join(User.type) \
-		.filter(User.location_id == id, Type.level > 0) \
+	staff = db.query(UserLocation) \
+		.join(UserLocation.type) \
+		.filter(UserLocation.location_id == id, Type.level > 0) \
 		.order_by(Type.level.desc())
 	kiosks = db.query(Kiosk).filter_by(location_id=id)
 
@@ -878,9 +891,6 @@ def admin_add_location():
 		db.add(loc)
 
 		db.commit()
-
-		default_type = Type(level=0, location_id=loc.id, name='Users')
-		db.add(default_type)
 
 		default_training = Machine(location_id=loc.id, name='General Safety Training')
 		db.add(default_training)
@@ -941,8 +951,8 @@ def check_set_type(userInfo, typeInfo):
 
 def set_type(userID, typeID):
 	db = db_session()
-	type = db.query(Type).filter_by(id=typeID, location_id=session['location_id']).one_or_none()
-	user = db.query(User).filter_by(sid=userID, location_id=session['location_id']).one_or_none()
+	type = db.query(Type).filter_by(id=typeID).one_or_none()
+	user = db.query(UserLocation).filter_by(sid=userID, location_id=session['location_id']).one_or_none()
 	check_set_type(user, type)
 	user.type_id = typeID
 	db.commit()
@@ -1061,9 +1071,9 @@ def waiver():
 			timeIn=sa.func.now(),
 			timeOut=None
 		))
-		user = db.query(User) \
+		user = db.query(UserLocation) \
 			.filter_by(sid=request.args.get('sid'),
-		               location_id=session['location_id']) \
+			           location_id=session['location_id']) \
 			.one_or_none()
 		if user:
 			user.waiverSigned = sa.func.now()
@@ -1093,19 +1103,18 @@ def waiver():
 def register():
 	db = db_session()
 	if request.method == 'GET':
-		resp = ""
+		resp = None
 		card_id = request.args.get('card_id')
-		name = ""
-		sid = ""
+		name = None
+		sid = None
 		# before we check ACaPS, let's see if they already have a record
-		cards = db.query(HawkCard).filter_by(card=card_id).all()
-		for c in cards:
-			if c.user:
-				sid = str(c.sid)
-				name = c.user.name
-				break
+		card = db.query(HawkCard).filter_by(card=card_id).one_or_none()
+		if card:
+			sid = card.sid
+			if card.user:
+				name = card.user.name
 
-		if sid == "" or name == "":
+		if not name or not sid:
 			# ping acaps if we couldn't find everything
 			try:
 				il = IITLookup(app.config['IITLOOKUPURL'], app.config['IITLOOKUPUSER'], app.config['IITLOOKUPPASS'])
@@ -1116,37 +1125,29 @@ def register():
 				sid = resp['idnumber'][1:]
 				name = ("%s %s") % (resp['first_name'], resp['last_name'])
 		return render_template('register.html',
-		                       sid=sid,
+		                       sid=sid or "",
 		                       card_id=card_id,
-		                       name=name)
+		                       name=name or "")
 
 	elif request.method == 'POST':
 		if request.form['name'] == "" or int(request.form['sid']) < 20000000:
 			return render_template('register.html', sid=request.form['sid'], card_id=request.form['card_id'],
 			                       name=request.form['name'])
 
-		existing_user = db.query(User).get((request.form['sid'], session['location_id']))
+		existing_user = db.query(User).get(request.form['sid'])
 		if not existing_user:
-			# create a new user to associate the hawkcard with
-			newtype = db.query(Type) \
-				.filter_by(location_id=session['location_id']) \
-				.filter_by(level=0) \
-				.one_or_none()
+			existing_user = User(sid=request.form['sid'], name=request.form['name'].title())
+			db.add(existing_user)
 
-			if not newtype:
-				newtype = Type(level=0, location_id=session['location_id'], name='Users')
-				db.add(newtype)
-				db.commit()
-
-			db.add(User(sid=request.form['sid'],
-			            name=request.form['name'].title(),
-			            type_id=newtype.id,
-			            waiverSigned=None,
-			            location_id=session['location_id']))
+		existing_user_location = db.query(UserLocation).get((request.form['sid'], session['location_id']))
+		if not existing_user_location:
+			db.add(UserLocation(sid=request.form['sid'],
+			                    type_id=default_type.id,
+			                    waiverSigned=None,
+			                    location_id=session['location_id']))
 
 		# associate the hawkcard with the user that was either just created or already exists
-		card = db.query(HawkCard).filter_by(card=request.form['card_id'],
-		                                    location_id=session['location_id']).one_or_none()
+		card = db.query(HawkCard).filter_by(card=request.form['card_id']).one_or_none()
 		card.sid = request.form['sid']
 
 		db.commit()
@@ -1175,14 +1176,9 @@ def check_in(data):
 		#    emit('go', {'to': '/deauth', 'hwid': session['hardware_id']})
 		#    return "Token mismatch!"
 
-		card = db.query(HawkCard).filter_by(
-			card=data['card'],
-			location_id=data['location']
-		).one_or_none()
+		card = db.query(HawkCard).filter_by(card=data['card']).one_or_none()
 
-		location = db.query(Location).filter_by(
-			id=data['location']
-		).one_or_none()
+		location = db.query(Location).filter_by(id=data['location']).one_or_none()
 
 		if not location:
 			resp = ("Location %d not found" % data['location'])
@@ -1227,30 +1223,6 @@ def check_in(data):
 			else:
 				student_count += 1
 
-		# check that:
-		# - card doesn't exist, user never finished the form, or card belongs to a student
-		# - staff ratio is set
-		# - floor(ratio * staff) <= student_count
-		# if true then lab is over capacity
-		if (not card or not card.user or (card.user and card.user.type.level == 0)) \
-				and location.staff_ratio \
-				and math.floor(location.staff_ratio * staff_count) <= student_count:
-			emit('go', {'to': url_for('.over_staff_capacity'), 'hwid': data['hwid']})
-			return
-
-		if not card:
-			# check to see if we already have their sid
-			# user has not signed in here but may have signed in elsewhere
-			cards = db.query(HawkCard).filter_by(
-				card=data['card']
-			).all()
-			for c in cards:
-				if c.sid:  # got data, now copy it under the new location
-					card = HawkCard(sid=None, card=data['card'], location_id=location.id)
-					db.add(card)
-					db.commit()
-					break
-
 		if not card:
 			# check to see if they already have a record
 			student = None
@@ -1265,24 +1237,39 @@ def check_in(data):
 				print("ERROR: IIT Lookup is offline.")
 			if not student:
 				# user is new and isn't in IIT's database
-				card = HawkCard(sid=None, card=data['card'], location_id=location.id)
+				card = HawkCard(sid=None, card=data['card'])
 				db.add(card)
 				db.commit()
-			elif db.query(User).get((sid, location.id)):
+			elif db.query(User).get(sid):
 				# user exists, has a new card
-				card = HawkCard(sid=sid, card=data['card'], location_id=location.id)
+				card = HawkCard(sid=sid, card=data['card'])
 				db.add(card)
 				db.commit()
 			else:
 				# first time in lab
 				resp = ("User for card id %d not found" % data['card'])
-				card = HawkCard(sid=None, card=data['card'], location_id=location.id)
+				card = HawkCard(sid=None, card=data['card'])
 				db.add(card)
 				db.commit()
 
 			db.commit()
 
-		if not card or not card.user:
+		userLocation = None
+		if card and card.user:
+			userLocation = db.query(UserLocation).filter(sid=card.sid, location=location.id).one_or_none()
+
+		# check that:
+		# - card doesn't exist, user never finished the form, or card belongs to a student
+		# - staff ratio is set
+		# - floor(ratio * staff) <= student_count
+		# if true then lab is over capacity
+		if (not userLocation or (userLocation.type.level == 0)) \
+				and location.staff_ratio \
+				and math.floor(location.staff_ratio * staff_count) <= student_count:
+			emit('go', {'to': url_for('.over_staff_capacity'), 'hwid': data['hwid']})
+			return
+
+		if not card or not userLocation:
 			# send to registration page
 			emit('go', {'to': url_for('.register', card_id=data['card']), 'hwid': data['hwid']})
 
@@ -1294,7 +1281,7 @@ def check_in(data):
 				.first()
 
 			# user is banned
-			if card.user.type.level < 0:
+			if userLocation.type.level < 0:
 				resp = ("User %s (card id %d) tried to sign in at %s but is banned! (id %d, kiosk %d)" % (
 					card.user.name, data['card'], location.name, location.id, data['hwid']
 				))
@@ -1302,7 +1289,7 @@ def check_in(data):
 
 
 			# user signing in
-			elif card.user.waiverSigned:
+			elif userLocation.waiverSigned:
 				general_machine = db.query(Machine) \
 					.filter(Machine.name.ilike('General Safety Training')) \
 					.filter_by(location_id=location.id) \

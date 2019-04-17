@@ -113,7 +113,8 @@ venv.bak/
 .mypy_cache/
 
 # JetBrains IDEs
-.idea/
+.idea/*
+!.idea/codeStyles
 
 tmp/
 

@@ -84,9 +84,9 @@ class Training(Base):
 
 class User(Base):
 	__tablename__ = 'users'
-	sid = sa.Column(DBStudentIDType, primary_key=True)
+	sid = sa.Column(DBStudentIDType, primary_key=True, autoincrement=False)
 	name = sa.Column(sa.String(length=100), nullable=False)
-	photo = sa.Column(sa.String(length=100), default='')
+	photo = sa.Column(sa.String(length=100))
 	pin = sa.Column(sa.Binary(length=16))
 	pin_salt = sa.Column(sa.Binary(length=16))
 
@@ -190,7 +190,7 @@ class Access(Base):
 
 class HawkCard(Base):
 	__tablename__ = 'hawkcards'
-	card = sa.Column(DBCardType, primary_key=True)
+	card = sa.Column(DBCardType, primary_key=True, autoincrement=False)
 	sid = sa.Column(DBStudentIDType, sa.ForeignKey(User.sid))
 
 	user = relationship('User', lazy='joined')
@@ -263,7 +263,14 @@ class Warning(Base):
 db_session = scoped_session(sessionmaker(bind=engine))
 Base.metadata.create_all(engine)
 
-def get_types() -> Tuple[Type, Type]:
+# Like a type, but with no connection to the database so it doesn't explode if you try to use it with a different session than the one that queried for it
+class TypeInfo:
+	def __init__(self, type: Type):
+		self.id = type.id
+		self.level = type.level
+		self.name = type.name
+
+def get_types() -> Tuple[TypeInfo, TypeInfo]:
 	db = db_session()
 	ban_type = db.query(Type).filter(Type.level < 0).first()
 	if not ban_type:
@@ -275,7 +282,7 @@ def get_types() -> Tuple[Type, Type]:
 		default_type = Type(level=0, name="Users")
 		db.add(default_type)
 		db.commit()
-	return default_type, ban_type
+	return TypeInfo(default_type), TypeInfo(ban_type)
 default_type, ban_type = get_types()
 
 @app.before_request
@@ -660,7 +667,7 @@ def admin_warn(sid):
 
 	db = db_session()
 
-	warnee = db.query(User).filter_by(sid=sid).one_or_none()
+	warnee = db.query(UserLocation).filter_by(sid=sid, location_id=g.admin.location_id).one_or_none()
 	warnings = db.query(Warning).filter_by(warnee_id=sid).order_by(sa.desc(Warning.time)).all()
 
 	if warnee is None:
@@ -754,7 +761,7 @@ def admin_lookup():
 			.order_by(Access.timeIn.desc()).limit(10).all()
 
 	return render_template('admin/lookup.html', results=results, machines=machines, types=types, access_log=access_log,
-	                       now=datetime.now(), ban_type=ban_type, error=request.args.get('error'))
+	                       now=datetime.now(), error=request.args.get('error'))
 
 
 @app.route('/admin/clear_waiver', methods=['GET'])
@@ -1256,7 +1263,7 @@ def check_in(data):
 
 		userLocation = None
 		if card and card.user:
-			userLocation = db.query(UserLocation).filter(sid=card.sid, location=location.id).one_or_none()
+			userLocation = db.query(UserLocation).filter_by(sid=card.sid, location_id=location.id).one_or_none()
 
 		# check that:
 		# - card doesn't exist, user never finished the form, or card belongs to a student

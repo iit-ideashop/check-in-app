@@ -76,6 +76,7 @@
                         <tr>
                             <th>HWID</th>
                             <th>Last seen</th>
+                            <th>IP address</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -84,6 +85,7 @@
                         <tr>
                         <td>{{ kiosk.hardware_id }}</td>
                         <td>{{ kiosk.last_seen }}</td>
+                        <td>{{ kiosk.last_ip }}</td>
                         <td>
                             <a href="/deauth/{{ location.id }}/{{ kiosk.hardware_id }}" class="btn btn-danger btn-xs pull-right">
                                 <i class="glyphicon glyphicon-remove"></i>

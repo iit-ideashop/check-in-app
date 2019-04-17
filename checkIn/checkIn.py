@@ -10,6 +10,7 @@ import random
 import argparse
 import zerorpc
 import math
+import logging
 from flask import Flask, request, session, g, redirect, url_for, render_template, abort
 from flask_bootstrap import Bootstrap
 from flask_socketio import SocketIO, emit, send
@@ -22,6 +23,8 @@ from datetime import datetime
 from typing import Optional, Tuple, List
 
 version = "1.0.0"
+
+logging.basicConfig()
 
 app = Flask(__name__, static_url_path='/static', static_folder='static')  # create the application instance :)
 socketio = SocketIO(app, manage_session=True)
@@ -118,6 +121,7 @@ class Kiosk(Base):
 	hardware_id = sa.Column(sa.Integer, primary_key=True, nullable=False)
 	token = sa.Column(sa.String(length=65), nullable=False)
 	last_seen = sa.Column(sa.DateTime, default=sa.func.now())
+	last_ip = sa.Column(sa.String(length=16), nullable=True)
 
 	location = relationship('Location')
 
@@ -262,6 +266,7 @@ def before_request():
 		kiosk = db.query(Kiosk).get(session['hardware_id'])
 		if kiosk:
 			kiosk.last_seen = sa.func.now()
+			kiosk.last_ip = request.remote_addr
 			db.commit()
 
 		in_lab = db.query(Access) \
@@ -279,6 +284,7 @@ def before_request():
 		g.admin = db.query(User).filter_by(sid=session['admin'], location_id=session[
 			'location_id']).one_or_none() if 'admin' in session else None
 		g.version = version
+		g.kiosk = kiosk
 
 		general_machine = db.query(Machine) \
 			.filter(Machine.name.ilike('General Safety Training')) \

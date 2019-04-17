@@ -23,6 +23,12 @@
     <hr />
     <a href="/admin/change_pin" class="btn btn-lg btn-default btn-block">Change PIN</a>
     <a href="/admin/logout" class="btn btn-lg btn-danger btn-block">Sign out</a>
+    {% if g.admin.type.level >= 90 %}
+    <hr />
+    <footer class="text-muted">
+        Kiosk {{ session['hardware_id'] }} at {{ request.remote_addr }}
+    </footer>
+    {% endif %}
 </div>
 
 <div class="modal fade" id="clearLabModal" tabindex="-1" role="dialog" aria-labelledby="clearLabModalLabel"

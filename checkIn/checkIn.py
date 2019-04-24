@@ -490,6 +490,14 @@ def checkout():
 			))
 			# sign user out and send to confirmation page
 			lastIn.timeOut = sa.func.now()
+
+			# assign a warning if we need to
+			if g.admin and 'warn' in request.form:
+				db.add(
+					Warning(warner_id=g.admin.sid, warnee_id=lastIn.sid, time=sa.func.now(), reason='Failed to tap out',
+					        location_id=lastIn.location_id, banned=False)
+				)
+
 	db.commit()
 
 	# need to query again for active users now that it's changed

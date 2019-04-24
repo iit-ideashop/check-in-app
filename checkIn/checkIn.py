@@ -106,7 +106,6 @@ class User(Base):
 	trainings = relationship('Training', foreign_keys=[Training.trainee_id])
 	cards = relationship('HawkCard')
 	warnings = relationship("Warning", foreign_keys="Warning.warnee_id", back_populates="warnee")
-	warningsGiven = relationship("Warning", foreign_keys="Warning.warner_id", back_populates="warner")
 
 	def __repr__(self):
 		return "<User A%d (%s)>" % (self.sid, self.name)
@@ -142,6 +141,7 @@ class UserLocation(Base):
 	location = relationship('Location')
 	access = relationship('Access', order_by='Access.timeIn')
 	type = relationship('Type', lazy="joined")
+	warningsGiven = relationship("Warning", foreign_keys="Warning.warner_id", back_populates="warner")
 
 
 g.admin: Optional[UserLocation]
@@ -177,11 +177,10 @@ class Access(Base):
 	location_id = sa.Column(sa.Integer, nullable=False)
 
 	user = relationship('UserLocation')
-	location = relationship('Location', foreign_keys=[location_id], viewonly=True)
+	location = relationship('Location', primaryjoin="foreign(Access.location_id)==remote(Location.id)", viewonly=True)
 
 	__table_args__ = (
-		sa.ForeignKeyConstraint([sid, location_id], [UserLocation.sid, UserLocation.location_id]),
-		sa.ForeignKeyConstraint([location_id], [Location.id])
+		sa.ForeignKeyConstraint((sid, location_id), (UserLocation.sid, UserLocation.location_id)),
 	)
 
 	def __repr__(self):
@@ -215,15 +214,19 @@ class Machine(Base):
 class AdminLog(Base):
 	__tablename__ = 'adminLog'
 	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-	admin_id = sa.Column(DBStudentIDType, sa.ForeignKey(User.sid))
+	admin_id = sa.Column(DBStudentIDType)
 	action = sa.Column(sa.String(length=50))
 	target_id = sa.Column(DBStudentIDType, sa.ForeignKey(User.sid))
 	data = sa.Column(sa.Text)
-	location_id = sa.Column(sa.Integer, sa.ForeignKey(Location.id))
+	location_id = sa.Column(sa.Integer)
 
-	admin = relationship('User', foreign_keys=[admin_id])
+	admin = relationship('UserLocation', foreign_keys=[admin_id, location_id])
 	target = relationship('User', foreign_keys=[target_id])
-	location = relationship('Location', foreign_keys=[location_id], viewonly=True)
+	location = relationship('Location', primaryjoin="foreign(AdminLog.location_id) == remote(Location.id)", viewonly=True)
+
+	__table_args__ = (
+		sa.ForeignKeyConstraint((admin_id, location_id), (UserLocation.sid, UserLocation.location_id)),
+	)
 
 	def __repr__(self):
 		return "<AdminLog %s (%s) %s, data=%s>" % (self.admin.name, self.action, self.target.name, self.data)
@@ -246,17 +249,21 @@ class CardScan(Base):
 class Warning(Base):
 	__tablename__ = 'warnings'
 	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-	warner_id = sa.Column(DBStudentIDType, sa.ForeignKey("users.sid"), nullable=False)
+	warner_id = sa.Column(DBStudentIDType, nullable=False)
 	warnee_id = sa.Column(DBStudentIDType, sa.ForeignKey("users.sid"), nullable=False)
 	time = sa.Column(sa.DateTime, nullable=False, default=sa.func.now())
 	reason = sa.Column(sa.Text, nullable=False)
-	location_id = sa.Column(sa.Integer, sa.ForeignKey("locations.id"), nullable=False)
+	location_id = sa.Column(sa.Integer, nullable=False)
 	comments = sa.Column(sa.Text, nullable=True)
 	banned = sa.Column(sa.Boolean, nullable=False)
 
-	warner = relationship("User", foreign_keys=warner_id, back_populates="warningsGiven", viewonly=True)
-	warnee = relationship("User", foreign_keys=warnee_id, back_populates="warnings", viewonly=True)
-	location = relationship("Location", viewonly=True)
+	warner = relationship("UserLocation", foreign_keys=(warner_id, location_id), back_populates="warningsGiven", viewonly=True)
+	warnee = relationship("User", foreign_keys=(warnee_id, location_id), back_populates="warnings", viewonly=True)
+	location = relationship("Location", primaryjoin="foreign(Warning.location_id) == remote(Location.id)", viewonly=True)
+
+	__table_args__ = (
+		sa.ForeignKeyConstraint((warner_id, location_id), (UserLocation.sid, UserLocation.location_id)),
+	)
 
 
 # create tables if they don't exist

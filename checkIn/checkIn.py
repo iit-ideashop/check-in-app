@@ -11,6 +11,7 @@ import argparse
 import zerorpc
 import math
 import logging
+import logging.config
 from flask import Flask, request, session, g, redirect, url_for, render_template, abort
 from flask_bootstrap import Bootstrap
 from flask_socketio import SocketIO, emit, send
@@ -24,20 +25,45 @@ from typing import Optional, Tuple, List
 
 version = "1.0.0"
 
-logging.basicConfig()
-
 app = Flask(__name__, static_url_path='/static', static_folder='static')  # create the application instance :)
-socketio = SocketIO(app, manage_session=True)
+socketio = SocketIO(app, manage_session=True, logger=True)
 app.config.from_object(__name__)
 app.config.from_pyfile('config.cfg')
 app.config.from_envvar('FLASKR_SETTINGS', silent=True)
 app.config['BOOTSTRAP_SERVE_LOCAL'] = True
 
+logging.config.dictConfig({
+	'version': 1,
+	'formatters': {'default': {
+		'format': '[%(asctime)s] %(levelname)-7s %(message)s',
+		'datefmt': '%m/%d/%Y %I:%M:%S %p'
+	}},
+	'handlers': {
+		'wsgi': {
+			'class': 'logging.StreamHandler',
+			'stream': 'ext://flask.logging.wsgi_errors_stream',
+			'formatter': 'default'
+		},
+		'file': {
+			'level': 'INFO',
+			'class': 'logging.handlers.RotatingFileHandler',
+			'formatter': 'default',
+			'filename': app.config['LOGFILE'],
+			'maxBytes': 8000000,
+			'backupCount': 3
+		}
+	},
+	'root': {
+		'level': 'INFO',
+		'handlers': ['wsgi', 'file']
+	}
+})
+
 Bootstrap(app)
 
 engine = sa.create_engine(app.config['DB'], pool_recycle=3600, encoding='utf-8')
 Base = declarative_base()
-
+app.logger.info('Server started.')
 
 # New schema
 class Location(Base):
@@ -457,7 +483,7 @@ def card_read(hwid):
 		'sid': user.sid if user else None,
 		'name': user.name if user else None,
 	})
-	print(resp)
+	logging.getLogger('checkin.card').info(resp)
 	return resp
 
 
@@ -470,7 +496,7 @@ def checkout():
 	).one_or_none()
 
 	if not location:
-		print("Location %d not found" % session['location_id'])
+		logging.getLogger('checkin.checkout').warn("Location %d not found (from kiosk %d)" % (session['location_id'], session['hardware_id']))
 
 	else:
 		lastIn = None;
@@ -485,7 +511,7 @@ def checkout():
 
 		if lastIn:
 			# user signing out
-			print("User %s signed out at location %s (id %d, kiosk %d)" % (
+			logging.getLogger('checkin.checkout').info("User %s signed out manually at location %s (id %d, kiosk %d)" % (
 				lastIn.user.name, location.name, location.id, session['hardware_id']
 			))
 			# sign user out and send to confirmation page
@@ -1191,7 +1217,8 @@ def check_in(data):
 		).one_or_none()
 
 		if not location:
-			resp = ("Location %d not found" % data['location'])
+			resp = ("Location %d not found (from kiosk %d)" % (data['location'], data['hwid']))
+			logging.getLogger('checkin.socket').warn(resp)
 			print(resp)
 			return resp
 
@@ -1207,6 +1234,7 @@ def check_in(data):
 				resp = ("User %s (card id %d) signed out at location %s (id %d, kiosk %d)" % (
 					card.user.name, data['card'], location.name, location.id, data['hwid']
 				))
+				logging.getLogger('checkin.socket').info(resp)
 				# sign user out and send to confirmation page
 				lastIn.timeOut = sa.func.now()
 				emit('go', {'to': url_for('.success', action='checkout', name=card.user.name), 'hwid': data['hwid']})
@@ -1350,7 +1378,7 @@ def check_in(data):
 		db.add(logEntry)
 
 		db.commit()
-		print(resp)
+		logging.getLogger('checkin.socket').info(resp)
 		return resp
 	except Exception as e:
 		app.logger.error(e, exc_info=True)

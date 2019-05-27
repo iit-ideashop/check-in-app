@@ -132,7 +132,27 @@
                             {% endfor %}
                         </table>
                     </div>
-
+					<div class="panel-body">
+						<button class="btn btn-primary" data-toggle="modal" data-target="#stModal">Add safety training</button>
+						<div class="pull-right">
+							{% if g.admin.type.level >= 75 %}
+								<!--<a href="javascript:void(0);" class="btn btn-danger">Delete user</a> --><!-- TODO: delete user flow -->
+								<a href="/admin/warnings/{{ results[0][0].sid }}" class="btn btn-primary">Warn / Ban</a>
+								{% if types %}
+									<div class="btn-group">
+										<a href="javascript:void(0);" class="btn btn-success dropdown-toggle" data-toggle="dropdown">
+											Set rank <span class="caret"></span>
+										</a>
+										<ul class="dropdown-menu">
+											{% for type in types %}
+												<li><a href="/admin/type/set?sid={{ results[0][0].sid }}&tid={{ type.id }}">{{ type.name }} ({{ type.level }})</a></li>
+											{% endfor %}
+										</ul>
+									</div>
+								{% endif %}
+							{% endif %}
+						</div>
+					</div>
                     <div class="list-group-item">
                         <h3>Last 10 visits</h3>
                         <table class="table">
@@ -156,9 +176,12 @@
                                 </td>
                                 <td>
                                     {% if not a.timeOut %}
-                                        <form action="{{ url_for('.checkout', aid=a.id, next=request.url) }}" method="post">
-                                            <input type="submit" class="btn btn-danger btn-xs pull-right" value="Check out" />
-                                        </form>
+	                                    <div class="pull-right">
+	                                        <form action="{{ url_for('.checkout', aid=a.id, next=request.url) }}" method="post">
+		                                        <button type="submit" class="btn btn-default btn-xs">Check out</button>
+		                                        <button type="submit" class="btn btn-default btn-xs" name="warn" value="true">Check out and Warn</button>
+	                                        </form>
+	                                    </div>
                                     {% endif %}
                                     {{ ((a.timeOut if a.timeOut else now) - a.timeIn) }}
                                 </td>
@@ -166,28 +189,6 @@
                             {% endfor %}
                             </tbody>
                         </table>
-                    </div>
-                </div>
-
-                <div class="panel-footer">
-                    <button class="btn btn-primary" data-toggle="modal" data-target="#stModal">Add safety training</button>
-                    <div class="pull-right">
-                        {% if g.admin.type.level >= 75 %}
-                        <!--<a href="javascript:void(0);" class="btn btn-danger">Delete user</a> --><!-- TODO: delete user flow -->
-                            <a href="/admin/warnings/{{ results[0][0].sid }}" class="btn btn-primary">Warn / Ban</a>
-                            {% if types %}
-                                <div class="btn-group">
-                                    <a href="javascript:void(0);" class="btn btn-success dropdown-toggle" data-toggle="dropdown">
-                                        Set rank <span class="caret"></span>
-                                    </a>
-                                    <ul class="dropdown-menu">
-                                        {% for type in types %}
-                                            <li><a href="/admin/type/set?sid={{ results[0][0].sid }}&tid={{ type.id }}">{{ type.name }} ({{ type.level }})</a></li>
-                                        {% endfor %}
-                                    </ul>
-                                </div>
-                            {% endif %}
-                        {% endif %}
                     </div>
                 </div>
 

@@ -6,7 +6,25 @@
             <strong>{{ error }}</strong>
         </div>
     {% endif %}
-    <h1>Please tap your card to sign in.</h1><br />
+	<h1>Please tap your card or type your ID to sign in.</h1><br />
+	<div class="panel panel-default">
+		<div class="panel-body">
+			<form class="form-inline" onsubmit="submitted(); return false;">
+				<div class="form-group">
+					<div class="input-group">
+						<div class="input-group">
+							<div class="input-group-addon">A</div>
+							<input class="form-control keyboard" type="tel"
+							       placeholder="Student ID" id="sid" name="sid"/>
+						</div>
+						<div class="input-group">
+							<button class="btn btn-success" type="submit">Go</button>
+						</div>
+					</div>
+				</div>
+			</form>
+		</div>
+	</div>
     <div class="form-group">
         <a href="/"><button class="btn btn-default btn-block btn-lg">Cancel</button></a>
     </div>
@@ -23,6 +41,13 @@ $(function() {
         if (data.hwid === {{ session['hardware_id'] | tojson }})
             window.location.assign("/admin/login?sid=" + data.sid + "&cardnum=" + data.card);
     });
+
+	$("#sid").keyboard();
+
+	function submitted() {
+		let id = Number(document.getElementById("sid").value);
+		window.location.assign("/admin/login?sid=" + id);
+	}
 });
 </script>
 {% endblock %}

@@ -116,7 +116,7 @@
                                     <th></th>
                                 </tr>
                             </thead>
-                            {% for t in results[0][0].trainings %}
+                            {% for t in results[0][0].user.trainings %}
 			    	{% if t.machine.location_id == g.location.id %}
                                 <tr>
                                     <td>{{ t.machine.name }}</td>

@@ -363,7 +363,7 @@ def before_request():
 		for student in g.students:
 			student.general_training = None
 			if general_machine:
-				for training in student.trainings:
+				for training in student.user.trainings:
 					if training.machine_id == general_machine.id:
 						student.general_training = training
 

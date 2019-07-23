@@ -106,9 +106,11 @@
                                 {{ student.name }}
                             </td>
                             <td>
-                                <form action="{{ url_for('.checkout', sid=student.sid) }}" method="post">
-                                    <button type="submit" class="btn btn-danger">Checkout</button>
-                                </form>
+	                            {% if g.admin %}
+	                                <form action="{{ url_for('.checkout', sid=student.sid) }}" method="post">
+	                                    <button type="submit" class="btn btn-danger">Checkout</button>
+	                                </form>
+	                            {% endif %}
                             </td>
                         </tr>
                     {% endfor %}

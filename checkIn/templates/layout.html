@@ -107,7 +107,7 @@
                             </td>
                             <td>
 	                            {% if g.admin %}
-	                                <form action="{{ url_for('.checkout', sid=student.sid) }}" method="post">
+	                                <form action="{{ url_for('.checkout', sid=student.sid, next=url_for('.admin_dash')) }}" method="post">
 	                                    <button type="submit" class="btn btn-danger">Checkout</button>
 	                                </form>
 	                            {% endif %}

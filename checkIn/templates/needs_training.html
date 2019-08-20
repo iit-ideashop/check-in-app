@@ -8,7 +8,12 @@
             {% if 'name' in request.args %}
             Welcome, {{ request.args.get('name') }}<br />
             {% endif %}
-            Please contact {{ g.location.name }} staff for safety training.
+
+            {% if 'trainings' in request.args %}
+	        You need the following {{ g.location.name }} trainings:<br />
+            {{ request.args.get('trainings') }}<br />
+            {% endif %}
+            Please see {{ g.location.name }} staff.
         </h3>
         <a href="{{ url_for('.index') }}" class="btn btn-warning btn-block btn-lg">Continue</a><br />
     </div>

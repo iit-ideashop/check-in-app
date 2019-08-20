@@ -99,6 +99,7 @@ class Training(Base):
 	trainer_id = sa.Column(DBStudentIDType, sa.ForeignKey('users.sid'), nullable=False)
 	machine_id = sa.Column(sa.Integer, sa.ForeignKey('machines.id'), nullable=False)
 	date = sa.Column(sa.DateTime, default=sa.func.now, nullable=False)
+	invalidation_date = sa.Column(sa.DateTime)
 
 	trainee = relationship('User', foreign_keys=[trainee_id], back_populates='trainings')
 	trainer = relationship('User', foreign_keys=[trainer_id])
@@ -230,6 +231,7 @@ class Machine(Base):
 	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
 	name = sa.Column(sa.String(length=50), nullable=False)
 	location_id = sa.Column(sa.Integer, sa.ForeignKey('locations.id'), nullable=False)
+	required = sa.Column(sa.Boolean, nullable=False)
 
 	location = relationship('Location')
 	trained_users = relationship('Training')
@@ -1129,21 +1131,27 @@ def waiver():
 		db.commit()
 		update_kiosks(session['location_id'], except_hwid=session['hardware_id'])
 
-		db.query(Training).filter_by(trainee_id=user.sid)
-
-		general_machine = db.query(Machine) \
-			.filter(Machine.name.ilike('General Safety Training')) \
+		required_machines = db.query(Machine) \
 			.filter_by(location_id=session['location_id']) \
-			.one_or_none()
+			.filter_by(required=1) \
+			.subquery()
 
-		general_training = None
-		if general_machine:
-			general_training = db.query(Training) \
-				.filter_by(machine_id=general_machine.id) \
-				.filter_by(trainee_id=user.sid) \
-				.one_or_none()
+		active_trainings = db.query(Training) \
+			.filter_by(trainee_id=user.sid) \
+			.filter_by(invalidation_date=None) \
+			.subquery()
 
-		return redirect('/success/checkin') if general_training else redirect('/needs_training')
+		missing_trainings_list = db.query(required_machines) \
+			.outerjoin(active_trainings) \
+			.filter_by(date=None) \
+			.all()
+
+		missing_trainings = ', '.join([x.name for x in missing_trainings_list])
+
+		if missing_trainings: \
+			return redirect(url_for('.needs_training', name=user.name, trainings=missing_trainings))
+		else:
+			return redirect('/success/checkin')
 	else:
 		return redirect('/')
 
@@ -1341,17 +1349,23 @@ def check_in(data):
 
 			# user signing in
 			elif userLocation.waiverSigned:
-				general_machine = db.query(Machine) \
-					.filter(Machine.name.ilike('General Safety Training')) \
+				# check for required safety trainings
+				required_machines = db.query(Machine) \
 					.filter_by(location_id=location.id) \
-					.one_or_none()
+					.filter_by(required=1) \
+					.subquery()
 
-				general_training = None
-				if general_machine:
-					general_training = db.query(Training) \
-						.filter_by(machine_id=general_machine.id) \
-						.filter_by(trainee_id=card.sid) \
-						.count()
+				active_trainings = db.query(Training) \
+					.filter_by(trainee_id=card.user.sid) \
+					.filter_by(invalidation_date=None) \
+					.subquery()
+
+				missing_trainings_list = db.query(required_machines) \
+										        .outerjoin(active_trainings) \
+												.filter_by(date=None) \
+												.all()
+
+				missing_trainings = ', '.join([x.name for x in missing_trainings_list])
 
 				resp = ("User %s (card id %d) is cleared for entry at location %s (id %d, kiosk %d)" % (
 					card.user.name, data['card'], location.name, location.id, data['hwid']
@@ -1361,11 +1375,12 @@ def check_in(data):
 				db.add(accessEntry)
 
 				# if user has training or there is no training required, let 'em in
-				if not general_machine or general_training > 0:
+				if not missing_trainings_list:
 					emit('go', {'to': url_for('.success', action='checkin', name=card.user.name), 'hwid': data['hwid']})
 
 				else:
-					emit('go', {'to': url_for('.needs_training', name=card.user.name), 'hwid': data['hwid']})
+					resp += (' (Missing trainings: %s)' % (missing_trainings))
+					emit('go', {'to': url_for('.needs_training', name=card.user.name, trainings=missing_trainings), 'hwid': data['hwid']})
 
 				update_kiosks(location.id, except_hwid=data['hwid'])
 

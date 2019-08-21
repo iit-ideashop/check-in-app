@@ -6,7 +6,7 @@ sys.path.insert(0, os.path.abspath(".."))
 import os
 import hashlib
 import hmac
-import random
+import base64
 import argparse
 import zerorpc
 import math
@@ -408,38 +408,6 @@ def auth():
 	if request.method == 'GET':
 		return render_template('auth.html', locations=locations)
 	else:
-		# random_utf8_seq adapted from https://stackoverflow.com/a/1477572
-		def byte_range(first, last):
-			return list(range(first, last + 1))
-
-		first_values = byte_range(0x00, 0x7F) + byte_range(0xC2, 0xF4)
-		trailing_values = byte_range(0x80, 0xBF)
-
-		def random_utf8_seq():
-			first = random.choice(first_values)
-			if first <= 0x7F:
-				return bytes([first])
-			elif first <= 0xDF:
-				return bytes([first, random.choice(trailing_values)])
-			elif first == 0xE0:
-				return bytes([first, random.choice(byte_range(0xA0, 0xBF)), random.choice(trailing_values)])
-			elif first == 0xED:
-				return bytes([first, random.choice(byte_range(0x80, 0x9F)), random.choice(trailing_values)])
-			elif first <= 0xEF:
-				return bytes([first, random.choice(trailing_values), random.choice(trailing_values)])
-			elif first == 0xF0:
-				return bytes([first, random.choice(byte_range(0x90, 0xBF)), random.choice(trailing_values),
-				              random.choice(trailing_values)])
-			elif first <= 0xF3:
-				return bytes([first, random.choice(trailing_values), random.choice(trailing_values),
-				              random.choice(trailing_values)])
-			elif first == 0xF4:
-				return bytes([first, random.choice(byte_range(0x80, 0x8F)), random.choice(trailing_values),
-				              random.choice(trailing_values)])
-
-		def random_utf8_str(length):
-			return "".join(str(random_utf8_seq(), "utf-8") for i in range(length))
-
 		if 'hwid' not in request.form or 'location' not in request.form or 'secret' not in request.form:
 			return render_template('auth.html', error='Please complete all fields.', locations=locations)
 
@@ -450,7 +418,7 @@ def auth():
 		if not location.verify_secret(request.form['secret']):
 			return render_template('auth.html', error='Invalid secret!', locations=locations)
 
-		new_token = random_utf8_str(32)
+		new_token = base64.urlsafe_b64encode(os.urandom(33))
 		kiosk = db.query(Kiosk) \
 			.filter_by(hardware_id=request.form['hwid']) \
 			.one_or_none()
@@ -466,7 +434,7 @@ def auth():
 		else:
 			kiosk = Kiosk(location_id=request.form['location'],
 			              hardware_id=request.form['hwid'],
-			              token=bytes(new_token, 'utf-8'),
+			              token=new_token,
 			              last_seen=sa.func.now())
 			db.add(kiosk)
 

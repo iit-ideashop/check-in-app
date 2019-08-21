@@ -21,7 +21,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from iitlookup import IITLookup
 from collections import defaultdict
 from datetime import datetime
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, Callable
 
 version = "1.0.0"
 
@@ -294,9 +294,23 @@ class Warning(Base):
 		sa.ForeignKeyConstraint((warner_id, location_id), (UserLocation.sid, UserLocation.location_id)),
 	)
 
+	@staticmethod
+	def warn(db: sa.orm.Session, warner: int, warnee: int, reason: str, location: int, comments: Optional[str], banned: bool) -> "Warning":
+		warnings = db.query(Warning).filter_by(warnee_id=warnee).all()
+		for training in db.query(Training).filter_by(trainee_id=warnee).all():
+			if training.machine.location_id != location or not training.machine.required:
+				continue
+			numWarnings = sum(1 for _ in filter(lambda x: x.time > training.date, warnings))
+			if numWarnings >= 10:
+				training.invalidation_date = sa.func.now()
+
+		warning = Warning(warner_id=warner, warnee_id=warnee, reason=reason, location_id=location, comments=comments, banned=banned)
+		db.add(warning)
+		return warning
+
 
 # create tables if they don't exist
-db_session = scoped_session(sessionmaker(bind=engine))
+db_session: Callable[[], sa.orm.Session] = scoped_session(sessionmaker(bind=engine))
 Base.metadata.create_all(engine)
 
 # Like a type, but with no connection to the database so it doesn't explode if you try to use it with a different session than the one that queried for it
@@ -529,10 +543,7 @@ def checkout():
 
 			# assign a warning if we need to
 			if g.admin and 'warn' in request.form:
-				db.add(
-					Warning(warner_id=g.admin.sid, warnee_id=lastIn.sid, time=sa.func.now(), reason='Failed to tap out',
-					        location_id=lastIn.location_id, banned=False)
-				)
+				Warning.warn(db, warner=g.admin.sid, warnee=lastIn.sid, reason="Failed to tap out", location=lastIn.location_id, banned=False)
 
 	db.commit()
 
@@ -707,8 +718,7 @@ def admin_warn(sid):
 		except ProcessingError as error:
 			return render_template('admin/warnings.html', warnee=warnee, warnings=warnings, admin=g.admin, reason=reason, comments=comments, canBan=False, error=error.message)
 
-	warning = Warning(warner_id=g.admin.sid, warnee_id=sid, location_id=session["location_id"], reason=reason, comments=comments, banned=shouldBan)
-	db.add(warning)
+	warning = Warning.warn(db, warner=g.admin.sid, warnee=sid, location=session["location_id"], reason=reason, comments=comments, banned=shouldBan)
 	db.commit()
 	return render_template('admin/warnings.html', warnee=warnee, warnings=[warning] + warnings, canBan=canBan, admin=g.admin)
 

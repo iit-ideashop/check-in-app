@@ -12,11 +12,7 @@
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <form role="form" class="form-inline" action="/admin/lookup" method="get">
-                        <div class="form-group">
-	                        <div class="input-group pull-right">
-                                <input class="btn btn-success" type="submit" value="Go" />
-                                or tap an ID
-                            </div>
+                        <div class="form-group" style="width: 100%;">
                             <div class="input-group">
                                 <a href="/admin" class="btn btn-primary"><i class="glyphicon glyphicon-home"></i></a>
                             </div>
@@ -38,6 +34,10 @@
                                 <input class="form-control keyboard" type="tel"
                                        placeholder="Card Number" id="card" name="card"
                                        value="{{ request.args.get('card') | default('', true) }}" />
+                            </div>
+	                        <div class="input-group">
+                                <input class="btn btn-success" type="submit" value="Go" />
+                                or tap an ID
                             </div>
                         </div>
                     </form>

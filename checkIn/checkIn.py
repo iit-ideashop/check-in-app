@@ -297,7 +297,7 @@ class Warning(Base):
 	@staticmethod
 	def warn(db: sa.orm.Session, warner: int, warnee: int, reason: str, location: int, comments: Optional[str], banned: bool) -> "Warning":
 		warnings = db.query(Warning).filter_by(warnee_id=warnee).all()
-		for training in db.query(Training).filter_by(trainee_id=warnee).all():
+		for training in db.query(Training).filter_by(trainee_id=warnee).options(joinedload(Training.machine)).all():
 			if training.machine.location_id != location or not training.machine.required:
 				continue
 			numWarnings = sum(1 for _ in filter(lambda x: x.time > training.date, warnings))
@@ -432,7 +432,7 @@ def auth():
 		if not location.verify_secret(request.form['secret']):
 			return render_template('auth.html', error='Invalid secret!', locations=locations)
 
-		new_token = base64.urlsafe_b64encode(os.urandom(33))
+		new_token = base64.urlsafe_b64encode(os.urandom(33)).decode('ascii')
 		kiosk = db.query(Kiosk) \
 			.filter_by(hardware_id=request.form['hwid']) \
 			.one_or_none()

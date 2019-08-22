@@ -418,7 +418,7 @@ def auth():
 		if not location.verify_secret(request.form['secret']):
 			return render_template('auth.html', error='Invalid secret!', locations=locations)
 
-		new_token = base64.urlsafe_b64encode(os.urandom(33))
+		new_token = base64.urlsafe_b64encode(os.urandom(33)).decode('ascii')
 		kiosk = db.query(Kiosk) \
 			.filter_by(hardware_id=request.form['hwid']) \
 			.one_or_none()

@@ -301,7 +301,7 @@ class Warning(Base):
 			if training.machine.location_id != location or not training.machine.required:
 				continue
 			numWarnings = sum(1 for _ in filter(lambda x: x.time > training.date, warnings))
-			if numWarnings >= 10:
+			if numWarnings >= 5:
 				training.invalidation_date = sa.func.now()
 
 		warning = Warning(warner_id=warner, warnee_id=warnee, reason=reason, location_id=location, comments=comments, banned=banned)

@@ -1067,7 +1067,7 @@ def admin_announcer_evac():
 	return redirect('/admin/announcer')
 
 
-@app.route('/admin/announcer/cancel_evac')
+@app.route('/admin/announcer/cancel_evac', methods=["POST"])
 def admin_announcer_cancel_evac():
 	if not g.admin or g.admin.location_id != session['location_id']:
 		return redirect('/')

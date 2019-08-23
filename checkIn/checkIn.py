@@ -854,18 +854,18 @@ def admin_group_add_training():
 	return render_template('admin/group_training.html', machines=machines)
 
 
-@app.route('/admin/training/remove')
+@app.route('/admin/training/remove', methods=["POST"])
 def admin_remove_training():
 	if not g.admin or g.admin.location_id != session['location_id']:
 		return redirect('/')
 	db = db_session()
-	training = db.query(Training).filter_by(id=request.args.get('id')).one_or_none()
+	training = db.query(Training).filter_by(id=request.form.get('id')).one_or_none()
 	if training:
 		sid = training.trainee_id if training else None
 		db.delete(training)
 		db.commit()
 	else:
-		sid = request.args.get('sid')
+		sid = request.form.get('sid')
 
 	return redirect('/admin/lookup?sid=' + str(sid))
 

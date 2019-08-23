@@ -808,7 +808,7 @@ def admin_clear_waiver():
 	return redirect('/admin/lookup?sid=' + str(user.sid))
 
 
-@app.route('/admin/clear_lab', methods=['GET', 'POST'])
+@app.route('/admin/clear_lab', methods=['POST'])
 def admin_clear_lab():
 	if not g.admin or g.admin.location_id != session['location_id']:
 		return redirect('/admin/login')

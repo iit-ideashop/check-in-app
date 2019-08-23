@@ -446,7 +446,7 @@ def auth():
 
 		if kiosk:
 			# deauthorize any existing kiosks with that ID
-			socketio.emit('go', {'to': url_for('.deauth'), 'hwid': kiosk.hardware_id})
+			socketio.emit('go', {'to': url_for('.auth'), 'hwid': kiosk.hardware_id})
 
 			kiosk.token = new_token
 			kiosk.location_id = request.form['location']
@@ -468,7 +468,7 @@ def auth():
 		return redirect('/')
 
 
-@app.route('/deauth')
+@app.route('/deauth', methods=["POST"])
 def deauth():
 	db = db_session()
 	db.query(Kiosk).filter_by(location_id=session['location_id'], hardware_id=session['hardware_id']).delete()
@@ -476,7 +476,7 @@ def deauth():
 	return redirect('/auth')
 
 
-@app.route('/deauth/<int:loc>/<int:hwid>')
+@app.route('/deauth/<int:loc>/<int:hwid>', methods=["POST"])
 def deauth_other(loc, hwid):
 	if not g.admin or g.admin.location_id != session['location_id'] or g.admin.type.level < 90:
 		return redirect('/')

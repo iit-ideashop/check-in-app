@@ -8,9 +8,9 @@ function stopAudio(className) {
     }
 }
 
-var socket = io();
+const socket = io();
 
-//$(function() {
+$(function() {
     const reconnected = function () {
         $('#disconnect-alert').hide();
     };
@@ -27,4 +27,20 @@ var socket = io();
     socket.on('connect_error', disconnected);
 
     socket.connect();
-//});
+
+    // From https://stackoverflow.com/a/27208677
+    $("a.POST").click(function (e) {
+        e.stopPropagation();
+        e.preventDefault();
+        let href = this.href;
+        let parts = href.split('?');
+        let url = parts[0];
+        let params = parts[1] ? parts[1].split('&') : [];
+        let inputs = params.map(param => {
+            let parts = param.split("=");
+            return '<input type="hidden" name="' + parts[0] + '" value="' + parts[1] + '" />';
+        }).join();
+        $("body").append('<form action="'+url+'" method="post" id="poster">'+inputs+'</form>');
+        $("#poster").submit();
+    });
+});

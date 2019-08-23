@@ -1045,7 +1045,7 @@ def admin_announcer_power_tool():
 		return abort(500)
 
 
-@app.route('/admin/announcer/cancel_power_tool')
+@app.route('/admin/announcer/cancel_power_tool', methods=["POST"])
 def admin_announcer_cancel_power_tool():
 	if not g.admin or g.admin.location_id != session['location_id']:
 		return redirect('/')

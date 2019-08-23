@@ -86,7 +86,7 @@
                     {% if results[0][0].waiverSigned %}
                         <div class="alert alert-success">
                             Accepted user agreement on {{ results[0][0].waiverSigned }}.
-                            <a href="/admin/clear_waiver?sid={{ results[0][0].sid }}">
+                            <a class="POST" href="/admin/clear_waiver?sid={{ results[0][0].sid }}">
                                 <button class="btn btn-xs btn-success pull-right">
                                     Require another signature
                                 </button>

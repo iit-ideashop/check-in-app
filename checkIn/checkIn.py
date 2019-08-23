@@ -793,15 +793,15 @@ def admin_lookup():
 	                       now=datetime.now(), error=request.args.get('error'))
 
 
-@app.route('/admin/clear_waiver', methods=['GET'])
+@app.route('/admin/clear_waiver', methods=['POST'])
 def admin_clear_waiver():
 	if not session['admin']:
 		return redirect('/')
-	if not request.args.get('sid'):
+	if not request.form.get('sid'):
 		return redirect('/admin/lookup')
 
 	db = db_session()
-	user = db.query(UserLocation).filter_by(sid=request.args.get('sid'),
+	user = db.query(UserLocation).filter_by(sid=request.form.get('sid'),
 	                                location_id=session['location_id']).one_or_none()
 	user.waiverSigned = None
 	db.commit()

@@ -18,10 +18,11 @@ from flask_socketio import SocketIO, emit, send
 import sqlalchemy as sa
 from sqlalchemy.orm import relationship, scoped_session, sessionmaker, joinedload
 from sqlalchemy.ext.declarative import declarative_base
+# noinspection PyUnresolvedReferences
 from iitlookup import IITLookup
 from collections import defaultdict
 from datetime import datetime
-from typing import Optional, Tuple, List, Callable
+from typing import Optional, Tuple, List, Callable, Union
 
 version = "1.0.0"
 
@@ -95,8 +96,8 @@ class Location(Base):
 class Training(Base):
 	__tablename__ = 'safetyTraining'
 	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-	trainee_id = sa.Column(DBStudentIDType, sa.ForeignKey('users.sid'), nullable=False)
-	trainer_id = sa.Column(DBStudentIDType, sa.ForeignKey('users.sid'), nullable=False)
+	trainee_id: int = sa.Column(DBStudentIDType, sa.ForeignKey('users.sid'), nullable=False)
+	trainer_id: int = sa.Column(DBStudentIDType, sa.ForeignKey('users.sid'), nullable=False)
 	machine_id = sa.Column(sa.Integer, sa.ForeignKey('machines.id'), nullable=False)
 	date = sa.Column(sa.DateTime, default=sa.func.now, nullable=False)
 	invalidation_date = sa.Column(sa.DateTime)
@@ -127,7 +128,7 @@ class User(Base):
 		digest = hashlib.pbkdf2_hmac('sha256', bytearray(attempt, 'utf-8'), self.pin_salt, 100000)
 		return hmac.compare_digest(self.pin, digest)
 
-	def locationSpecific(self, location_id: int) -> "UserLocation":
+	def locationSpecific(self, location_id: int) -> Optional["UserLocation"]:
 		return self.userLocation.filter(location_id=location_id).one_or_none()
 
 	userLocation = relationship('UserLocation', lazy="dynamic")
@@ -144,7 +145,7 @@ class UserLocation(Base):
 	sid = sa.Column(DBStudentIDType, sa.ForeignKey('users.sid'), primary_key=True)
 	location_id = sa.Column(sa.Integer, sa.ForeignKey('locations.id'), primary_key=True)
 	type_id = sa.Column(sa.Integer, sa.ForeignKey('types.id'))
-	waiverSigned = sa.Column(sa.DateTime)
+	waiverSigned: Optional[datetime] = sa.Column(sa.DateTime)
 
 	def verify_pin(self, attempt):
 		return self.user.verify_pin(attempt)
@@ -172,8 +173,8 @@ class UserLocation(Base):
 	warningsGiven = relationship("Warning", foreign_keys="Warning.warner_id", back_populates="warner")
 
 
+# noinspection PyTypeHints
 g.admin: Optional[UserLocation]
-
 
 class Kiosk(Base):
 	__tablename__ = 'kiosks'
@@ -199,9 +200,9 @@ class Type(Base):
 class Access(Base):
 	__tablename__ = 'access'
 	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-	sid = sa.Column(DBStudentIDType)
+	sid: Optional[int] = sa.Column(DBStudentIDType)
 	timeIn = sa.Column(sa.DateTime, nullable=False)
-	timeOut = sa.Column(sa.DateTime, default=None)
+	timeOut: Optional[datetime] = sa.Column(sa.DateTime, nullable=True, default=None)
 	location_id = sa.Column(sa.Integer, nullable=False)
 
 	user = relationship('UserLocation')
@@ -217,8 +218,8 @@ class Access(Base):
 
 class HawkCard(Base):
 	__tablename__ = 'hawkcards'
-	card = sa.Column(DBCardType, primary_key=True, autoincrement=False)
-	sid = sa.Column(DBStudentIDType, sa.ForeignKey(User.sid))
+	card: int = sa.Column(DBCardType, primary_key=True, autoincrement=False)
+	sid: Optional[int] = sa.Column(DBStudentIDType, sa.ForeignKey(User.sid))
 
 	user = relationship('User', lazy='joined')
 
@@ -272,14 +273,14 @@ class CardScan(Base):
 	location = relationship('Location', foreign_keys=[location_id], viewonly=True)
 
 	def __repr__(self):
-		return "<CardScan %d at %s>" % (self.card, self.time)
+		return "<CardScan %d at %s>" % (self.card.card, self.time)
 
 
 class Warning(Base):
 	__tablename__ = 'warnings'
 	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-	warner_id = sa.Column(DBStudentIDType, nullable=False)
-	warnee_id = sa.Column(DBStudentIDType, sa.ForeignKey("users.sid"), nullable=False)
+	warner_id: int = sa.Column(DBStudentIDType, nullable=False)
+	warnee_id: int = sa.Column(DBStudentIDType, sa.ForeignKey("users.sid"), nullable=False)
 	time = sa.Column(sa.DateTime, nullable=False, default=sa.func.now())
 	reason = sa.Column(sa.Text, nullable=False)
 	location_id = sa.Column(sa.Integer, nullable=False)
@@ -309,8 +310,11 @@ class Warning(Base):
 		return warning
 
 
+class HasRemoveMethod:
+	def remove(self):
+		pass
 # create tables if they don't exist
-db_session: Callable[[], sa.orm.Session] = scoped_session(sessionmaker(bind=engine))
+db_session: Union[Callable[[], sa.orm.Session], HasRemoveMethod] = scoped_session(sessionmaker(bind=engine))
 Base.metadata.create_all(engine)
 
 # Like a type, but with no connection to the database so it doesn't explode if you try to use it with a different session than the one that queried for it
@@ -520,10 +524,10 @@ def checkout():
 	).one_or_none()
 
 	if not location:
-		logging.getLogger('checkin.checkout').warn("Location %d not found (from kiosk %d)" % (session['location_id'], session['hardware_id']))
+		logging.getLogger('checkin.checkout').warning("Location %d not found (from kiosk %d)" % (session['location_id'], session['hardware_id']))
 
 	else:
-		lastIn = None;
+		lastIn = None
 		if 'sid' in request.args:
 			lastIn = db.query(Access) \
 				.filter_by(location_id=location.id) \
@@ -723,7 +727,7 @@ def admin_warn(sid):
 	return render_template('admin/warnings.html', warnee=warnee, warnings=[warning] + warnings, canBan=canBan, admin=g.admin)
 
 
-def lookupQuery(db: sa.orm.session.Session, location_id: int, sid: Optional[int], name: Optional[str], card_no: Optional[int]) -> List[Tuple[User, int]]:
+def lookupQuery(db: sa.orm.session.Session, location_id: int, sid: Optional[int], name: Optional[str], card_no: Optional[int]) -> List[Tuple[UserLocation, int]]:
 	warningCounts = db.query(
 		Warning.warnee_id,
 		sa.func.count(Warning.warnee_id).label("warningCount")
@@ -853,7 +857,6 @@ def admin_remove_training():
 		return redirect('/')
 	db = db_session()
 	training = db.query(Training).filter_by(id=request.args.get('id')).one_or_none()
-	sid = 0
 	if training:
 		sid = training.trainee_id if training else None
 		db.delete(training)
@@ -872,7 +875,7 @@ def admin_locations():
 	db = db_session()
 	locations = db.query(Location).all()
 
-	return render_template("/admin/locations.html", locations=locations)
+	return render_template("admin/locations.html", locations=locations)
 
 
 @app.route('/admin/locations/<int:id>')
@@ -888,7 +891,7 @@ def admin_location(id):
 		.order_by(Type.level.desc())
 	kiosks = db.query(Kiosk).filter_by(location_id=id)
 
-	return render_template("/admin/location.html", location=location, machines=machines, staff=staff, kiosks=kiosks)
+	return render_template("admin/location.html", location=location, machines=machines, staff=staff, kiosks=kiosks)
 
 
 @app.route('/admin/locations/remove')
@@ -909,7 +912,7 @@ def admin_add_location():
 		return redirect('/')
 
 	if request.method == 'GET':
-		return render_template('/admin/add_location.html')
+		return render_template('admin/add_location.html')
 
 	elif request.method == 'POST':
 		db = db_session()
@@ -952,7 +955,7 @@ def admin_add_machine(id):
 		return redirect('/admin')
 
 	if request.method == 'GET':
-		return render_template('/admin/add_machine.html', location_id=id)
+		return render_template('admin/add_machine.html', location_id=id)
 
 	db = db_session()
 	machine = Machine(name=request.form['name'], location_id=id)
@@ -1005,7 +1008,7 @@ def admin_set_type():
 def admin_announcer():
 	if not g.admin or g.admin.location_id != session['location_id']:
 		return redirect('/')
-	return render_template("/admin/announcer.html")
+	return render_template("admin/announcer.html")
 
 
 @app.route('/admin/announcer/test')
@@ -1158,7 +1161,7 @@ def register():
 				print(sys.exc_info()[0])
 			if resp:
 				sid = resp['idnumber'][1:]
-				name = ("%s %s") % (resp['first_name'], resp['last_name'])
+				name = "%s %s" % (resp['first_name'], resp['last_name'])
 		return render_template('register.html',
 		                       sid=sid or "",
 		                       card_id=card_id,
@@ -1217,7 +1220,7 @@ def check_in(data):
 
 		if not location:
 			resp = ("Location %d not found (from kiosk %d)" % (data['location'], data['hwid']))
-			logging.getLogger('checkin.socket').warn(resp)
+			logging.getLogger('checkin.socket').warning(resp)
 			print(resp)
 			return resp
 
@@ -1357,7 +1360,7 @@ def check_in(data):
 					emit('go', {'to': url_for('.success', action='checkin', name=card.user.name), 'hwid': data['hwid']})
 
 				else:
-					resp += (' (Missing trainings: %s)' % (missing_trainings))
+					resp += (' (Missing trainings: %s)' % missing_trainings)
 					emit('go', {'to': url_for('.needs_training', name=card.user.name, trainings=missing_trainings), 'hwid': data['hwid']})
 
 				update_kiosks(location.id, except_hwid=data['hwid'])

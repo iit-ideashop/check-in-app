@@ -518,7 +518,7 @@ def card_read(hwid):
 	return resp
 
 
-@app.route('/checkout', methods=['GET', 'POST'])
+@app.route('/checkout', methods=['POST'])
 def checkout():
 	db = db_session()
 

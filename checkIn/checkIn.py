@@ -351,7 +351,7 @@ def before_request():
 	if request.endpoint and request.endpoint != 'card_read' and \
 			'socket.io' not in request.path and \
 			'static' not in request.path and \
-			'auth' not in request.path:
+			'/auth' not in request.path:
 		db = db_session()
 		kiosk = db.query(Kiosk).get(session['hardware_id'])
 		if kiosk:

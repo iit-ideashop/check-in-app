@@ -310,6 +310,7 @@ class Warning(Base):
 		return warning
 
 
+# Just for type-hinting, if you know a better way please fix
 class HasRemoveMethod:
 	def remove(self):
 		pass

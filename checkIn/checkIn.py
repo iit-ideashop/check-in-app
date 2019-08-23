@@ -497,7 +497,7 @@ def root():
 	return render_template('index.html')
 
 
-@app.route('/card_read/<int:hwid>', methods=['GET', 'POST'])
+@app.route('/card_read/<int:hwid>', methods=['POST'])
 def card_read(hwid):
 	resp = 'Read success from HWID %d: Facility %s, card %s' % (hwid, request.form['facility'], request.form['cardnum'])
 	db = db_session()

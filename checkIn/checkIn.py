@@ -354,7 +354,7 @@ def before_request():
 			'/auth' not in request.path:
 		db = db_session()
 		kiosk = db.query(Kiosk).get(session['hardware_id'])
-		if kiosk:
+		if kiosk and kiosk.token == session['token']:
 			kiosk.last_seen = sa.func.now()
 			kiosk.last_ip = request.remote_addr
 			db.commit()

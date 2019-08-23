@@ -295,7 +295,7 @@ class Warning(Base):
 	)
 
 	@staticmethod
-	def warn(db: sa.orm.Session, warner: int, warnee: int, reason: str, location: int, comments: Optional[str], banned: bool) -> "Warning":
+	def warn(db: sa.orm.Session, warner: int, warnee: int, reason: str, location: int, comments: Optional[str] = None, banned: bool = False) -> "Warning":
 		warnings = db.query(Warning).filter_by(warnee_id=warnee).all()
 		for training in db.query(Training).filter_by(trainee_id=warnee).options(joinedload(Training.machine)).all():
 			if training.machine.location_id != location or not training.machine.required:

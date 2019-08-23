@@ -358,6 +358,8 @@ def before_request():
 			kiosk.last_seen = sa.func.now()
 			kiosk.last_ip = request.remote_addr
 			db.commit()
+		else:
+			return redirect("/auth")
 
 		in_lab = db.query(Access) \
 			.filter_by(timeOut=None) \

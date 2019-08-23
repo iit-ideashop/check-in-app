@@ -1014,7 +1014,7 @@ def admin_announcer():
 	return render_template("admin/announcer.html")
 
 
-@app.route('/admin/announcer/test')
+@app.route('/admin/announcer/test', methods=["POST"])
 def admin_announcer_test():
 	if not g.admin or g.admin.location_id != session['location_id']:
 		return redirect('/')

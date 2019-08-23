@@ -993,17 +993,17 @@ def set_type(userID, typeID):
 	db.commit()
 
 
-@app.route('/admin/type/set')
+@app.route('/admin/type/set', methods=["POST"])
 def admin_set_type():
 	if not g.admin or g.admin.location_id != session['location_id']:
 		return redirect('/')
 
 	try:
-		set_type(request.args["sid"], request.args["tid"])
+		set_type(request.form["sid"], request.form["tid"])
 	except ProcessingError as error:
-		return redirect("/admin/lookup?sid=" + request.args["sid"] + "&error=" + error.message)
+		return redirect("/admin/lookup?sid=" + request.form["sid"] + "&error=" + error.message)
 
-	return redirect('/admin/lookup?sid=' + request.args['sid'])
+	return redirect('/admin/lookup?sid=' + request.form['sid'])
 
 
 # Automatic announcer control

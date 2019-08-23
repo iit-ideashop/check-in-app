@@ -658,7 +658,7 @@ def admin_auth():
 	return redirect('/admin')
 
 
-@app.route('/admin/logout', methods=['GET'])
+@app.route('/admin/logout', methods=['POST'])
 def admin_logout():
 	session['admin'] = None
 	return redirect(url_for('.success', action='logout'))

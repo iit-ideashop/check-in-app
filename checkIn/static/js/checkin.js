@@ -28,12 +28,10 @@ $(function() {
 
     socket.connect();
 
-    // From https://stackoverflow.com/a/27208677
-    $("a.POST").click(function (e) {
-        e.stopPropagation();
-        e.preventDefault();
-        let href = this.href;
-        let parts = href.split('?');
+    /** @type{function(string): void} */
+    window.navigatePOST = function(href) {
+        // From https://stackoverflow.com/a/27208677
+        let parts = href.split("?");
         let url = parts[0];
         let params = parts[1] ? parts[1].split('&') : [];
         let inputs = params.map(param => {
@@ -42,5 +40,11 @@ $(function() {
         }).join();
         $("body").append('<form action="'+url+'" method="post" id="poster">'+inputs+'</form>');
         $("#poster").submit();
+    };
+
+    $("a.POST").click(function (e) {
+        e.stopPropagation();
+        e.preventDefault();
+        navigatePOST(this.href)
     });
 });

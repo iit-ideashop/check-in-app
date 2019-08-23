@@ -617,16 +617,16 @@ def _login(request):
 # Admin authentication
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
-	if not request.args.get('sid') and not request.args.get('card'):
+	if request.method == "GET":
 		return render_template('admin/login_cardtap.html')
 	else:
-		if not request.args.get('sid') or not request.args.get('sid').isdigit():
+		if not request.form.get('sid') or not request.form.get('sid').isdigit():
 			return render_template('admin/login_cardtap.html',
 			                       error='This HawkCard is not registered!')
 
 		# check to see if user has a pin
 		db = db_session()
-		user = db.query(UserLocation).filter_by(sid=request.args.get('sid'), location_id=session['location_id']).one_or_none()
+		user = db.query(UserLocation).filter_by(sid=request.form.get('sid'), location_id=session['location_id']).one_or_none()
 
 		if not user.pin and user.type.level > 0:
 			session['admin'] = user.sid
@@ -636,7 +636,7 @@ def admin_login():
 			                       error='Insufficient permission! This incident will be reported.')
 
 		return render_template('admin/login_pin.html',
-		                       sid=request.args.get('sid'))
+		                       sid=request.form.get('sid'))
 
 
 @app.route('/admin/auth', methods=['POST'])

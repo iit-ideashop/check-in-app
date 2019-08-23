@@ -1078,9 +1078,9 @@ def admin_announcer_cancel_evac():
 
 
 # Card tap flow
-@app.route('/waiver', methods=['GET'])
+@app.route('/waiver', methods=['GET', "POST"])
 def waiver():
-	if not request.args.get('agreed'):
+	if request.method == "GET":
 		db = db_session()
 
 		general_machine = db.query(Machine) \
@@ -1098,16 +1098,16 @@ def waiver():
 		return render_template('waiver.html',
 		                       sid=request.args.get('sid'),
 		                       show_training_warning=general_training is None)
-	elif request.args.get('agreed') == 'true':
+	elif request.method == "POST" and request.form.get('agreed') == 'true':
 		db = db_session()
 		db.add(Access(
-			sid=request.args.get('sid'),
+			sid=request.form.get('sid'),
 			location_id=session['location_id'],
 			timeIn=sa.func.now(),
 			timeOut=None
 		))
 		user = db.query(UserLocation) \
-			.filter_by(sid=request.args.get('sid'),
+			.filter_by(sid=request.form.get('sid'),
 			           location_id=session['location_id']) \
 			.one_or_none()
 		if user:

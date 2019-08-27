@@ -5,6 +5,8 @@ PASSWORD='password'
 IITLOOKUPURL=''
 IITLOOKUPUSER=''
 IITLOOKUPPASS=''
-
-ANNOUNCER='tcp://10.0.8.20:4242'
+DEBUG=False
 LOGFILE='checkin.log'
+SMTPHOST='localhost'
+SMTPFROM='checkin@test.com'
+SMTPTO=['importantperson@test.com']

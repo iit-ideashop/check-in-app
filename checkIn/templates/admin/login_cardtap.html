@@ -9,7 +9,7 @@
 	<h1>Please tap your card or type your ID to sign in.</h1><br />
 	<div class="panel panel-default">
 		<div class="panel-body">
-			<form class="form-inline" onsubmit="submitted(); return false;">
+			<form class="form-inline" method="post" target="/admin/login">
 				<div class="form-group">
 					<div class="input-group">
 						<div class="input-group">
@@ -39,15 +39,10 @@ $(function() {
 
     socket.on('scan', function (data) {
         if (data.hwid === {{ session['hardware_id'] | tojson }})
-            window.location.assign("/admin/login?sid=" + data.sid + "&cardnum=" + data.card);
+            navigatePOST("/admin/login?sid=" + data.sid + "&cardnum=" + data.card);
     });
 
 	$("#sid").keyboard();
-
-	function submitted() {
-		let id = Number(document.getElementById("sid").value);
-		window.location.assign("/admin/login?sid=" + id);
-	}
 });
 </script>
 {% endblock %}

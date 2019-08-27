@@ -446,7 +446,7 @@ def auth():
 
 		if kiosk:
 			# deauthorize any existing kiosks with that ID
-			socketio.emit('go', {'to': url_for('.deauth'), 'hwid': kiosk.hardware_id})
+			socketio.emit('go', {'to': url_for('.auth'), 'hwid': kiosk.hardware_id})
 
 			kiosk.token = new_token
 			kiosk.location_id = request.form['location']
@@ -468,7 +468,7 @@ def auth():
 		return redirect('/')
 
 
-@app.route('/deauth')
+@app.route('/deauth', methods=["POST"])
 def deauth():
 	db = db_session()
 	db.query(Kiosk).filter_by(location_id=session['location_id'], hardware_id=session['hardware_id']).delete()
@@ -476,7 +476,7 @@ def deauth():
 	return redirect('/auth')
 
 
-@app.route('/deauth/<int:loc>/<int:hwid>')
+@app.route('/deauth/<int:loc>/<int:hwid>', methods=["POST"])
 def deauth_other(loc, hwid):
 	if not g.admin or g.admin.location_id != session['location_id'] or g.admin.type.level < 90:
 		return redirect('/')
@@ -497,7 +497,7 @@ def root():
 	return render_template('index.html')
 
 
-@app.route('/card_read/<int:hwid>', methods=['GET', 'POST'])
+@app.route('/card_read/<int:hwid>', methods=['POST'])
 def card_read(hwid):
 	resp = 'Read success from HWID %d: Facility %s, card %s' % (hwid, request.form['facility'], request.form['cardnum'])
 	db = db_session()
@@ -518,7 +518,7 @@ def card_read(hwid):
 	return resp
 
 
-@app.route('/checkout', methods=['GET', 'POST'])
+@app.route('/checkout', methods=['POST'])
 def checkout():
 	db = db_session()
 
@@ -617,16 +617,16 @@ def _login(request):
 # Admin authentication
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
-	if not request.args.get('sid') and not request.args.get('card'):
+	if request.method == "GET":
 		return render_template('admin/login_cardtap.html')
 	else:
-		if not request.args.get('sid') or not request.args.get('sid').isdigit():
+		if not request.form.get('sid') or not request.form.get('sid').isdigit():
 			return render_template('admin/login_cardtap.html',
 			                       error='This HawkCard is not registered!')
 
 		# check to see if user has a pin
 		db = db_session()
-		user = db.query(UserLocation).filter_by(sid=request.args.get('sid'), location_id=session['location_id']).one_or_none()
+		user = db.query(UserLocation).filter_by(sid=request.form.get('sid'), location_id=session['location_id']).one_or_none()
 
 		if not user.pin and user.type.level > 0:
 			session['admin'] = user.sid
@@ -636,7 +636,7 @@ def admin_login():
 			                       error='Insufficient permission! This incident will be reported.')
 
 		return render_template('admin/login_pin.html',
-		                       sid=request.args.get('sid'))
+		                       sid=request.form.get('sid'))
 
 
 @app.route('/admin/auth', methods=['POST'])
@@ -658,7 +658,7 @@ def admin_auth():
 	return redirect('/admin')
 
 
-@app.route('/admin/logout', methods=['GET'])
+@app.route('/admin/logout', methods=['POST'])
 def admin_logout():
 	session['admin'] = None
 	return redirect(url_for('.success', action='logout'))
@@ -793,22 +793,22 @@ def admin_lookup():
 	                       now=datetime.now(), error=request.args.get('error'))
 
 
-@app.route('/admin/clear_waiver', methods=['GET'])
+@app.route('/admin/clear_waiver', methods=['POST'])
 def admin_clear_waiver():
 	if not session['admin']:
 		return redirect('/')
-	if not request.args.get('sid'):
+	if not request.form.get('sid'):
 		return redirect('/admin/lookup')
 
 	db = db_session()
-	user = db.query(UserLocation).filter_by(sid=request.args.get('sid'),
+	user = db.query(UserLocation).filter_by(sid=request.form.get('sid'),
 	                                location_id=session['location_id']).one_or_none()
 	user.waiverSigned = None
 	db.commit()
 	return redirect('/admin/lookup?sid=' + str(user.sid))
 
 
-@app.route('/admin/clear_lab', methods=['GET', 'POST'])
+@app.route('/admin/clear_lab', methods=['POST'])
 def admin_clear_lab():
 	if not g.admin or g.admin.location_id != session['location_id']:
 		return redirect('/admin/login')
@@ -854,18 +854,18 @@ def admin_group_add_training():
 	return render_template('admin/group_training.html', machines=machines)
 
 
-@app.route('/admin/training/remove')
+@app.route('/admin/training/remove', methods=["POST"])
 def admin_remove_training():
 	if not g.admin or g.admin.location_id != session['location_id']:
 		return redirect('/')
 	db = db_session()
-	training = db.query(Training).filter_by(id=request.args.get('id')).one_or_none()
+	training = db.query(Training).filter_by(id=request.form.get('id')).one_or_none()
 	if training:
 		sid = training.trainee_id if training else None
 		db.delete(training)
 		db.commit()
 	else:
-		sid = request.args.get('sid')
+		sid = request.form.get('sid')
 
 	return redirect('/admin/lookup?sid=' + str(sid))
 
@@ -993,17 +993,17 @@ def set_type(userID, typeID):
 	db.commit()
 
 
-@app.route('/admin/type/set')
+@app.route('/admin/type/set', methods=["POST"])
 def admin_set_type():
 	if not g.admin or g.admin.location_id != session['location_id']:
 		return redirect('/')
 
 	try:
-		set_type(request.args["sid"], request.args["tid"])
+		set_type(request.form["sid"], request.form["tid"])
 	except ProcessingError as error:
-		return redirect("/admin/lookup?sid=" + request.args["sid"] + "&error=" + error.message)
+		return redirect("/admin/lookup?sid=" + request.form["sid"] + "&error=" + error.message)
 
-	return redirect('/admin/lookup?sid=' + request.args['sid'])
+	return redirect('/admin/lookup?sid=' + request.form['sid'])
 
 
 # Automatic announcer control
@@ -1014,7 +1014,7 @@ def admin_announcer():
 	return render_template("admin/announcer.html")
 
 
-@app.route('/admin/announcer/test')
+@app.route('/admin/announcer/test', methods=["POST"])
 def admin_announcer_test():
 	if not g.admin or g.admin.location_id != session['location_id']:
 		return redirect('/')
@@ -1045,7 +1045,7 @@ def admin_announcer_power_tool():
 		return abort(500)
 
 
-@app.route('/admin/announcer/cancel_power_tool')
+@app.route('/admin/announcer/cancel_power_tool', methods=["POST"])
 def admin_announcer_cancel_power_tool():
 	if not g.admin or g.admin.location_id != session['location_id']:
 		return redirect('/')
@@ -1067,7 +1067,7 @@ def admin_announcer_evac():
 	return redirect('/admin/announcer')
 
 
-@app.route('/admin/announcer/cancel_evac')
+@app.route('/admin/announcer/cancel_evac', methods=["POST"])
 def admin_announcer_cancel_evac():
 	if not g.admin or g.admin.location_id != session['location_id']:
 		return redirect('/')
@@ -1078,9 +1078,9 @@ def admin_announcer_cancel_evac():
 
 
 # Card tap flow
-@app.route('/waiver', methods=['GET'])
+@app.route('/waiver', methods=['GET', "POST"])
 def waiver():
-	if not request.args.get('agreed'):
+	if request.method == "GET":
 		db = db_session()
 
 		general_machine = db.query(Machine) \
@@ -1098,16 +1098,16 @@ def waiver():
 		return render_template('waiver.html',
 		                       sid=request.args.get('sid'),
 		                       show_training_warning=general_training is None)
-	elif request.args.get('agreed') == 'true':
+	elif request.method == "POST" and request.form.get('agreed') == 'true':
 		db = db_session()
 		db.add(Access(
-			sid=request.args.get('sid'),
+			sid=request.form.get('sid'),
 			location_id=session['location_id'],
 			timeIn=sa.func.now(),
 			timeOut=None
 		))
 		user = db.query(UserLocation) \
-			.filter_by(sid=request.args.get('sid'),
+			.filter_by(sid=request.form.get('sid'),
 			           location_id=session['location_id']) \
 			.one_or_none()
 		if user:

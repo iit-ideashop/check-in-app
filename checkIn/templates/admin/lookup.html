@@ -86,7 +86,7 @@
                     {% if results[0][0].waiverSigned %}
                         <div class="alert alert-success">
                             Accepted user agreement on {{ results[0][0].waiverSigned }}.
-                            <a href="/admin/clear_waiver?sid={{ results[0][0].sid }}">
+                            <a class="POST" href="/admin/clear_waiver?sid={{ results[0][0].sid }}">
                                 <button class="btn btn-xs btn-success pull-right">
                                     Require another signature
                                 </button>
@@ -126,7 +126,7 @@
 	                                    <td>{{ t.trainer.name }}</td>
 	                                    <td>{{ t.date }}</td>
 	                                    <td>
-	                                        <a href="/admin/training/remove?sid={{ results[0][0].sid }}&id={{ t.id }}" class="btn btn-danger btn-xs">
+	                                        <a href="/admin/training/remove?sid={{ results[0][0].sid }}&id={{ t.id }}" class="POST btn btn-danger btn-xs">
 	                                            <i class="glyphicon glyphicon-remove"></i>
 	                                        </a>
 	                                    </td>
@@ -153,7 +153,7 @@
 										</a>
 										<ul class="dropdown-menu">
 											{% for type in types %}
-												<li><a href="/admin/type/set?sid={{ results[0][0].sid }}&tid={{ type.id }}">{{ type.name }} ({{ type.level }})</a></li>
+												<li><a class="POST" href="/admin/type/set?sid={{ results[0][0].sid }}&tid={{ type.id }}">{{ type.name }} ({{ type.level }})</a></li>
 											{% endfor %}
 										</ul>
 									</div>

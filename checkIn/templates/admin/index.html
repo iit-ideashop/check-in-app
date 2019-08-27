@@ -22,7 +22,7 @@
     {% endif %}
     <hr />
     <a href="/admin/change_pin" class="btn btn-lg btn-default btn-block">Change PIN</a>
-    <a href="/admin/logout" class="btn btn-lg btn-danger btn-block">Sign out</a>
+    <a href="/admin/logout" class="POST btn btn-lg btn-danger btn-block">Sign out</a>
     {% if g.admin.type.level >= 90 %}
     <hr />
     <footer class="text-muted">
@@ -51,7 +51,7 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <a href="/admin/clear_lab">
+                    <a class="POST" href="/admin/clear_lab">
                         <input type="submit" class="btn btn-danger" value="Yes" />
                     </a>
                     <button type="button" class="btn btn-default" data-dismiss="modal">No</button>
@@ -74,7 +74,7 @@
                 Are you sure you want to deauthorize this kiosk?
             </div>
             <div class="modal-footer">
-                <a href="/deauth">
+                <a href="/deauth" class="POST">
                     <button type="button" class="btn btn-danger">Yes</button>
                 </a>
                 <button type="button" class="btn btn-default" data-dismiss="modal">No</button>

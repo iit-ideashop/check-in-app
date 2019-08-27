@@ -47,4 +47,10 @@ $(function() {
         e.preventDefault();
         navigatePOST(this.href)
     });
+
+    $('[data-href] tr').click(function(e) {
+        let url = $(e.delegateTarget).data('href');
+        console.log('Click! ' + url);
+        window.location.href = url;
+    });
 });

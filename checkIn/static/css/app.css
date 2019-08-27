@@ -73,3 +73,7 @@ html, body {
 	animation-timing-function: ease-in-out;
 	animation-direction: alternate;
 }
+
+.link-cursor {
+    cursor: pointer;
+}

@@ -55,7 +55,7 @@
                         </thead>
                         <tbody>
                             {% for (u, warnings) in results %}
-                                <tr>
+                                <tr onclick="window.location.href='/admin/lookup?sid={{ u.sid }}';" class="link-cursor">
                                     <td><a href="/admin/lookup?sid={{ u.sid }}" class="btn btn-xs btn-primary">A{{ u.sid }}</a></td>
                                     <td>{{ u.name }}</td>
                                     <td>{{ u.type.name }}</td>

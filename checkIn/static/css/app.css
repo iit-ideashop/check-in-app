@@ -77,3 +77,15 @@ html, body {
 .link-cursor {
     cursor: pointer;
 }
+
+@media (min-width: 1281px) {
+    .login-panel {
+        width: 30vw;
+    }
+}
+
+@media (max-width: 1281px) {
+    .login-panel {
+        width: 80vw;
+    }
+}

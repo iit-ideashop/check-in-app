@@ -298,9 +298,11 @@ class Warning(Base):
 	@staticmethod
 	def warn(db: sa.orm.Session, warner: int, warnee: int, reason: str, location: int, comments: Optional[str] = None, banned: bool = False) -> "Warning":
 		warnings = db.query(Warning).filter_by(warnee_id=warnee).all()
-		for training in db.query(Training).filter_by(trainee_id=warnee).options(joinedload(Training.machine)).all():
-			if training.machine.location_id != location or not training.machine.required:
-				continue
+		for training in db.query(Training)\
+				.filter_by(trainee_id=warnee)\
+				.join(Training.machine)\
+				.filter(Machine.location_id == location, Machine.required == True)\
+				.all():
 			numWarnings = sum(1 for _ in filter(lambda x: x.time > training.date, warnings))
 			if numWarnings >= 5:
 				training.invalidation_date = sa.func.now()

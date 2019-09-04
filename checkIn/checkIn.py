@@ -1417,4 +1417,8 @@ if __name__ == '__main__':
 
 	app.jinja_env.auto_reload = True
 	app.config['TEMPLATES_AUTO_RELOAD'] = True
-	socketio.run(app, host='0.0.0.0')
+	sslInfo = {}
+	if "SSLCERT" in app.config and "SSLKEY" in app.config:
+		sslInfo = {"certfile": app.config["SSLCERT"], "keyfile": app.config["SSLKEY"]}
+
+	socketio.run(app, host='0.0.0.0', **sslInfo)

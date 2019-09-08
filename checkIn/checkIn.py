@@ -842,9 +842,13 @@ def admin_add_training():
 	             trainer_id=int(session['admin']),
 	             machine_id=int(request.form['machine']),
 	             date=sa.func.now())
-	db.add(t)
-	db.commit()
-	return redirect('/admin/lookup?sid=' + str(request.form['student_id']))
+	try:
+		check_allowed_modify(session['admin'],request.form['student_id'],session['location_id'])
+		db.add(t)
+		db.commit()
+		return redirect('/admin/lookup?sid=' + str(request.form['student_id']))
+	except ProcessingError as error:
+		return redirect("/admin/lookup?sid=" + str(request.form["student_id"]) + "&error=" + str(error))
 
 
 @app.route('/admin/training/group_add', methods=['GET'])
@@ -863,14 +867,15 @@ def admin_remove_training():
 	db = db_session()
 	training = db.query(Training).filter_by(id=request.form.get('id')).one_or_none()
 	if training:
-		sid = training.trainee_id if training else None
-		db.delete(training)
-		db.commit()
-	else:
-		sid = request.form.get('sid')
-
-	return redirect('/admin/lookup?sid=' + str(sid))
-
+		try:
+			sid = training.trainee_id if training else None
+			check_allowed_modify(session['admin'], sid, session['location_id'])
+			db.delete(training)
+			db.commit()
+		except ProcessingError as error:
+			return redirect("/admin/lookup?sid=" + str(sid) + "&error=" + str(error))
+		return redirect('/admin/lookup?sid=' + str(sid))
+	else : return redirect('/internal_error.html')
 
 # TODO: implement location & machine UI
 @app.route('/admin/locations')
@@ -985,6 +990,15 @@ def check_set_type(userInfo, typeInfo):
 	if userInfo.type.level >= g.admin.type.level:
 		raise ProcessingError("You don't have permission to modify that user.")
 
+def check_allowed_modify(modifingUser, modifiedUser, location_id):
+	db = db_session()
+	if (db.query(UserLocation).filter_by(sid=modifingUser).filter_by(location_id=location_id).one().type.level >= 90) or \
+			((modifingUser != modifiedUser) and \
+			(db.query(UserLocation).filter_by(sid=modifingUser).filter_by(location_id=location_id).one().type.level \
+			> db.query(UserLocation).filter_by(sid=modifiedUser).filter_by(location_id=location_id).one().type.level)):
+		return #check successful
+	else:
+		raise ProcessingError("You don't have permission to modify that user.")
 
 def set_type(userID, typeID):
 	db = db_session()

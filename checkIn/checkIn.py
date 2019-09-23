@@ -519,6 +519,29 @@ def card_read(hwid):
 	logging.getLogger('checkin.card').info(resp)
 	return resp
 
+@app.route('/anumber_read/<int:hwid>', methods=['GET'])
+def anumber_read(hwid):
+	db = db_session()
+	card = db.query(HawkCard).filter_by(sid=request.args['anumber'][1:]).first()
+	print(card)
+	resp = 'Read success from HWID %d: Facility %s, card %s' % (hwid, "null", card.card)
+	kiosk = db.query(Kiosk).filter_by(hardware_id=hwid).one_or_none()
+	if not kiosk:
+		return abort(403)
+
+	dbcard = db.query(HawkCard).filter_by(card=card.card).one_or_none()
+	user = dbcard.user if dbcard else None
+	socketio.emit('scan', {
+		'facility': '2508',
+		'card': card.card,
+		'hwid': hwid,
+		'sid': user.sid if user else None,
+		'name': user.name if user else None,
+	})
+	logging.getLogger('checkin.card').info(resp)
+	return resp
+
+
 
 @app.route('/checkout', methods=['POST'])
 def checkout():
@@ -1214,7 +1237,6 @@ def register():
 @socketio.on('ping')
 def ping(data):
 	send('pong')
-
 
 @socketio.on('check in')
 def check_in(data):

@@ -204,6 +204,7 @@ class Access(Base):
 	timeIn = sa.Column(sa.DateTime, nullable=False)
 	timeOut: Optional[datetime] = sa.Column(sa.DateTime, nullable=True, default=None)
 	location_id = sa.Column(sa.Integer, nullable=False)
+	hideStaff = sa.Column(sa.Boolean, nullable=False, default=False)
 
 	user = relationship('UserLocation')
 	location = relationship('Location', primaryjoin="foreign(Access.location_id)==remote(Location.id)", viewonly=True)
@@ -372,8 +373,8 @@ def before_request():
 
 		g.location = db.query(Location).filter_by(
 			id=session['location_id']).one_or_none() if 'location_id' in session else None
-		g.students = [a.user for a in in_lab if a.user.type.level <= 0]
-		g.staff = [a.user for a in in_lab if a.user.type.level > 0]
+		g.students = [a.user for a in in_lab if a.hideStaff or a.user.type.level <= 0]
+		g.staff = [a.user for a in in_lab if not a.hideStaff and a.user.type.level > 0]
 		g.staff.sort(key=lambda x: x.type.level, reverse=True)
 		g.admin = db.query(UserLocation).filter_by(sid=session['admin'], location_id=session['location_id']).one_or_none() if 'admin' in session else None
 		g.version = version
@@ -480,7 +481,7 @@ def deauth():
 
 @app.route('/deauth/<int:loc>/<int:hwid>', methods=["POST"])
 def deauth_other(loc, hwid):
-	if not g.admin or g.admin.location_id != session['location_id'] or g.admin.type.level < 90:
+	if not g.admin or g.admin.location_id != session['location_id']or g.admin.type.level < 90:
 		return redirect('/')
 
 	socketio.emit('go', {'to': url_for('.deauth'), 'hwid': hwid})
@@ -605,7 +606,9 @@ success_messages.update({
 
 @app.route('/success/<action>', methods=['GET'])
 def success(action):
-	return render_template('success.html', msg=success_messages[action])
+	return render_template('success.html', msg=success_messages[action],
+	                       show_hide_staff_button=request.args.get('show_hide_staff_button', False),
+	                       sid=request.args.get('sid', 0))
 
 
 @app.route('/banned', methods=['GET'])
@@ -637,6 +640,16 @@ def _login(request):
 		else:
 			session['logged_in'] = True
 	return error
+
+
+@app.route('/admin/hideStaff', methods=['POST'])
+def admin_hide_staff():
+	db = db_session()
+	access = db.query(Access).filter_by(sid=request.form.get('sid'), location_id=session['location_id'], timeOut=None)\
+			   .one_or_none()
+	access.hideStaff = not access.hideStaff
+	db.commit()
+	return redirect('/')
 
 
 # Admin authentication
@@ -1299,7 +1312,7 @@ def check_in(data):
 
 		student_count = staff_count = 0
 		for a in in_lab:  # type: Access
-			if a.user.type.level > 0:
+			if a.user.type.level > 0 and not a.hideStaff:
 				staff_count += 1
 			else:
 				student_count += 1
@@ -1398,7 +1411,12 @@ def check_in(data):
 
 				# if user has training or there is no training required, let 'em in
 				if not missing_trainings_list:
-					emit('go', {'to': url_for('.success', action='checkin', name=card.user.name), 'hwid': data['hwid']})
+					if userLocation.type.level > 0:
+						emit('go', {'to': url_for('.success', action='checkin', name=card.user.name,
+						                          show_hide_staff_button=True, sid=card.sid),
+						            'hwid': data['hwid']})
+					else:
+						emit('go', {'to': url_for('.success', action='checkin', name=card.user.name), 'hwid': data['hwid']})
 
 				else:
 					resp += (' (Missing trainings: %s)' % missing_trainings)

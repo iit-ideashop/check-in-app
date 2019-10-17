@@ -1145,11 +1145,11 @@ def waiver():
 			general_training = db.query(Training) \
 				.filter_by(machine_id=general_machine.id) \
 				.filter_by(trainee_id=request.args.get('sid')) \
-				.one_or_none()
+				.all()
 
 		return render_template('waiver.html',
 		                       sid=request.args.get('sid'),
-		                       show_training_warning=general_training is None)
+		                       show_training_warning=general_training)
 	elif request.method == "POST" and request.form.get('agreed') == 'true':
 		db = db_session()
 		db.add(Access(

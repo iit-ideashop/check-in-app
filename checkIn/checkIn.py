@@ -118,6 +118,9 @@ class User(Base):
 	photo = sa.Column(sa.String(length=100))
 	pin = sa.Column(sa.Binary(length=16))
 	pin_salt = sa.Column(sa.Binary(length=16))
+	email = sa.Column(sa.String(length=100), nullable=True)
+	major_id = sa.Column(sa.Integer, sa.ForeignKey("majors.id"), nullable=True)
+	type = sa.Column(sa.Enum("Graduate", "Undergraduate", "Alumnus"), nullable=True)
 
 	def set_pin(self, pin):
 		self.pin_salt = os.urandom(16)
@@ -139,6 +142,11 @@ class User(Base):
 	def __repr__(self):
 		return "<User A%d (%s)>" % (self.sid, self.name)
 
+class Major(Base):
+	__tablename__ = "majors"
+	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
+	major = sa.Column(sa.String(length=50), nullable=False)
+	college = sa.Column(sa.String(length=50), nullable=False)
 
 class UserLocation(Base):
 	__tablename__ = "userLocation"

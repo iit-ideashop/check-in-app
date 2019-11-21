@@ -1,4 +1,5 @@
 # all the imports
+import enum
 import os, sys
 
 sys.path.insert(0, os.path.abspath(".."))
@@ -111,6 +112,31 @@ class Training(Base):
 		       (self.trainee.name, self.trainer.name, self.machine.name, str(self.date))
 
 
+class Major(Base):
+	__tablename__ = 'majors'
+	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
+	name = sa.Column(sa.String(length=100), nullable=False)
+
+	def __repr__(self):
+		return self.name
+
+
+class College(Base):
+	__tablename__ = 'colleges'
+	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
+	name = sa.Column(sa.String(length=100), nullable=False)
+
+	def __repr__(self):
+		return self.name
+
+
+class Status(enum.Enum):
+	undergraduate = 0
+	graduate = 1
+	employee = 2
+	inactive = 3
+
+
 class User(Base):
 	__tablename__ = 'users'
 	sid = sa.Column(DBStudentIDType, primary_key=True, autoincrement=False)
@@ -118,6 +144,14 @@ class User(Base):
 	photo = sa.Column(sa.String(length=100))
 	pin = sa.Column(sa.Binary(length=16))
 	pin_salt = sa.Column(sa.Binary(length=16))
+	email = sa.Column(sa.String(length=100))
+	major_id = sa.Column(sa.Integer, sa.ForeignKey('majors.id'))
+	college_id = sa.Column(sa.Integer, sa.ForeignKey('colleges.id'))
+	status = sa.Column(sa.Enum(Status))
+
+	major = relationship('Major')
+	college = relationship('College')
+
 
 	def set_pin(self, pin):
 		self.pin_salt = os.urandom(16)

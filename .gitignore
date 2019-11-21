@@ -3,6 +3,8 @@
 # MYSQL database config file
 
 config.cfg
+config.cfg.prod
+config.cfg.dev
 !config.cfg.default
 !placeholder.png
 checkIn/static/images/A*

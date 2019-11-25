@@ -91,13 +91,15 @@ if __name__ == '__main__':
 			user: Optional[User] = existing_users.get(sid)
 
 			row_op = ' '
-			if not user:
-				user = User(sid=sid, name=reformat_name(row['NAME']), email=row['EMAIL_PREFERRED_ADDRESS'])
-				db.add(user)
-				row_op = '+'
+
+			# if not user:
+				# user = User(sid=sid, name=reformat_name(row['NAME']), email=row['EMAIL_PREFERRED_ADDRESS'])
+				# existing_users[sid] = user
+				# db.add(user)
+				# row_op = '+'
 
 			# don't update anything if we've already seen newer data
-			if sid not in user_terms.keys() or compare_terms(user_terms[sid], row['ACADEMIC_PERIOD_DESC']):
+			if user and (sid not in user_terms.keys() or compare_terms(user_terms[sid], row['ACADEMIC_PERIOD_DESC'])):
 				user_terms[sid] = row['ACADEMIC_PERIOD_DESC']
 
 				user.email = row['EMAIL_PREFERRED_ADDRESS']
@@ -116,8 +118,8 @@ if __name__ == '__main__':
 
 				if row['ACADEMIC_PERIOD_DESC'] == term:
 					user.status = status
-				elif compare_terms(row['ACADEMIC_PERIOD_DESC'], term):
-					user.status = None
+				else:
+					user.status = Status.inactive
 
 				row_op = '~'
 
@@ -133,8 +135,10 @@ if __name__ == '__main__':
 
 			if batch_count > batch_size:
 				print('[C] Committing batch')
+				batch_count = 0
 				db.commit()
 
+	print('[C] Committing batch')
 	db.commit()
 	print('Summary: %d created, %d updated, %d bypassed' % (records_created, records_updated, records_bypassed))
 

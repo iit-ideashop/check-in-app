@@ -122,7 +122,7 @@
                             {% for t in results[0][0].user.trainings %}
 			    	            {% if t.machine.location_id == g.location.id %}
 	                                <tr {% if t.invalidation_date %} class="danger" {% endif %}>
-	                                    <td {% if t.invalidation_date %} rowspan="2" {% endif %}>{{ t.machine.name }}</td>
+	                                    <td>{{ t.machine.name }}</td>
 	                                    <td>{{ t.trainer.name }}</td>
 	                                    <td>{{ t.date }}</td>
 	                                    <td>
@@ -133,7 +133,13 @@
 	                                </tr>
 						            {% if t.invalidation_date %}
 							            <tr class="danger">
-							                <td colspan="3"><strong>Invalidated as of {{ t.invalidation_date }}</strong></td>
+							                <td colspan="3">
+							                    &rarr;
+								                <strong>Invalidated as of {{ t.invalidation_date }}</strong>
+								                {% if t.invalidation_reason %}
+									                &mdash; {{ t.invalidation_reason }}
+								                {% endif %}
+							                </td>
 							            </tr>
 						            {% endif %}
 					            {% endif %}

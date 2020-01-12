@@ -102,6 +102,7 @@ class Training(Base):
 	machine_id = sa.Column(sa.Integer, sa.ForeignKey('machines.id'), nullable=False)
 	date = sa.Column(sa.DateTime, default=sa.func.now, nullable=False)
 	invalidation_date = sa.Column(sa.DateTime)
+	invalidation_reason = sa.Column(sa.Text)
 
 	trainee = relationship('User', foreign_keys=[trainee_id], back_populates='trainings')
 	trainer = relationship('User', foreign_keys=[trainer_id])
@@ -341,6 +342,7 @@ class Warning(Base):
 			numWarnings = sum(1 for _ in filter(lambda x: x.time > training.date, warnings))
 			if numWarnings >= 5:
 				training.invalidation_date = sa.func.now()
+				training.invalidation_reason = 'System - Excessive warnings'
 
 		warning = Warning(warner_id=warner, warnee_id=warnee, reason=reason, location_id=location, comments=comments, banned=banned)
 		db.add(warning)

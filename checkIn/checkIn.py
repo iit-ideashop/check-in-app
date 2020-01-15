@@ -103,10 +103,11 @@ class Training(Base):
 	date = sa.Column(sa.DateTime, default=sa.func.now, nullable=False)
 	invalidation_date = sa.Column(sa.DateTime)
 	invalidation_reason = sa.Column(sa.Text)
+	show_invalidation_reason = sa.Column(sa.Boolean)
 
 	trainee = relationship('User', foreign_keys=[trainee_id], back_populates='trainings')
 	trainer = relationship('User', foreign_keys=[trainer_id])
-	machine = relationship('Machine', foreign_keys=[machine_id])
+	machine = relationship('Machine', foreign_keys=[machine_id], lazy='joined')
 
 	def __repr__(self):
 		return "<%s trained %s on %s, time=%s>" % \
@@ -269,6 +270,8 @@ class Machine(Base):
 	name = sa.Column(sa.String(length=50), nullable=False)
 	location_id = sa.Column(sa.Integer, sa.ForeignKey('locations.id'), nullable=False)
 	required = sa.Column(sa.Boolean, nullable=False)
+	quiz_ids = sa.Column(sa.String(length=255), nullable=True)
+	quiz_grace_period_days = sa.Column(sa.Integer, nullable=True)
 
 	location = relationship('Location')
 	trained_users = relationship('Training')
@@ -1208,19 +1211,20 @@ def waiver():
 			.filter_by(required=1) \
 			.subquery()
 
-		active_trainings = db.query(Training) \
+		most_recent_trainings = db.query(Training) \
 			.filter_by(trainee_id=user.sid) \
-			.filter_by(invalidation_date=None) \
 			.subquery()
 
-		missing_trainings_list = db.query(required_machines) \
-			.outerjoin(active_trainings) \
-			.filter_by(date=None) \
+		missing_trainings_list = db.query(required_machines, most_recent_trainings) \
+			.outerjoin(most_recent_trainings) \
+			.filter(Training.date is None or Training.invalidation_date < sa.func.now()) \
 			.all()
 
-		missing_trainings = ', '.join([x.name for x in missing_trainings_list])
+		missing_trainings = ', '.join([x.name + (
+			x.invalidation_reason if x.invalidation_date and x.show_invalidation_reason else ''
+		) for x in missing_trainings_list])
 
-		if missing_trainings: \
+		if missing_trainings:
 			return redirect(url_for('.needs_training', name=user.name, trainings=missing_trainings))
 		else:
 			return redirect('/success/checkin')
@@ -1422,21 +1426,25 @@ def check_in(data):
 			elif userLocation.waiverSigned:
 				# check for required safety trainings
 				required_machines = db.query(Machine) \
-					.filter_by(location_id=location.id) \
+					.filter_by(location_id=session['location_id']) \
 					.filter_by(required=1) \
 					.subquery()
 
-				active_trainings = db.query(Training) \
+				most_recent_trainings = db.query(Training) \
 					.filter_by(trainee_id=card.user.sid) \
-					.filter_by(invalidation_date=None) \
+					.filter(Training.machine.has(location_id=session['location_id'])) \
+					.order_by(sa.desc(Training.date)) \
 					.subquery()
 
-				missing_trainings_list = db.query(required_machines) \
-										        .outerjoin(active_trainings) \
-												.filter_by(date=None) \
-												.all()
+				missing_trainings_list = db.query(required_machines, most_recent_trainings) \
+					.outerjoin(most_recent_trainings) \
+					.filter(Training.date is None or Training.invalidation_date < sa.func.now()) \
+					.distinct() \
+					.all()
 
-				missing_trainings = ', '.join([x.name for x in missing_trainings_list])
+				missing_trainings = ', '.join([x.name + (
+					' - ' + x.invalidation_reason if x.invalidation_date and x.show_invalidation_reason else ''
+				) for x in missing_trainings_list])
 
 				resp = ("User %s (card id %d) is cleared for entry at location %s (id %d, kiosk %d)" % (
 					card.user.name, data['card'], location.name, location.id, data['hwid']

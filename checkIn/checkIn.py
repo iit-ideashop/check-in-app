@@ -22,7 +22,7 @@ from sqlalchemy.ext.declarative import declarative_base
 # noinspection PyUnresolvedReferences
 from iitlookup import IITLookup
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, Tuple, List, Callable, Union
 
 version = "1.0.0"
@@ -116,6 +116,20 @@ class Training(Base):
 	def __repr__(self):
 		return "<%s trained %s on %s, time=%s>" % \
 		       (self.trainee.name, self.trainer.name, self.machine.name, str(self.date))
+
+	def quiz_required(self):
+		return self.machine.quiz is not None
+
+	def quiz_passed(self):
+		return self.quiz_score >= self.machine.quiz.pass_score
+
+	def quiz_available(self):
+		return (not self.quiz_passed()) and self.date + timedelta(days=self.machine.quiz_issue_days) > datetime.now()
+
+	def quiz_training_invalidated(self):
+		return (not self.quiz_passed()) and self.date +\
+		       timedelta(days=self.machine.quiz_grace_period_days) +\
+		       timedelta(days=self.machine.quiz_issue_days) < datetime.now()
 
 
 class Major(Base):
@@ -275,6 +289,7 @@ class Machine(Base):
 	location_id = sa.Column(sa.Integer, sa.ForeignKey('locations.id'), nullable=False)
 	required = sa.Column(sa.Boolean, nullable=False)
 	quiz_id = sa.Column(sa.Integer, sa.ForeignKey('quiz.id'), nullable=True)
+	quiz_issue_days = sa.Column(sa.Integer, nullable=True)
 	quiz_grace_period_days = sa.Column(sa.Integer, nullable=True)
 
 	location = relationship('Location')

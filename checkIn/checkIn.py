@@ -124,7 +124,7 @@ class Training(Base):
 		return self.quiz_score >= self.machine.quiz.pass_score
 
 	def quiz_available(self):
-		return (not self.quiz_passed()) and self.date + timedelta(days=self.machine.quiz_issue_days) > datetime.now()
+		return (not self.quiz_passed()) and self.date + timedelta(days=self.machine.quiz_issue_days) < datetime.now()
 
 	def quiz_training_invalidated(self):
 		return (not self.quiz_passed()) and self.date +\

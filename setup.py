@@ -8,6 +8,7 @@ setup(
             'flask',
             'flask-bootstrap',
             'flask-socketio',
+            'flask-mail',
             'sqlalchemy',
             'pysimplesoap',
             'zerorpc'

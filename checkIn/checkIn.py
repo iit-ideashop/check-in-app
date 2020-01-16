@@ -104,6 +104,9 @@ class Training(Base):
 	invalidation_date = sa.Column(sa.DateTime)
 	invalidation_reason = sa.Column(sa.Text)
 	show_invalidation_reason = sa.Column(sa.Boolean)
+	quiz_score = sa.Column(sa.DECIMAL(5, 2), nullable=True)
+	quiz_date = sa.Column(sa.DateTime, nullable=True)
+	quiz_attempts = sa.Column(sa.Integer, nullable=True)
 
 	trainee = relationship('User', foreign_keys=[trainee_id], back_populates='trainings')
 	trainer = relationship('User', foreign_keys=[trainer_id])
@@ -270,11 +273,12 @@ class Machine(Base):
 	name = sa.Column(sa.String(length=50), nullable=False)
 	location_id = sa.Column(sa.Integer, sa.ForeignKey('locations.id'), nullable=False)
 	required = sa.Column(sa.Boolean, nullable=False)
-	quiz_ids = sa.Column(sa.String(length=255), nullable=True)
+	quiz_id = sa.Column(sa.Integer, sa.ForeignKey('quiz.id'), nullable=True)
 	quiz_grace_period_days = sa.Column(sa.Integer, nullable=True)
 
 	location = relationship('Location')
 	trained_users = relationship('Training')
+	quiz = relationship('Quiz')
 
 	def __repr__(self):
 		return "<Machine %s>" % self.name
@@ -337,10 +341,10 @@ class Warning(Base):
 	@staticmethod
 	def warn(db: sa.orm.Session, warner: int, warnee: int, reason: str, location: int, comments: Optional[str] = None, banned: bool = False) -> "Warning":
 		warnings = db.query(Warning).filter_by(warnee_id=warnee).all()
-		for training in db.query(Training)\
-				.filter_by(trainee_id=warnee)\
-				.join(Training.machine)\
-				.filter(Machine.location_id == location, Machine.required == True)\
+		for training in db.query(Training) \
+				.filter_by(trainee_id=warnee) \
+				.join(Training.machine) \
+				.filter(Machine.location_id == location, Machine.required == True) \
 				.all():
 			numWarnings = sum(1 for _ in filter(lambda x: x.time > training.date, warnings))
 			if numWarnings >= 5:
@@ -350,6 +354,47 @@ class Warning(Base):
 		warning = Warning(warner_id=warner, warnee_id=warnee, reason=reason, location_id=location, comments=comments, banned=banned)
 		db.add(warning)
 		return warning
+
+
+class Quiz(Base):
+	__tablename__ = 'quiz'
+	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
+	name = sa.Column(sa.Text, nullable=False)
+
+	def __repr__(self):
+		return self.name
+
+
+class Question(Base):
+	__tablename__ = 'questions'
+	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
+	quiz_id = sa.Column(sa.Integer, sa.ForeignKey('quiz.id'), nullable=False)
+	prompt = sa.Column(sa.Text)
+	description = sa.Column(sa.Text)
+	image = sa.Column(sa.Text)
+	option_type = sa.Column(sa.Text, default="radio", nullable=False) #current allowable [radio, checkbox]
+
+	quiz = relationship('Quiz', lazy="joined")
+	option = relationship('Option', cascade='all, delete-orphan', lazy="joined")
+
+	def __repr__(self):
+		return self.prompt
+
+
+class Option(Base):
+	__tablename__ = 'options'
+	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
+	question_id = sa.Column(sa.Integer, sa.ForeignKey('questions.id'), nullable=False)
+	text = sa.Column(sa.Text)
+	image = sa.Column(sa.Text)
+	correct = sa.Column(sa.Boolean, default=False, nullable=False)
+
+	question = relationship('Question', lazy="joined")
+
+	def __repr__(self):
+		return self.text
+
+
 
 
 # Just for type-hinting, if you know a better way please fix
@@ -684,8 +729,8 @@ def _login(request):
 @app.route('/admin/hideStaff', methods=['POST'])
 def admin_hide_staff():
 	db = db_session()
-	access = db.query(Access).filter_by(sid=request.form.get('sid'), location_id=session['location_id'], timeOut=None)\
-			   .one_or_none()
+	access = db.query(Access).filter_by(sid=request.form.get('sid'), location_id=session['location_id'], timeOut=None) \
+		.one_or_none()
 	access.hideStaff = not access.hideStaff
 	db.commit()
 	return redirect('/')
@@ -815,10 +860,10 @@ def lookupQuery(db: sa.orm.session.Session, location_id: int, sid: Optional[int]
 	query = db.query(
 		UserLocation,
 		sa.func.coalesce(warningCounts.c.warningCount, sa.literal_column("0"))
-	)\
-		.select_from(UserLocation)\
-		.join(User, UserLocation.sid == User.sid)\
-		.outerjoin(warningCounts, UserLocation.sid == warningCounts.c.warnee_id)\
+	) \
+		.select_from(UserLocation) \
+		.join(User, UserLocation.sid == User.sid) \
+		.outerjoin(warningCounts, UserLocation.sid == warningCounts.c.warnee_id) \
 		.filter(UserLocation.location_id == location_id)
 
 	if sid or name or card_no:
@@ -879,7 +924,7 @@ def admin_clear_waiver():
 
 	db = db_session()
 	user = db.query(UserLocation).filter_by(sid=request.form.get('sid'),
-	                                location_id=session['location_id']).one_or_none()
+	                                        location_id=session['location_id']).one_or_none()
 	user.waiverSigned = None
 	db.commit()
 	return redirect('/admin/lookup?sid=' + str(user.sid))
@@ -1069,8 +1114,8 @@ def check_allowed_modify(modifingUser, modifiedUser, location_id):
 	db = db_session()
 	if (db.query(UserLocation).filter_by(sid=modifingUser).filter_by(location_id=location_id).one().type.level >= 90) or \
 			((modifingUser != modifiedUser) and \
-			(db.query(UserLocation).filter_by(sid=modifingUser).filter_by(location_id=location_id).one().type.level \
-			> db.query(UserLocation).filter_by(sid=modifiedUser).filter_by(location_id=location_id).one().type.level)):
+			 (db.query(UserLocation).filter_by(sid=modifingUser).filter_by(location_id=location_id).one().type.level \
+			  > db.query(UserLocation).filter_by(sid=modifiedUser).filter_by(location_id=location_id).one().type.level)):
 		return #check successful
 	else:
 		raise ProcessingError("You don't have permission to modify that user.")
@@ -1199,7 +1244,7 @@ def waiver():
 		))
 		user = db.query(UserLocation) \
 			.filter_by(sid=request.form.get('sid'),
-			           location_id=session['location_id']) \
+		               location_id=session['location_id']) \
 			.one_or_none()
 		if user:
 			user.waiverSigned = sa.func.now()

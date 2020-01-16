@@ -107,6 +107,7 @@ class Training(Base):
 	quiz_score = sa.Column(sa.DECIMAL(5, 2), nullable=True)
 	quiz_date = sa.Column(sa.DateTime, nullable=True)
 	quiz_attempts = sa.Column(sa.Integer, nullable=True)
+	quiz_notification_sent = sa.Column(sa.DateTime, nullable=True)
 
 	trainee = relationship('User', foreign_keys=[trainee_id], back_populates='trainings')
 	trainer = relationship('User', foreign_keys=[trainer_id])
@@ -168,7 +169,7 @@ class User(Base):
 		return hmac.compare_digest(self.pin, digest)
 
 	def locationSpecific(self, location_id: int) -> Optional["UserLocation"]:
-		return self.userLocation.filter(location_id=location_id).one_or_none()
+		return self.userLocation.filter(User.location_id == location_id).one_or_none()
 
 	userLocation = relationship('UserLocation', lazy="dynamic")
 	trainings = relationship('Training', foreign_keys=[Training.trainee_id])
@@ -360,6 +361,9 @@ class Quiz(Base):
 	__tablename__ = 'quiz'
 	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
 	name = sa.Column(sa.Text, nullable=False)
+	pass_score = sa.Column(sa.DECIMAL(5, 2), nullable=False, default=70.0)
+
+	questions = relationship('Question', lazy='joined', cascade='all, delete-orphan')
 
 	def __repr__(self):
 		return self.name

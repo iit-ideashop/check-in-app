@@ -115,7 +115,7 @@ class Training(Base):
 
 	def __repr__(self):
 		return "<%s trained %s on %s, time=%s>" % \
-		       (self.trainee.name, self.trainer.name, self.machine.name, str(self.date))
+		       (self.trainer.name, self.trainee.name, self.machine.name, str(self.date))
 
 	def quiz_required(self):
 		return self.machine.quiz is not None

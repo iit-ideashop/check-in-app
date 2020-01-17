@@ -1275,13 +1275,25 @@ def waiver():
 			.filter_by(required=1) \
 			.subquery()
 
-		most_recent_trainings = db.query(Training) \
+		training_dates = db.query(Training.machine_id, sa.func.max(Training.date).label('date')) \
 			.filter_by(trainee_id=user.sid) \
+			.filter(Training.machine.has(location_id=session['location_id'])) \
+			.group_by(Training.machine_id) \
 			.subquery()
 
-		missing_trainings_list = db.query(required_machines, most_recent_trainings) \
-			.outerjoin(most_recent_trainings) \
-			.filter(Training.date is None or Training.invalidation_date < sa.func.now()) \
+		trainings = db.query(Training) \
+			.join(training_dates,
+		          sa.and_(
+			          Training.date == training_dates.c.date,
+			          Training.machine_id == training_dates.c.machine_id)) \
+			.subquery()
+
+		missing_trainings_list = db.query(required_machines, trainings) \
+			.outerjoin(trainings) \
+			.having(sa.or_(trainings.c.date == None,
+		                   sa.and_(trainings.c.invalidation_date != None,
+		                           trainings.c.invalidation_date < sa.func.now()))) \
+			.order_by(sa.desc(trainings.c.date)) \
 			.all()
 
 		missing_trainings = ', '.join([x.name + (
@@ -1494,16 +1506,25 @@ def check_in(data):
 					.filter_by(required=1) \
 					.subquery()
 
-				most_recent_trainings = db.query(Training) \
+				training_dates = db.query(Training.machine_id, sa.func.max(Training.date).label('date')) \
 					.filter_by(trainee_id=card.user.sid) \
 					.filter(Training.machine.has(location_id=session['location_id'])) \
-					.order_by(sa.desc(Training.date)) \
+					.group_by(Training.machine_id) \
 					.subquery()
 
-				missing_trainings_list = db.query(required_machines, most_recent_trainings) \
-					.outerjoin(most_recent_trainings) \
-					.filter(Training.date is None or Training.invalidation_date < sa.func.now()) \
-					.distinct() \
+				trainings = db.query(Training) \
+					.join(training_dates,
+                          sa.and_(
+				              Training.date == training_dates.c.date,
+                              Training.machine_id == training_dates.c.machine_id))\
+					.subquery()
+
+				missing_trainings_list = db.query(required_machines, trainings) \
+					.outerjoin(trainings) \
+					.having(sa.or_(trainings.c.date == None,
+				                   sa.and_(trainings.c.invalidation_date != None,
+				                           trainings.c.invalidation_date < sa.func.now()))) \
+					.order_by(sa.desc(trainings.c.date)) \
 					.all()
 
 				missing_trainings = ', '.join([x.name + (

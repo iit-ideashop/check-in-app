@@ -22,7 +22,7 @@ from sqlalchemy.ext.declarative import declarative_base
 # noinspection PyUnresolvedReferences
 from iitlookup import IITLookup
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from typing import Optional, Tuple, List, Callable, Union
 
 version = "1.0.0"
@@ -294,7 +294,7 @@ class Machine(Base):
 
 	location = relationship('Location')
 	trained_users = relationship('Training')
-	quiz = relationship('Quiz')
+	quiz = relationship('Quiz', lazy='joined')
 
 	def __repr__(self):
 		return "<Machine %s>" % self.name
@@ -1501,13 +1501,14 @@ def check_in(data):
 			# user signing in
 			elif userLocation.waiverSigned:
 				# check for required safety trainings
-				required_machines = db.query(Machine) \
-					.filter_by(location_id=session['location_id']) \
-					.filter_by(required=1) \
+				required_machines = db.query(Machine, Quiz) \
+					.filter(Machine.location_id == session['location_id']) \
+					.filter(Machine.required == 1) \
+					.with_labels() \
 					.subquery()
 
 				training_dates = db.query(Training.machine_id, sa.func.max(Training.date).label('date')) \
-					.filter_by(trainee_id=card.user.sid) \
+					.filter(Training.trainee_id == card.user.sid) \
 					.filter(Training.machine.has(location_id=session['location_id'])) \
 					.group_by(Training.machine_id) \
 					.subquery()
@@ -1516,18 +1517,28 @@ def check_in(data):
 					.join(training_dates,
                           sa.and_(
 				              Training.date == training_dates.c.date,
-                              Training.machine_id == training_dates.c.machine_id))\
-					.subquery()
+                              Training.machine_id == training_dates.c.machine_id)) \
+				.subquery()
 
 				missing_trainings_list = db.query(required_machines, trainings) \
 					.outerjoin(trainings) \
 					.having(sa.or_(trainings.c.date == None,
+                                   trainings.c.quiz_score < required_machines.c.quiz_pass_score,
 				                   sa.and_(trainings.c.invalidation_date != None,
 				                           trainings.c.invalidation_date < sa.func.now()))) \
 					.order_by(sa.desc(trainings.c.date)) \
 					.all()
 
-				missing_trainings = ', '.join([x.name + (
+				#check if missing trainings are in grace period, if so remove from missing_trainings_list
+				new_list = []
+				for each in missing_trainings_list:
+					print(each.date.date())
+					print(date.today()-timedelta(days=each.machines_quiz_grace_period_days))
+					if not each.date or (each.date.date() < (date.today()-timedelta(days=each.machines_quiz_grace_period_days))):
+						new_list.append(each)
+				missing_trainings_list = new_list
+
+				missing_trainings = ', '.join([x.machines_name + (
 					' - ' + x.invalidation_reason if x.invalidation_date and x.show_invalidation_reason else ''
 				) for x in missing_trainings_list])
 

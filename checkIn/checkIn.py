@@ -121,7 +121,10 @@ class Training(Base):
 		return self.machine.quiz is not None
 
 	def quiz_passed(self):
-		return self.quiz_score >= self.machine.quiz.pass_score
+		if self.quiz_score and self.machine and self.machine.quiz and self.machine.quiz.pass_score:
+			return self.quiz_score >= self.machine.quiz.pass_score
+		else:
+			return False
 
 	def quiz_available(self):
 		return (not self.quiz_passed()) and self.date + timedelta(days=self.machine.quiz_issue_days) < datetime.now()

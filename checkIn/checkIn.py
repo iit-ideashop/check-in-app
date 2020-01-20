@@ -127,7 +127,7 @@ class Training(Base):
 			return False
 
 	def quiz_available(self):
-		if self.date and self.machine and self.machine:
+		if self.date and self.machine and self.machine and self.machine.quiz_issue_days:
 			return (not self.quiz_passed()) and self.date + timedelta(days=self.machine.quiz_issue_days) < datetime.now()
 		else :
 			return False
@@ -385,6 +385,7 @@ class Quiz(Base):
 	pass_score = sa.Column(sa.DECIMAL(5, 2), nullable=False, default=70.0)
 
 	questions = relationship('Question', lazy='joined', cascade='all, delete-orphan')
+	machine = relationship('Machine')
 
 	def __repr__(self):
 		return self.name

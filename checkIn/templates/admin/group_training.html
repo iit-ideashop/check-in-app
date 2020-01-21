@@ -21,6 +21,7 @@
                 </div>
                 <form>
                     <select id="training_sel" class="form-control">
+                        <option value="-1">All Required</option>
                         {% for machine in machines %}
                             <option value="{{ machine.id }}">{{ machine.name }}</option>
                         {% endfor %}

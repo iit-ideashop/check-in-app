@@ -984,13 +984,23 @@ def admin_add_training():
 	if not g.admin or g.admin.location_id != session['location_id']:
 		return redirect('/')
 	db = db_session()
-	t = Training(trainee_id=int(request.form['student_id']),
+	t = []      #list of trainings to add
+	#add all required
+	if int(request.form['machine']) == (-1):
+		required_list = db.query(Machine).filter_by(location_id = session['location_id']).filter_by(required = 1).all()
+		for each in required_list:
+			t.append(Training(trainee_id=int(request.form['student_id']),
+	             trainer_id=int(session['admin']),
+	             machine_id=each.id,
+	             date=sa.func.now()))
+	else:
+		t.append(Training(trainee_id=int(request.form['student_id']),
 	             trainer_id=int(session['admin']),
 	             machine_id=int(request.form['machine']),
-	             date=sa.func.now())
+	             date=sa.func.now()))
 	try:
 		check_allowed_modify(session['admin'],request.form['student_id'],session['location_id'])
-		db.add(t)
+		db.add_all(t)
 		db.commit()
 		return redirect('/admin/lookup?sid=' + str(request.form['student_id']))
 	except ProcessingError as error:
@@ -1538,7 +1548,7 @@ def check_in(data):
 				                   )) \
 					.order_by(sa.desc(trainings.c.date)) \
 					.all()
-				
+
 				#check if missing trainings are in grace period, if so remove from missing_trainings_list
 				new_list = []
 				for each in missing_trainings_list:

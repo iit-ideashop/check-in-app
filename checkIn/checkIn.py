@@ -1509,6 +1509,7 @@ def check_in(data):
 			elif userLocation.waiverSigned:
 				# check for required safety trainings
 				required_machines = db.query(Machine, Quiz) \
+					.join(Quiz) \
 					.filter(Machine.location_id == session['location_id']) \
 					.filter(Machine.required == 1) \
 					.with_labels() \
@@ -1525,22 +1526,24 @@ def check_in(data):
                           sa.and_(
 				              Training.date == training_dates.c.date,
                               Training.machine_id == training_dates.c.machine_id)) \
-				.subquery()
+					.subquery()
 
 				missing_trainings_list = db.query(required_machines, trainings) \
 					.outerjoin(trainings) \
 					.having(sa.or_(trainings.c.date == None,
-                                   trainings.c.quiz_score < required_machines.c.quiz_pass_score,
 				                   sa.and_(trainings.c.invalidation_date != None,
-				                           trainings.c.invalidation_date < sa.func.now()))) \
+				                           trainings.c.invalidation_date < sa.func.now()),
+				                   trainings.c.quiz_score < required_machines.c.quiz_pass_score,
+				                   sa.and_(trainings.c.quiz_score == None, trainings.c.invalidation_date == None) \
+				                   )) \
 					.order_by(sa.desc(trainings.c.date)) \
 					.all()
-
+				
 				#check if missing trainings are in grace period, if so remove from missing_trainings_list
 				new_list = []
 				for each in missing_trainings_list:
-					print(each.date.date())
-					print(date.today()-timedelta(days=each.machines_quiz_grace_period_days))
+					#print(each.date.date())
+					#print(date.today()-timedelta(days=each.machines_quiz_grace_period_days))
 					if not each.date or (each.date.date() < (date.today()-timedelta(days=each.machines_quiz_grace_period_days))):
 						new_list.append(each)
 				missing_trainings_list = new_list

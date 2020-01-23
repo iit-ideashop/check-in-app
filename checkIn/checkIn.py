@@ -421,8 +421,6 @@ class Option(Base):
 		return self.text
 
 
-
-
 # Just for type-hinting, if you know a better way please fix
 class HasRemoveMethod:
 	def remove(self):
@@ -438,6 +436,46 @@ class TypeInfo:
 		self.level = type.level
 		self.name = type.name
 
+
+def get_missing_trainings(user: User, location_id: int, db: sa.orm.Session):
+	assert db
+	assert user
+	assert location_id is not None
+
+	required_machines = db.query(Machine) \
+		.filter_by(location_id=location_id) \
+		.filter_by(required=1) \
+		.subquery()
+
+	training_dates = db.query(Training.machine_id, sa.func.max(Training.date).label('date')) \
+		.filter_by(trainee_id=user.sid) \
+		.filter(Training.machine.has(location_id=location_id)) \
+		.group_by(Training.machine_id) \
+		.subquery()
+
+	trainings = db.query(Training) \
+		.join(training_dates,
+	          sa.and_(
+		          Training.date == training_dates.c.date,
+		          Training.machine_id == training_dates.c.machine_id)) \
+		.subquery()
+
+	missing_trainings_list = db.query(required_machines, trainings) \
+		.outerjoin(trainings) \
+		.having(sa.or_(trainings.c.date == None,
+	                   sa.and_(trainings.c.invalidation_date != None,
+	                           trainings.c.invalidation_date < sa.func.now()))) \
+		.order_by(sa.desc(trainings.c.date)) \
+		.all()
+
+	missing_trainings_list = [
+		x for x in missing_trainings_list
+		if not x or not x.date or (x.date.date() < (date.today() - timedelta(days=x.quiz_grace_period_days)))
+	]
+
+	return missing_trainings_list
+
+
 def get_types() -> Tuple[TypeInfo, TypeInfo]:
 	db = db_session()
 	ban_type = db.query(Type).filter(Type.level < 0).first()
@@ -451,7 +489,10 @@ def get_types() -> Tuple[TypeInfo, TypeInfo]:
 		db.add(default_type)
 		db.commit()
 	return TypeInfo(default_type), TypeInfo(ban_type)
+
+
 default_type, ban_type = get_types()
+
 
 @app.before_request
 def before_request():
@@ -490,18 +531,11 @@ def before_request():
 		g.version = version
 		g.kiosk = kiosk
 
-		general_machine = db.query(Machine) \
-			.filter(Machine.name.ilike('General Safety Training')) \
-			.filter_by(location_id=session['location_id']) \
-			.one_or_none() \
-			if 'location_id' in session else None
-
 		for student in g.students:
-			student.general_training = None
-			if general_machine:
-				for training in student.user.trainings:
-					if training.machine_id == general_machine.id:
-						student.general_training = training
+			if not get_missing_trainings(student, g.location.id, db):
+				student.general_training = True
+			else:
+				student.general_training = False
 
 
 def update_kiosks(location, except_hwid=None):
@@ -1287,31 +1321,7 @@ def waiver():
 		db.commit()
 		update_kiosks(session['location_id'], except_hwid=session['hardware_id'])
 
-		required_machines = db.query(Machine) \
-			.filter_by(location_id=session['location_id']) \
-			.filter_by(required=1) \
-			.subquery()
-
-		training_dates = db.query(Training.machine_id, sa.func.max(Training.date).label('date')) \
-			.filter_by(trainee_id=user.sid) \
-			.filter(Training.machine.has(location_id=session['location_id'])) \
-			.group_by(Training.machine_id) \
-			.subquery()
-
-		trainings = db.query(Training) \
-			.join(training_dates,
-		          sa.and_(
-			          Training.date == training_dates.c.date,
-			          Training.machine_id == training_dates.c.machine_id)) \
-			.subquery()
-
-		missing_trainings_list = db.query(required_machines, trainings) \
-			.outerjoin(trainings) \
-			.having(sa.or_(trainings.c.date == None,
-		                   sa.and_(trainings.c.invalidation_date != None,
-		                           trainings.c.invalidation_date < sa.func.now()))) \
-			.order_by(sa.desc(trainings.c.date)) \
-			.all()
+		missing_trainings_list = get_missing_trainings(user, session['location_id'], db)
 
 		missing_trainings = ', '.join([x.name + (
 			x.invalidation_reason if x.invalidation_date and x.show_invalidation_reason else ''
@@ -1392,7 +1402,7 @@ def check_in(data):
 		data['facility'] = int(data['facility'])
 		data['location'] = int(data['location'])
 
-		server_kiosk = db.query(Kiosk).filter_by(location_id=data['location'], hardware_id=data['hwid']).one_or_none()
+		# server_kiosk = db.query(Kiosk).filter_by(location_id=data['location'], hardware_id=data['hwid']).one_or_none()
 
 		resp = ""
 
@@ -1501,12 +1511,6 @@ def check_in(data):
 			emit('go', {'to': url_for('.register', card_id=data['card']), 'hwid': data['hwid']})
 
 		else:
-			lastIn = db.query(Access) \
-				.filter_by(location_id=location.id) \
-				.filter_by(timeOut=None) \
-				.filter_by(sid=card.sid) \
-				.first()
-
 			# user is banned
 			if userLocation.type.level < 0:
 				resp = ("User %s (card id %d) tried to sign in at %s but is banned! (id %d, kiosk %d)" % (
@@ -1517,48 +1521,9 @@ def check_in(data):
 
 			# user signing in
 			elif userLocation.waiverSigned:
-				# check for required safety trainings
-				required_machines = db.query(Machine, Quiz) \
-					.join(Quiz) \
-					.filter(Machine.location_id == session['location_id']) \
-					.filter(Machine.required == 1) \
-					.with_labels() \
-					.subquery()
+				missing_trainings_list = get_missing_trainings(card.user, location.id, db)
 
-				training_dates = db.query(Training.machine_id, sa.func.max(Training.date).label('date')) \
-					.filter(Training.trainee_id == card.user.sid) \
-					.filter(Training.machine.has(location_id=session['location_id'])) \
-					.group_by(Training.machine_id) \
-					.subquery()
-
-				trainings = db.query(Training) \
-					.join(training_dates,
-                          sa.and_(
-				              Training.date == training_dates.c.date,
-                              Training.machine_id == training_dates.c.machine_id)) \
-					.subquery()
-
-				missing_trainings_list = db.query(required_machines, trainings) \
-					.outerjoin(trainings) \
-					.having(sa.or_(trainings.c.date == None,
-				                   sa.and_(trainings.c.invalidation_date != None,
-				                           trainings.c.invalidation_date < sa.func.now()),
-				                   trainings.c.quiz_score < required_machines.c.quiz_pass_score,
-				                   sa.and_(trainings.c.quiz_score == None, trainings.c.invalidation_date == None) \
-				                   )) \
-					.order_by(sa.desc(trainings.c.date)) \
-					.all()
-
-				#check if missing trainings are in grace period, if so remove from missing_trainings_list
-				new_list = []
-				for each in missing_trainings_list:
-					#print(each.date.date())
-					#print(date.today()-timedelta(days=each.machines_quiz_grace_period_days))
-					if not each.date or (each.date.date() < (date.today()-timedelta(days=each.machines_quiz_grace_period_days))):
-						new_list.append(each)
-				missing_trainings_list = new_list
-
-				missing_trainings = ', '.join([x.machines_name + (
+				missing_trainings = ', '.join([x.name + (
 					' - ' + x.invalidation_reason if x.invalidation_date and x.show_invalidation_reason else ''
 				) for x in missing_trainings_list])
 

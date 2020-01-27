@@ -1,7 +1,9 @@
-from checkIn import db_session, User, Major, College, Status
+from checkIn.model import User, Major, College, Status, init_db
 import argparse
 import csv
-from typing import Optional, List, Set, Dict
+from typing import Optional, List, Dict
+from flask.config import Config
+from os import curdir
 
 batch_size = 1000
 batch_count = 0
@@ -51,6 +53,12 @@ def reformat_name(name: str) -> str:
 
 
 if __name__ == '__main__':
+	conf = Config(curdir)
+	conf.from_object(__name__)
+	conf.from_pyfile('config.cfg')
+
+	db_session = init_db(conf['DB'])
+
 	records_created = 0
 	records_updated = 0
 	records_bypassed = 0
@@ -91,12 +99,6 @@ if __name__ == '__main__':
 			user: Optional[User] = existing_users.get(sid)
 
 			row_op = ' '
-
-			# if not user:
-				# user = User(sid=sid, name=reformat_name(row['NAME']), email=row['EMAIL_PREFERRED_ADDRESS'])
-				# existing_users[sid] = user
-				# db.add(user)
-				# row_op = '+'
 
 			# don't update anything if we've already seen newer data
 			if user and (sid not in user_terms.keys() or compare_terms(user_terms[sid], row['ACADEMIC_PERIOD_DESC'])):

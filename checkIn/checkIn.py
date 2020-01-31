@@ -212,6 +212,7 @@ def deauth_other(loc, hwid):
 def root():
 	if 'admin' in session:
 		del session['admin']
+		g.admin = None
 
 	return render_template('index.html')
 

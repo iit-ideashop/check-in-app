@@ -402,6 +402,19 @@ class Option(_base):
 	def __repr__(self):
 		return self.text
 
+class MissedQuestion(_base):
+	__tablename__ = 'missedQuestion'
+	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
+	question_id = sa.Column(sa.Integer, sa.ForeignKey('questions.id'), nullable=False)
+	training_id = sa.Column(sa.Integer, sa.ForeignKey('safetyTraining.id'), nullable=False)
+	date = sa.Column(sa.DateTime, nullable=False, default=sa.func.now())
+
+	training = relationship('Training', lazy="joined")
+	question = relationship('Question', lazy="joined")
+
+	def __repr__(self):
+		return ("<Question %s missed on %s>" % (self.question_id, self.date))
+
 
 # Like a type, but with no connection to the database so it doesn't explode if you try to use it with a different session than the one that queried for it
 class TypeInfo:

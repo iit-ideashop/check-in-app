@@ -17,7 +17,7 @@ from flask_socketio import SocketIO, emit, send
 import sqlalchemy as sa
 from sqlalchemy.orm import joinedload
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, date, timedelta
 from typing import Optional, Tuple, List
 from checkIn.iitlookup import IITLookup
 from checkIn.model import User, UserLocation, Type, Training, Machine, Access, CardScan, Kiosk, Location, HawkCard, \
@@ -897,7 +897,10 @@ def waiver():
 		missing_trainings_list = user.get_missing_trainings(db)
 
 		missing_trainings = ', '.join([x.name + (
-			x.invalidation_reason if x.invalidation_date and x.show_invalidation_reason else ''
+			' - ' + x.Training.invalidation_reason if x.Training.invalidation_date and x.Training.show_invalidation_reason
+			else ' - Missing or incomplete quiz' if x.Training.quiz_score != 100.0 and x.Training.date.date() < (
+						date.today() - timedelta(days=x.quiz_grace_period_days))
+			else ''
 		) for x in missing_trainings_list])
 
 		if missing_trainings:
@@ -1097,7 +1100,9 @@ def check_in(data):
 				missing_trainings_list = card.user.location_specific(db, location.id).get_missing_trainings(db)
 
 				missing_trainings = ', '.join([x.name + (
-					' - ' + x.invalidation_reason if x.invalidation_date and x.show_invalidation_reason else ''
+					' - ' + x.Training.invalidation_reason if x.Training.invalidation_date and x.Training.show_invalidation_reason
+					else ' - Missing or incomplete quiz' if x.Training.quiz_score != 100.0 and x.Training.date.date() < (date.today() - timedelta(days=x.quiz_grace_period_days))
+					else ''
 				) for x in missing_trainings_list])
 
 				resp = ("User %s (card id %d) is cleared for entry at location %s (id %d, kiosk %d)" % (

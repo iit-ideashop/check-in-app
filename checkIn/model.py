@@ -184,30 +184,33 @@ class UserLocation(_base):
 			.filter_by(required=1) \
 			.subquery()
 
-		training_dates = db.query(Training.machine_id, sa.func.max(Training.date).label('date')) \
+		training_dates = db.query(Training.machine_id, sa.func.max(Training.date).label('max_date')) \
 			.filter_by(trainee_id=self.sid) \
 			.filter(Training.machine.has(location_id=self.location_id)) \
 			.group_by(Training.machine_id) \
 			.subquery()
 
-		trainings = db.query(Training) \
+		trainings = db.query(Training, required_machines) \
 			.join(training_dates,
 		          sa.and_(
-			          Training.date == training_dates.c.date,
+			          Training.date == training_dates.c.max_date,
 			          Training.machine_id == training_dates.c.machine_id)) \
-			.subquery()
+			.join(required_machines, Training.machine_id == required_machines.c.id) \
+			.filter(Training.trainee_id == self.sid) \
+			.order_by(sa.desc(Training.date)).all()
 
-		missing_trainings_list = db.query(required_machines, trainings) \
-			.outerjoin(trainings) \
-			.having(sa.or_(trainings.c.date == None,
-		                   sa.and_(trainings.c.invalidation_date != None,
-		                           trainings.c.invalidation_date < sa.func.now()))) \
-			.order_by(sa.desc(trainings.c.date)) \
-			.all()
+		#missing_trainings_list = db.query(required_machines, trainings) \
+		#	.outerjoin(trainings).order_by(sa.desc(trainings.c.date)).distinct().all()
+			#.having(sa.or_(trainings.c.date == None,
+		    #              sa.and_(trainings.c.invalidation_date != None,
+		    #                       trainings.c.invalidation_date < sa.func.now()),
+		    #               )
 
 		missing_trainings_list = [
-			x for x in missing_trainings_list
-			if not x or not x.date or (x.date.date() < (date.today() - timedelta(days=x.quiz_grace_period_days)))
+			x for x in trainings
+			if not x.Training.date
+			   or (x.Training.quiz_score != 100.0 and x.quiz_grace_period_days and x.Training.date.date() < (date.today() - timedelta(days=x.quiz_grace_period_days)))
+			   or (x.Training.invalidation_date and x.Training.invalidation_date < datetime.now())
 		]
 
 		return missing_trainings_list

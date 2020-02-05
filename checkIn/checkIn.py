@@ -861,22 +861,16 @@ def admin_announcer_cancel_evac():
 def waiver():
 	if request.method == "GET":
 		db = db_session()
+		user = db.query(UserLocation).filter_by(
+			sid=request.form.get('sid'),
+			location_id=session['location_id']
+		).one_or_none()
 
-		general_machine = db.query(Machine) \
-			.filter(Machine.name.ilike('General Safety Training')) \
-			.filter_by(location_id=session['location_id']) \
-			.one_or_none()
-
-		general_training = None
-		if general_machine:
-			general_training = db.query(Training) \
-				.filter_by(machine_id=general_machine.id) \
-				.filter_by(trainee_id=request.args.get('sid')) \
-				.all()
+		missing_trainings = Training.build_missing_trainings_string(user.get_missing_trainings(db))
 
 		return render_template('waiver.html',
 		                       sid=request.args.get('sid'),
-		                       show_training_warning=general_training)
+		                       show_training_warning=missing_trainings)
 	elif request.method == "POST" and request.form.get('agreed') == 'true':
 		db = db_session()
 		db.add(Access(
@@ -894,14 +888,7 @@ def waiver():
 		db.commit()
 		update_kiosks(session['location_id'], except_hwid=session['hardware_id'])
 
-		missing_trainings_list = user.get_missing_trainings(db)
-
-		missing_trainings = ', '.join([x.name + (
-			' - ' + x.Training.invalidation_reason if x.Training.invalidation_date and x.Training.show_invalidation_reason
-			else ' - Missing or incomplete quiz' if x.Training.quiz_score != 100.0 and x.Training.date.date() < (
-						date.today() - timedelta(days=x.quiz_grace_period_days))
-			else ''
-		) for x in missing_trainings_list])
+		missing_trainings = Training.build_missing_trainings_string(user.get_missing_trainings(db))
 
 		if missing_trainings:
 			return redirect(url_for('.needs_training', name=user.name, trainings=missing_trainings))
@@ -1098,12 +1085,7 @@ def check_in(data):
 			# user signing in
 			elif userLocation.waiverSigned:
 				missing_trainings_list = card.user.location_specific(db, location.id).get_missing_trainings(db)
-
-				missing_trainings = ', '.join([x.name + (
-					' - ' + x.Training.invalidation_reason if x.Training.invalidation_date and x.Training.show_invalidation_reason
-					else ' - Missing or incomplete quiz' if x.Training.quiz_score != 100.0 and x.Training.date.date() < (date.today() - timedelta(days=x.quiz_grace_period_days))
-					else ''
-				) for x in missing_trainings_list])
+				missing_trainings = Training.build_missing_trainings_string(missing_trainings_list)
 
 				resp = ("User %s (card id %d) is cleared for entry at location %s (id %d, kiosk %d)" % (
 					card.user.name, data['card'], location.name, location.id, data['hwid']

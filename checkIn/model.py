@@ -81,6 +81,25 @@ class Training(_base):
 		return (not self.quiz_passed()) and self.date + \
 		       timedelta(days=self.machine.quiz_grace_period_days) + \
 		       timedelta(days=self.machine.quiz_issue_days) < datetime.now()
+	
+	@classmethod
+	def build_missing_trainings_string(cls, missing_trainings_list):
+		data = []
+
+		for x in missing_trainings_list:
+			if x.Training is None:
+				data.append((x, ''))
+			elif x.Training.invalidation_date and x.Training.invalidation_date < datetime.utcnow():
+				if x.Training.show_invalidation_reason:
+					data.append((x, x.Training.invalidation_reason))
+				else:
+					data.append((x, ''))
+			elif x.Training.quiz_score != 100.0 \
+					and x.Training.date.date() < (date.today() - timedelta(days=x.quiz_grace_period_days)):
+				data.append((x, 'Incomplete quiz'))
+
+		missing_trainings = ', '.join([x[0].name + (' - ' + x[1]) if x[1] else '' for x in data])
+		return missing_trainings
 
 
 class Major(_base):
@@ -195,7 +214,7 @@ class UserLocation(_base):
 		          sa.and_(
 			          Training.date == training_dates.c.max_date,
 			          Training.machine_id == training_dates.c.machine_id)) \
-			.join(required_machines, Training.machine_id == required_machines.c.id) \
+			.outerjoin(required_machines, Training.machine_id == required_machines.c.id) \
 			.filter(Training.trainee_id == self.sid) \
 			.order_by(sa.desc(Training.date)).all()
 
@@ -208,9 +227,10 @@ class UserLocation(_base):
 
 		missing_trainings_list = [
 			x for x in trainings
-			if not x.Training.date
+			if not x.Training
+			   or not x.Training.date
 			   or (x.Training.quiz_score != 100.0 and x.quiz_grace_period_days and x.Training.date.date() < (date.today() - timedelta(days=x.quiz_grace_period_days)))
-			   or (x.Training.invalidation_date and x.Training.invalidation_date < datetime.now())
+			   or (x.Training.invalidation_date is not None and x.Training.invalidation_date < datetime.utcnow())
 		]
 
 		return missing_trainings_list

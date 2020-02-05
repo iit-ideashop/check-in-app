@@ -861,16 +861,9 @@ def admin_announcer_cancel_evac():
 def waiver():
 	if request.method == "GET":
 		db = db_session()
-		user = db.query(UserLocation).filter_by(
-			sid=request.form.get('sid'),
-			location_id=session['location_id']
-		).one_or_none()
-
-		missing_trainings = Training.build_missing_trainings_string(user.get_missing_trainings(db))
 
 		return render_template('waiver.html',
-		                       sid=request.args.get('sid'),
-		                       show_training_warning=missing_trainings)
+		                       sid=request.args.get('sid'))
 	elif request.method == "POST" and request.form.get('agreed') == 'true':
 		db = db_session()
 		db.add(Access(

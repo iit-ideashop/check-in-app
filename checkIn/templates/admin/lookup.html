@@ -23,17 +23,20 @@
                                 <div class="input-group-addon">A</div>
                                 <input class="form-control keyboard" type="tel"
                                        placeholder="Student ID" id="sid" name="sid"
-                                       value="{{ request.args.get('sid') | default('', true) }}" />
+                                       value="{{ request.args.get('sid') | default('', true) }}"
+                                       autocomplete="off" />
                             </div>
                             <div class="input-group" style="width: 25%;">
                                 <input class="form-control keyboard" type="text"
                                        placeholder="Name" id="name" name="name"
-                                       value="{{ request.args.get('name') | default('', true) }}" />
+                                       value="{{ request.args.get('name') | default('', true) }}"
+                                       autocomplete="off" />
                             </div>
                             <div class="input-group" style="width: 25%;">
                                 <input class="form-control keyboard" type="tel"
                                        placeholder="Card Number" id="card" name="card"
-                                       value="{{ request.args.get('card') | default('', true) }}" />
+                                       value="{{ request.args.get('card') | default('', true) }}"
+                                       autocomplete="off" />
                             </div>
 	                        <div class="input-group">
                                 <input class="btn btn-success" type="submit" value="Go" />

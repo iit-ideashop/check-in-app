@@ -25,6 +25,7 @@ from checkIn.model import User, UserLocation, Type, Training, Machine, Access, C
 from checkIn.controllers.auth import auth_controller
 from checkIn.controllers.userflow import userflow_controller
 from checkIn.controllers.api import api_controller
+from checkIn.controllers.admin import admin_controller
 
 version = "1.0.0"
 
@@ -65,7 +66,9 @@ logging.config.dictConfig({
 Bootstrap(app)
 
 db_session = init_db(app.config['DB'])
-default_type, ban_type = get_types()
+db = db_session()
+default_type, ban_type = get_types(db)
+db.close()
 app.logger.info('Server started.')
 
 
@@ -151,96 +154,7 @@ def display_error():
 app.register_blueprint(auth_controller)
 app.register_blueprint(userflow_controller)
 app.register_blueprint(api_controller)
-
-
-# Card tap flow
-@app.route('/waiver', methods=['GET', "POST"])
-def waiver():
-	if request.method == "GET":
-		db = db_session()
-
-		return render_template('waiver.html',
-		                       sid=request.args.get('sid'))
-	elif request.method == "POST" and request.form.get('agreed') == 'true':
-		db = db_session()
-		db.add(Access(
-			sid=request.form.get('sid'),
-			location_id=session['location_id'],
-			timeIn=sa.func.now(),
-			timeOut=None
-		))
-		user = db.query(UserLocation) \
-			.filter_by(sid=request.form.get('sid'),
-		               location_id=session['location_id']) \
-			.one_or_none()
-		if user:
-			user.waiverSigned = sa.func.now()
-		db.commit()
-		update_kiosks(session['location_id'], except_hwid=session['hardware_id'])
-
-		missing_trainings = Training.build_missing_trainings_string(user.get_missing_trainings(db))
-
-		if missing_trainings:
-			return redirect(url_for('userflow.needs_training', name=user.name, trainings=missing_trainings))
-		else:
-			return redirect('/success/checkin')
-	else:
-		return redirect('/')
-
-
-@app.route('/register', methods=['GET', 'POST'])
-def register():
-	db = db_session()
-	if request.method == 'GET':
-		resp = None
-		card_id = request.args.get('card_id')
-		name = None
-		sid = None
-		# before we check ACaPS, let's see if they already have a record
-		card = db.query(HawkCard).filter_by(card=card_id).one_or_none()
-		if card:
-			sid = card.sid
-			if card.user:
-				name = card.user.name
-
-		if not name or not sid:
-			# ping acaps if we couldn't find everything
-			try:
-				il = IITLookup(app.config['IITLOOKUPURL'], app.config['IITLOOKUPUSER'], app.config['IITLOOKUPPASS'])
-				resp = il.nameIDByCard(card_id)
-			except:
-				print(sys.exc_info()[0])
-			if resp:
-				sid = resp['idnumber'][1:]
-				name = "%s %s" % (resp['first_name'], resp['last_name'])
-		return render_template('register.html',
-		                       sid=sid or "",
-		                       card_id=card_id,
-		                       name=name or "")
-
-	elif request.method == 'POST':
-		if request.form['name'] == "" or int(request.form['sid']) < 20000000:
-			return render_template('register.html', sid=request.form['sid'], card_id=request.form['card_id'],
-			                       name=request.form['name'])
-
-		existing_user = db.query(User).get(request.form['sid'])
-		if not existing_user:
-			existing_user = User(sid=request.form['sid'], name=request.form['name'].title())
-			db.add(existing_user)
-
-		existing_user_location = db.query(UserLocation).get((request.form['sid'], session['location_id']))
-		if not existing_user_location:
-			db.add(UserLocation(sid=request.form['sid'],
-			                    type_id=default_type.id,
-			                    waiverSigned=None,
-			                    location_id=session['location_id']))
-
-		# associate the hawkcard with the user that was either just created or already exists
-		card = db.query(HawkCard).filter_by(card=request.form['card_id']).one_or_none()
-		card.sid = request.form['sid']
-
-		db.commit()
-		return redirect(url_for('.waiver', sid=request.form['sid']))
+app.register_blueprint(admin_controller)
 
 
 @socketio.on('ping')

@@ -1,8 +1,11 @@
 import logging
+import sys
+
 import sqlalchemy as sa
 from collections import defaultdict
-from flask import Blueprint, session, render_template, request, redirect, g
-from checkIn.model import Access
+from flask import Blueprint, session, render_template, request, redirect, g, url_for
+from checkIn.model import Access, UserLocation, Training, HawkCard, User
+from iitlookup import IITLookup
 
 userflow_controller = Blueprint('userflow', __name__)
 
@@ -71,7 +74,7 @@ def checkout():
 				.filter_by(sid=int(request.args['sid'])) \
 				.first()
 		elif 'aid' in request.args:
-			lastIn = db.query(Access).get(int(request.args['aid']))
+			lastIn = g.db.query(Access).get(int(request.args['aid']))
 
 		if lastIn:
 			# user signing out
@@ -95,3 +98,92 @@ def checkout():
 		return redirect(request.args.get('next'))
 	else:
 		return success('checkout')
+
+
+# Card tap flow
+@userflow_controller.route('/waiver', methods=['GET', "POST"])
+def waiver():
+	if request.method == "GET":
+		return render_template('waiver.html',
+		                       sid=request.args.get('sid'))
+	elif request.method == "POST" and request.form.get('agreed') == 'true':
+		from checkIn import update_kiosks
+
+		g.db.add(Access(
+			sid=request.form.get('sid'),
+			location_id=session['location_id'],
+			timeIn=sa.func.now(),
+			timeOut=None
+		))
+		user = g.db.query(UserLocation) \
+			.filter_by(sid=request.form.get('sid'),
+		               location_id=session['location_id']) \
+			.one_or_none()
+		if user:
+			user.waiverSigned = sa.func.now()
+		g.db.commit()
+		update_kiosks(session['location_id'], except_hwid=session['hardware_id'])
+
+		missing_trainings = Training.build_missing_trainings_string(user.get_missing_trainings(db))
+
+		if missing_trainings:
+			return redirect(url_for('userflow.needs_training', name=user.name, trainings=missing_trainings))
+		else:
+			return redirect('/success/checkin')
+	else:
+		return redirect('/')
+
+
+@userflow_controller.route('/register', methods=['GET', 'POST'])
+def register():
+	if request.method == 'GET':
+		resp = None
+		card_id = request.args.get('card_id')
+		name = None
+		sid = None
+		# before we check ACaPS, let's see if they already have a record
+		card = g.db.query(HawkCard).filter_by(card=card_id).one_or_none()
+		if card:
+			sid = card.sid
+			if card.user:
+				name = card.user.name
+
+		if not name or not sid:
+			# ping acaps if we couldn't find everything
+			try:
+				il = IITLookup(app.config['IITLOOKUPURL'], app.config['IITLOOKUPUSER'], app.config['IITLOOKUPPASS'])
+				resp = il.nameIDByCard(card_id)
+			except:
+				print(sys.exc_info()[0])
+			if resp:
+				sid = resp['idnumber'][1:]
+				name = "%s %s" % (resp['first_name'], resp['last_name'])
+		return render_template('register.html',
+		                       sid=sid or "",
+		                       card_id=card_id,
+		                       name=name or "")
+
+	elif request.method == 'POST':
+		if request.form['name'] == "" or int(request.form['sid']) < 20000000:
+			return render_template('register.html', sid=request.form['sid'], card_id=request.form['card_id'],
+			                       name=request.form['name'])
+
+		existing_user = g.db.query(User).get(request.form['sid'])
+		if not existing_user:
+			existing_user = User(sid=request.form['sid'], name=request.form['name'].title())
+			db.add(existing_user)
+
+		existing_user_location = g.db.query(UserLocation).get((request.form['sid'], session['location_id']))
+		if not existing_user_location:
+			from checkIn import default_type
+			g.db.add(UserLocation(sid=request.form['sid'],
+			                    type_id=default_type.id,
+			                    waiverSigned=None,
+			                    location_id=session['location_id']))
+
+		# associate the hawkcard with the user that was either just created or already exists
+		card = g.db.query(HawkCard).filter_by(card=request.form['card_id']).one_or_none()
+		card.sid = request.form['sid']
+
+		g.db.commit()
+		return redirect(url_for('.waiver', sid=request.form['sid']))

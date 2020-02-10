@@ -467,6 +467,7 @@ def init_db(connection_string: str) -> Union[Callable[[], sa.orm.Session], HasRe
 	engine = sa.create_engine(connection_string, pool_size=50, max_overflow=150, pool_recycle=3600, encoding='utf-8')
 	db_session = scoped_session(sessionmaker(bind=engine))
 	_base.metadata.create_all(engine)
-	default_type, ban_type = get_types()
-	get_types()
+	db = db_session()
+	default_type, ban_type = get_types(db)
+	db.close()
 	return db_session

@@ -2,7 +2,9 @@ from datetime import datetime
 
 import sqlalchemy as sa
 from typing import Optional, List, Tuple
-from flask import Blueprint, render_template, redirect, g, session, request, url_for
+
+import zerorpc
+from flask import Blueprint, render_template, redirect, g, session, request, url_for, abort
 from checkIn.model import Access, UserLocation, User, ban_type, HawkCard, Machine, Type, Warning, Training, Location, \
 	Kiosk
 

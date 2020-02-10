@@ -1,5 +1,5 @@
 import logging
-from flask import Blueprint, request, abort
+from flask import Blueprint, request, abort, g
 from checkIn.model import HawkCard, Kiosk
 
 api_controller = Blueprint('api', __name__)

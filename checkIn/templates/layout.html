@@ -108,10 +108,10 @@
                             <td>
 	                            {% if g.admin %}
 		                            <div class="btn-toolbar">
-		                                <form style="display: inline-block;" action="{{ url_for('.checkout', sid=student.sid, next=url_for('.admin_dash')) }}" method="post">
+		                                <form style="display: inline-block;" action="{{ url_for('userflow.checkout', sid=student.sid, next=url_for('admin.admin_dash')) }}" method="post">
 		                                    <button type="submit" class="btn btn-default btn-xs">Checkout</button>
 		                                </form>
-			                            <form style="display: inline-block;" action="{{ url_for('.checkout', sid=student.sid, next=url_for('.admin_dash')) }}" method="post">
+			                            <form style="display: inline-block;" action="{{ url_for('userflow.checkout', sid=student.sid, next=url_for('admin.admin_dash')) }}" method="post">
 			                                <input type="hidden" name="warn" value="True" />
 		                                    <button type="submit" class="btn btn-danger btn-xs">Checkout + Warn</button>
 		                                </form>

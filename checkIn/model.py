@@ -88,17 +88,17 @@ class Training(_base):
 
 		for x in missing_trainings_list:
 			if x.Training is None:
-				data.append((x, ''))
+				data.append((x.Machine.name, ''))
 			elif x.Training.invalidation_date and x.Training.invalidation_date < datetime.utcnow():
 				if x.Training.show_invalidation_reason:
-					data.append((x, x.Training.invalidation_reason))
+					data.append((x.Machine.name, x.Training.invalidation_reason))
 				else:
-					data.append((x, ''))
+					data.append((x.Machine.name, ''))
 			elif x.Training.quiz_score != 100.0 \
-					and x.Training.date.date() < (date.today() - timedelta(days=x.quiz_grace_period_days)):
-				data.append((x, 'Incomplete quiz'))
+					and x.Training.date.date() < (date.today() - timedelta(days=x.Machine.quiz_grace_period_days)):
+				data.append((x.Machine.name, 'Incomplete quiz'))
 
-		missing_trainings = ', '.join([x[0].name + (' - ' + x[1]) if x[1] else '' for x in data])
+		missing_trainings = ', '.join([x[0] + (' - ' + x[1] if x[1] else '') for x in data])
 		return missing_trainings
 
 
@@ -198,6 +198,8 @@ class UserLocation(_base):
 	def get_missing_trainings(self, db: sa.orm.Session):
 		assert db
 
+
+		"""
 		required_machines = db.query(Machine) \
 			.filter_by(location_id=self.location_id) \
 			.filter_by(required=1) \
@@ -209,14 +211,32 @@ class UserLocation(_base):
 			.group_by(Training.machine_id) \
 			.subquery()
 
-		trainings = db.query(Training, required_machines) \
-			.join(training_dates,
-		          sa.and_(
-			          Training.date == training_dates.c.max_date,
-			          Training.machine_id == training_dates.c.machine_id)) \
-			.outerjoin(required_machines, Training.machine_id == required_machines.c.id) \
+		trainings = db.query(required_machines, Training) \
 			.filter(Training.trainee_id == self.sid) \
-			.order_by(sa.desc(Training.date)).all()
+			.outerjoin(training_dates,
+		               sa.and_(
+			               Training.date == training_dates.c.max_date,
+			               Training.machine_id == training_dates.c.machine_id
+		               )) \
+			.order_by(sa.desc(Training.date))
+
+		print(trainings.subquery())
+		trainings = trainings.all()
+		"""
+
+		trainings = db.query(Machine, Training,
+		                          sa.func.nullif(sa.func.max(sa.func.coalesce(Training.date, datetime.max)), datetime.max) \
+		                          .label('max_date')) \
+			.outerjoin(Training, sa.and_(
+				Training.trainee_id == self.sid,
+				Machine.id == Training.machine_id
+			)) \
+			.filter(sa.and_(Machine.location_id == 3, Machine.required == 1)) \
+			.group_by(Machine.id) \
+			.having(sa.text("safetyTraining.date = max_date or safetyTraining.date is null")) \
+			.order_by(Machine.id) \
+			.all()
+
 
 		#missing_trainings_list = db.query(required_machines, trainings) \
 		#	.outerjoin(trainings).order_by(sa.desc(trainings.c.date)).distinct().all()
@@ -229,7 +249,7 @@ class UserLocation(_base):
 			x for x in trainings
 			if not x.Training
 			   or not x.Training.date
-			   or (x.Training.quiz_score != 100.0 and x.quiz_grace_period_days and x.Training.date.date() < (date.today() - timedelta(days=x.quiz_grace_period_days)))
+			   or (x.Training.quiz_score != 100.0 and x.Machine.quiz_grace_period_days and x.Training.date.date() < (date.today() - timedelta(days=x.Machine.quiz_grace_period_days)))
 			   or (x.Training.invalidation_date is not None and x.Training.invalidation_date < datetime.utcnow())
 		]
 

@@ -198,32 +198,6 @@ class UserLocation(_base):
 	def get_missing_trainings(self, db: sa.orm.Session):
 		assert db
 
-
-		"""
-		required_machines = db.query(Machine) \
-			.filter_by(location_id=self.location_id) \
-			.filter_by(required=1) \
-			.subquery()
-
-		training_dates = db.query(Training.machine_id, sa.func.max(Training.date).label('max_date')) \
-			.filter_by(trainee_id=self.sid) \
-			.filter(Training.machine.has(location_id=self.location_id)) \
-			.group_by(Training.machine_id) \
-			.subquery()
-
-		trainings = db.query(required_machines, Training) \
-			.filter(Training.trainee_id == self.sid) \
-			.outerjoin(training_dates,
-		               sa.and_(
-			               Training.date == training_dates.c.max_date,
-			               Training.machine_id == training_dates.c.machine_id
-		               )) \
-			.order_by(sa.desc(Training.date))
-
-		print(trainings.subquery())
-		trainings = trainings.all()
-		"""
-
 		trainings = db.query(Machine, Training,
 		                          sa.func.nullif(sa.func.max(sa.func.coalesce(Training.date, datetime.max)), datetime.max) \
 		                          .label('max_date')) \
@@ -236,14 +210,6 @@ class UserLocation(_base):
 			.having(sa.text("safetyTraining.date = max_date or safetyTraining.date is null")) \
 			.order_by(Machine.id) \
 			.all()
-
-
-		#missing_trainings_list = db.query(required_machines, trainings) \
-		#	.outerjoin(trainings).order_by(sa.desc(trainings.c.date)).distinct().all()
-			#.having(sa.or_(trainings.c.date == None,
-		    #              sa.and_(trainings.c.invalidation_date != None,
-		    #                       trainings.c.invalidation_date < sa.func.now()),
-		    #               )
 
 		missing_trainings_list = [
 			x for x in trainings

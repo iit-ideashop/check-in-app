@@ -205,7 +205,7 @@ class UserLocation(_base):
 				Training.trainee_id == self.sid,
 				Machine.id == Training.machine_id
 			)) \
-			.filter(sa.and_(Machine.location_id == 3, Machine.required == 1)) \
+			.filter(sa.and_(Machine.location_id == self.location_id, Machine.required == 1)) \
 			.group_by(Machine.id) \
 			.having(sa.text("safetyTraining.date = max_date or safetyTraining.date is null")) \
 			.order_by(Machine.id) \

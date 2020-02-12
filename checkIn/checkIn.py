@@ -606,7 +606,7 @@ def admin_add_training():
 	             machine_id=int(request.form['machine']),
 	             date=sa.func.now()))
 	try:
-		check_allowed_modify(session['admin'],request.form['student_id'],session['location_id'])
+		check_allowed_modify(db, session['admin'], request.form['student_id'], session['location_id'])
 		db.add_all(t)
 		db.commit()
 		return redirect('/admin/lookup?sid=' + str(request.form['student_id']))
@@ -632,7 +632,7 @@ def admin_remove_training():
 	if training:
 		try:
 			sid = training.trainee_id if training else None
-			check_allowed_modify(session['admin'], sid, session['location_id'])
+			check_allowed_modify(db, session['admin'], sid, session['location_id'])
 			db.delete(training)
 			db.commit()
 		except ProcessingError as error:
@@ -753,12 +753,26 @@ def check_set_type(userInfo, typeInfo):
 	if userInfo.type.level >= g.admin.type.level:
 		raise ProcessingError("You don't have permission to modify that user.")
 
-def check_allowed_modify(modifingUser, modifiedUser, location_id):
-	db = db_session()
-	if (db.query(UserLocation).filter_by(sid=modifingUser).filter_by(location_id=location_id).one().type.level >= 90) or \
-			((modifingUser != modifiedUser) and \
-			 (db.query(UserLocation).filter_by(sid=modifingUser).filter_by(location_id=location_id).one().type.level \
-			  > db.query(UserLocation).filter_by(sid=modifiedUser).filter_by(location_id=location_id).one().type.level)):
+def check_allowed_modify(db, modifyingUser, modifiedUser, location_id):
+	if isinstance(modifyingUser, User):
+		modifyingUser = modifyingUser.location_specific(db, location_id)
+	elif isinstance(modifyingUser, UserLocation):
+		pass
+	else:
+		modifyingUser = db.query(UserLocation).filter_by(sid=modifyingUser, location_id=location_id).one()
+
+	if isinstance(modifiedUser, User):
+		modifiedUser = modifiedUser.location_specific(db, location_id)
+	elif isinstance(modifiedUser, UserLocation):
+		pass
+	else:
+		modifiedUser = db.query(UserLocation).filter_by(sid=modifiedUser, location_id=location_id).one_or_none()
+		if not modifiedUser:
+			modifiedUser = UserLocation(sid=modifiedUser, location_id=location_id, type_id=default_type.id)
+			db.add(modifiedUser)
+
+	if (modifyingUser.type.level >= 90) or \
+		((modifyingUser != modifiedUser) and modifyingUser.type.level > modifiedUser.type.level):
 		return #check successful
 	else:
 		raise ProcessingError("You don't have permission to modify that user.")

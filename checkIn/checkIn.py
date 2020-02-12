@@ -771,8 +771,10 @@ def check_allowed_modify(db, modifyingUser, modifiedUser, location_id):
 			modifiedUser = UserLocation(sid=modifiedUser, location_id=location_id, type_id=default_type.id)
 			db.add(modifiedUser)
 
+	modifiedUserType = modifiedUser.type if modifiedUser.type else default_type
+
 	if (modifyingUser.type.level >= 90) or \
-		((modifyingUser != modifiedUser) and modifyingUser.type.level > modifiedUser.type.level):
+		((modifyingUser != modifiedUser) and modifyingUser.type.level > modifiedUserType.level):
 		return #check successful
 	else:
 		raise ProcessingError("You don't have permission to modify that user.")

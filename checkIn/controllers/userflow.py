@@ -88,7 +88,7 @@ def checkout():
 			if g.admin and 'warn' in request.form:
 				Warning.warn(g.db, warner=g.admin.sid, warnee=lastIn.sid, reason="Failed to tap out", location=lastIn.location_id, banned=False)
 
-	db.commit()
+	g.db.commit()
 
 	# need to query again for active users now that it's changed
 	before_request()

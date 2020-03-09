@@ -5,8 +5,9 @@ from typing import Optional, List, Tuple
 
 import zerorpc
 from flask import Blueprint, render_template, redirect, g, session, request, url_for, abort
-from checkIn.model import Access, UserLocation, User, ban_type, HawkCard, Machine, Type, Warning, Training, Location, \
-	Kiosk
+
+from checkIn.model import Access, UserLocation, User, HawkCard, Machine, Type, Warning, Training, Location, \
+	Kiosk, default_type, ban_type
 
 admin_controller = Blueprint('admin', __name__)
 
@@ -249,7 +250,7 @@ def admin_add_training():
 	             machine_id=int(request.form['machine']),
 	             date=sa.func.now()))
 	try:
-		check_allowed_modify(session['admin'],request.form['student_id'],session['location_id'])
+		check_allowed_modify(g.db, session['admin'], request.form['student_id'], session['location_id'])
 		g.db.add_all(t)
 		g.db.commit()
 		return redirect('/admin/lookup?sid=' + str(request.form['student_id']))
@@ -274,7 +275,7 @@ def admin_remove_training():
 	if training:
 		try:
 			sid = training.trainee_id if training else None
-			check_allowed_modify(session['admin'], sid, session['location_id'])
+			check_allowed_modify(g.db, session['admin'], sid, session['location_id'])
 			g.db.delete(training)
 			g.db.commit()
 		except ProcessingError as error:
@@ -390,22 +391,38 @@ def check_set_type(userInfo, typeInfo):
 	if userInfo.type.level >= g.admin.type.level:
 		raise ProcessingError("You don't have permission to modify that user.")
 
-def check_allowed_modify(modifingUser, modifiedUser, location_id):
-	if (g.db.query(UserLocation).filter_by(sid=modifingUser).filter_by(location_id=location_id).one().type.level >= 90) or \
-			((modifingUser != modifiedUser) and \
-			 (g.db.query(UserLocation).filter_by(sid=modifingUser).filter_by(location_id=location_id).one().type.level \
-			  > g.db.query(UserLocation).filter_by(sid=modifiedUser).filter_by(location_id=location_id).one().type.level)):
+def check_allowed_modify(db, modifyingUser, modifiedUser, location_id):
+	if isinstance(modifyingUser, User):
+		modifyingUser = modifyingUser.location_specific(db, location_id)
+	elif isinstance(modifyingUser, UserLocation):
+		pass
+	else:
+		modifyingUser = db.query(UserLocation).filter_by(sid=modifyingUser, location_id=location_id).one()
+
+	if isinstance(modifiedUser, User):
+		modifiedUser = modifiedUser.location_specific(db, location_id)
+	elif isinstance(modifiedUser, UserLocation):
+		pass
+	else:
+		modifiedUser = db.query(UserLocation).filter_by(sid=modifiedUser, location_id=location_id).one_or_none()
+		if not modifiedUser:
+			modifiedUser = UserLocation(sid=modifiedUser, location_id=location_id, type_id=default_type.id)
+			db.add(modifiedUser)
+
+	modifiedUserType = modifiedUser.type if modifiedUser.type else default_type
+
+	if (modifyingUser.type.level >= 90) or \
+		((modifyingUser != modifiedUser) and modifyingUser.type.level > modifiedUser.type.level):
 		return #check successful
 	else:
 		raise ProcessingError("You don't have permission to modify that user.")
 
 def set_type(userID, typeID):
-	db = db_session()
-	type = db.query(Type).filter_by(id=typeID).one_or_none()
-	user = db.query(UserLocation).filter_by(sid=userID, location_id=session['location_id']).one_or_none()
+	type = g.db.query(Type).filter_by(id=typeID).one_or_none()
+	user = g.db.query(UserLocation).filter_by(sid=userID, location_id=session['location_id']).one_or_none()
 	check_set_type(user, type)
 	user.type_id = typeID
-	db.commit()
+	g.db.commit()
 
 
 @admin_controller.route('/admin/type/set', methods=["POST"])

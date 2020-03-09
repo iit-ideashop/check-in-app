@@ -110,16 +110,6 @@ def before_request():
 				student.general_training = False
 
 
-def update_kiosks(location, except_hwid=None):
-	db = db_session()
-	kiosks = db.query(Kiosk).filter_by(location_id=location)
-	if except_hwid:
-		kiosks = kiosks.filter(Kiosk.hardware_id != except_hwid)
-	kiosks = kiosks.all()
-	for kiosk in kiosks:
-		socketio.emit('go', {'to': '/', 'hwid': kiosk.hardware_id})
-
-
 @app.teardown_appcontext
 def close_db(error):
 	db_session.remove()
@@ -146,7 +136,7 @@ app.register_blueprint(userflow_controller)
 app.register_blueprint(api_controller)
 app.register_blueprint(admin_controller)
 
-socketio.on_namespace(SocketV1Namespace('/'))
+socketio.on_namespace(SocketV1Namespace('/', db_session, app))
 
 
 if __name__ == '__main__':

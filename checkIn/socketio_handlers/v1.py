@@ -1,4 +1,5 @@
 import math
+from typing import Optional
 
 from flask import url_for, session, logging
 from flask_socketio import Namespace, emit, send
@@ -6,11 +7,18 @@ from flask_socketio import Namespace, emit, send
 import sqlalchemy as sa
 from sqlalchemy.orm import joinedload
 
-from checkIn.model import db_session, HawkCard, Location, Access, UserLocation, User, CardScan, Training
+from checkIn.model import HawkCard, Location, Access, UserLocation, User, CardScan, Training, Kiosk
 from iitlookup import IITLookup
 
 
 class SocketV1Namespace(Namespace):
+	def __init__(self, namespace, db_session, app):
+		global io_controller
+		self.db_session = db_session
+		self.app = app
+		io_controller = self
+		super().__init__(namespace)
+
 	def on_connect(self):
 		pass
 
@@ -21,9 +29,8 @@ class SocketV1Namespace(Namespace):
 		send('pong')
 
 	def on_check_in(self, data):
-		from checkIn.checkIn import update_kiosks
 		try:
-			db = db_session()
+			db = self.db_session()
 			data['card'] = int(data['card'])
 			data['facility'] = int(data['facility'])
 			data['location'] = int(data['location'])
@@ -43,7 +50,7 @@ class SocketV1Namespace(Namespace):
 
 			if not location:
 				resp = ("Location %d not found (from kiosk %d)" % (data['location'], data['hwid']))
-				logging.getLogger('checkin.socket').warning(resp)
+				self.app.logger.warning(resp)
 				print(resp)
 				return resp
 
@@ -59,12 +66,12 @@ class SocketV1Namespace(Namespace):
 					resp = ("User %s (card id %d) signed out at location %s (id %d, kiosk %d)" % (
 						card.user.name, data['card'], location.name, location.id, data['hwid']
 					))
-					logging.getLogger('checkin.socket').info(resp)
+					self.app.logger.info(resp)
 					# sign user out and send to confirmation page
 					lastIn.timeOut = sa.func.now()
 					emit('go', {'to': url_for('userflow.success', action='checkout', name=card.user.name),
 					            'hwid': data['hwid']})
-					update_kiosks(location.id, except_hwid=data['hwid'])
+					self.update_kiosks(location.id, except_hwid=data['hwid'])
 					db.commit()
 					return
 
@@ -94,12 +101,11 @@ class SocketV1Namespace(Namespace):
 
 				try:
 					# check ACaPS
-					from checkIn import app
-					il = IITLookup(app.config['IITLOOKUPURL'], app.config['IITLOOKUPUSER'], app.config['IITLOOKUPPASS'])
+					il = IITLookup(self.app.config['IITLOOKUPURL'], self.app.config['IITLOOKUPUSER'], self.app.config['IITLOOKUPPASS'])
 					student = il.nameIDByCard(data['card'])
 					sid = int(student['idnumber'].replace('A', ''))
 				except Exception:
-					print("ERROR: IIT Lookup is offline.")
+					self.app.logger.error("ERROR: IIT Lookup is offline.")
 				if not student:
 					# user is new and isn't in IIT's database
 					card = HawkCard(sid=None, card=data['card'])
@@ -175,7 +181,7 @@ class SocketV1Namespace(Namespace):
 							'to': url_for('userflow.needs_training', name=card.user.name, trainings=missing_trainings),
 							'hwid': data['hwid']})
 
-					update_kiosks(location.id, except_hwid=data['hwid'])
+					self.update_kiosks(location.id, except_hwid=data['hwid'])
 
 				# user needs to sign waiver
 				else:
@@ -184,15 +190,27 @@ class SocketV1Namespace(Namespace):
 						location.name, location.id, data['hwid']
 					))
 					# present waiver page
-					emit('go', {'to': url_for('.waiver', sid=card.sid), 'hwid': data['hwid']})
+					emit('go', {'to': url_for('userflow.waiver', sid=card.sid), 'hwid': data['hwid']})
 
 			logEntry = CardScan(card_id=data['card'], time=sa.func.now(), location_id=data['location'])
 			db.add(logEntry)
 
 			db.commit()
-			logging.getLogger('checkin.socket').info(resp)
+			self.app.logger.info(resp)
 			return resp
 		except Exception as e:
-			app.logger.error(e, exc_info=True)
+			self.app.logger.error(e, exc_info=True)
 			emit('go', {'to': url_for('.display_error'), 'hwid': data['hwid']})
 			return 'Internal error.'
+
+	def update_kiosks(self, location, except_hwid=None):
+		db = self.db_session()
+		kiosks = db.query(Kiosk).filter_by(location_id=location)
+		if except_hwid:
+			kiosks = kiosks.filter(Kiosk.hardware_id != except_hwid)
+		kiosks = kiosks.all()
+		for kiosk in kiosks:
+			emit('go', {'to': '/', 'hwid': kiosk.hardware_id})
+
+
+io_controller = None

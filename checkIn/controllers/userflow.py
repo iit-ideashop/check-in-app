@@ -4,8 +4,9 @@ import sys
 import sqlalchemy as sa
 from collections import defaultdict
 from flask import Blueprint, session, render_template, request, redirect, g, url_for
-from checkIn.model import Access, UserLocation, Training, HawkCard, User
 from iitlookup import IITLookup
+from checkIn.model import Access, UserLocation, Training, HawkCard, User
+from checkIn.socketio_handlers.v1 import io_controller
 
 userflow_controller = Blueprint('userflow', __name__)
 
@@ -92,7 +93,7 @@ def checkout():
 
 	# need to query again for active users now that it's changed
 	before_request()
-	update_kiosks(session['location_id'], except_hwid=session['hardware_id'])
+	io_controller.update_kiosks(session['location_id'], except_hwid=session['hardware_id'])
 
 	if 'next' in request.args:
 		return redirect(request.args.get('next'))
@@ -107,8 +108,6 @@ def waiver():
 		return render_template('waiver.html',
 		                       sid=request.args.get('sid'))
 	elif request.method == "POST" and request.form.get('agreed') == 'true':
-		from checkIn import update_kiosks
-
 		g.db.add(Access(
 			sid=request.form.get('sid'),
 			location_id=session['location_id'],
@@ -122,7 +121,7 @@ def waiver():
 		if user:
 			user.waiverSigned = sa.func.now()
 		g.db.commit()
-		update_kiosks(session['location_id'], except_hwid=session['hardware_id'])
+		io_controller.update_kiosks(session['location_id'], except_hwid=session['hardware_id'])
 
 		missing_trainings = Training.build_missing_trainings_string(user.get_missing_trainings(db))
 

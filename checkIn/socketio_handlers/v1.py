@@ -1,7 +1,7 @@
 import math
 from typing import Optional
 
-from flask import url_for, session, logging
+from flask import url_for, session, logging, g
 from flask_socketio import Namespace, emit, send
 
 import sqlalchemy as sa
@@ -13,10 +13,8 @@ from iitlookup import IITLookup
 
 class SocketV1Namespace(Namespace):
 	def __init__(self, namespace, db_session, app):
-		global io_controller
 		self.db_session = db_session
 		self.app = app
-		io_controller = self
 		super().__init__(namespace)
 
 	def on_connect(self):
@@ -71,7 +69,7 @@ class SocketV1Namespace(Namespace):
 					lastIn.timeOut = sa.func.now()
 					emit('go', {'to': url_for('userflow.success', action='checkout', name=card.user.name),
 					            'hwid': data['hwid']})
-					self.update_kiosks(location.id, except_hwid=data['hwid'])
+					self.update_kiosks(location.id, except_hwid=data['hwid'], use_request_context=False)
 					db.commit()
 					return
 
@@ -181,7 +179,7 @@ class SocketV1Namespace(Namespace):
 							'to': url_for('userflow.needs_training', name=card.user.name, trainings=missing_trainings),
 							'hwid': data['hwid']})
 
-					self.update_kiosks(location.id, except_hwid=data['hwid'])
+					self.update_kiosks(location.id, except_hwid=data['hwid'], use_request_context=False)
 
 				# user needs to sign waiver
 				else:
@@ -203,14 +201,17 @@ class SocketV1Namespace(Namespace):
 			emit('go', {'to': url_for('.display_error'), 'hwid': data['hwid']})
 			return 'Internal error.'
 
-	def update_kiosks(self, location, except_hwid=None):
+	def update_kiosks(self, location, except_hwid=None, use_request_context=True):
 		db = self.db_session()
 		kiosks = db.query(Kiosk).filter_by(location_id=location)
 		if except_hwid:
 			kiosks = kiosks.filter(Kiosk.hardware_id != except_hwid)
 		kiosks = kiosks.all()
 		for kiosk in kiosks:
-			emit('go', {'to': '/', 'hwid': kiosk.hardware_id})
+			if use_request_context:
+				g.socketio.emit('go', {'to': '/', 'hwid': kiosk.hardware_id})
+			else:
+				emit('go', {'to': '/', 'hwid': kiosk.hardware_id})
 
 
 io_controller = None

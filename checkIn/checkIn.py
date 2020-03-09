@@ -61,12 +61,16 @@ default_type, ban_type = get_types(db)
 db.close()
 app.logger.info('Server started.')
 
+io_controller = SocketV1Namespace('/', db_session, app)
+socketio.on_namespace(io_controller)
+
 
 @app.before_request
 def before_request():
 	db = db_session()
 	g.socketio = socketio
 	g.db = db
+	g.io_controller = io_controller
 
 	if 'location_id' not in session \
 			and request.endpoint != 'auth.auth' \
@@ -135,8 +139,6 @@ app.register_blueprint(auth_controller)
 app.register_blueprint(userflow_controller)
 app.register_blueprint(api_controller)
 app.register_blueprint(admin_controller)
-
-socketio.on_namespace(SocketV1Namespace('/', db_session, app))
 
 
 if __name__ == '__main__':

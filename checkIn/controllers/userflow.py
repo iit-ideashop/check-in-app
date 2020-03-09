@@ -6,7 +6,6 @@ from collections import defaultdict
 from flask import Blueprint, session, render_template, request, redirect, g, url_for
 from iitlookup import IITLookup
 from checkIn.model import Access, UserLocation, Training, HawkCard, User
-from checkIn.socketio_handlers.v1 import io_controller
 
 userflow_controller = Blueprint('userflow', __name__)
 
@@ -61,7 +60,7 @@ def index():
 
 @userflow_controller.route('/checkout', methods=['POST'])
 def checkout():
-	from checkIn.checkIn import update_kiosks, before_request
+	from checkIn.checkIn import before_request
 
 	if not g.location:
 		logging.getLogger('checkin.checkout').warning("Location %d not found (from kiosk %d)" % (session['location_id'], session['hardware_id']))
@@ -93,7 +92,7 @@ def checkout():
 
 	# need to query again for active users now that it's changed
 	before_request()
-	io_controller.update_kiosks(session['location_id'], except_hwid=session['hardware_id'])
+	g.io_controller.update_kiosks(session['location_id'], except_hwid=session['hardware_id'])
 
 	if 'next' in request.args:
 		return redirect(request.args.get('next'))
@@ -121,9 +120,9 @@ def waiver():
 		if user:
 			user.waiverSigned = sa.func.now()
 		g.db.commit()
-		io_controller.update_kiosks(session['location_id'], except_hwid=session['hardware_id'])
+		g.io_controller.update_kiosks(session['location_id'], except_hwid=session['hardware_id'])
 
-		missing_trainings = Training.build_missing_trainings_string(user.get_missing_trainings(db))
+		missing_trainings = Training.build_missing_trainings_string(user.get_missing_trainings(g.db))
 
 		if missing_trainings:
 			return redirect(url_for('userflow.needs_training', name=user.name, trainings=missing_trainings))

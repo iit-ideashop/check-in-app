@@ -1,8 +1,6 @@
 # all the imports
 import os, sys
 
-from socketio_handlers.v1 import SocketV1Namespace
-
 sys.path.insert(0, os.path.abspath(".."))
 
 import argparse
@@ -17,6 +15,7 @@ from checkIn.controllers.auth import auth_controller
 from checkIn.controllers.userflow import userflow_controller
 from checkIn.controllers.api import api_controller
 from checkIn.controllers.admin import admin_controller
+from checkIn.socketio_handlers.v1 import SocketV1Namespace
 
 version = "1.0.0"
 

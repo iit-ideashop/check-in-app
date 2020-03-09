@@ -185,4 +185,4 @@ def register():
 		card.sid = request.form['sid']
 
 		g.db.commit()
-		return redirect(url_for('.waiver', sid=request.form['sid']))
+		return redirect(url_for('userflow.waiver', sid=request.form['sid']))

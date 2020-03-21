@@ -21,6 +21,16 @@ def card_read(hwid):
 		'sid': user.sid if user else None,
 		'name': user.name if user else None,
 	})
+
+	# v2 emit
+	g.socketio.emit('scan', {
+		'facility': request.form['facility'],
+		'card': request.form['cardnum'],
+		'hwid': hwid,
+		'sid': user.sid if user else None,
+		'name': user.name if user else None,
+	}, namespace='/v2')
+
 	logging.getLogger('checkin.card').info(resp)
 	return resp
 
@@ -43,5 +53,15 @@ def anumber_read(hwid):
 		'sid': user.sid if user else None,
 		'name': user.name if user else None,
 	})
+
+	# v2 emit
+	g.socketio.emit('scan', {
+		'facility': request.form['facility'],
+		'card': request.form['cardnum'],
+		'hwid': hwid,
+		'sid': user.sid if user else None,
+		'name': user.name if user else None,
+	}, namespace='/v2')
+
 	logging.getLogger('checkin.card').info(resp)
 	return resp

@@ -16,6 +16,7 @@ from checkIn.controllers.userflow import userflow_controller
 from checkIn.controllers.api import api_controller
 from checkIn.controllers.admin import admin_controller
 from checkIn.socketio_handlers.v1 import SocketV1Namespace
+from checkIn.socketio_handlers.v2 import SocketV2Namespace
 
 version = "1.0.0"
 
@@ -63,6 +64,9 @@ app.logger.info('Server started.')
 
 io_controller = SocketV1Namespace('/', db_session, app)
 socketio.on_namespace(io_controller)
+
+io_controller_v2 = SocketV2Namespace('/v2', db_session, app)
+socketio.on_namespace(io_controller_v2)
 
 
 @app.before_request

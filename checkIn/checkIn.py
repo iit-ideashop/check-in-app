@@ -177,6 +177,4 @@ if __name__ == '__main__':
 	if "SSLCERT" in app.config and "SSLKEY" in app.config:
 		sslInfo = {"certfile": app.config["SSLCERT"], "keyfile": app.config["SSLKEY"]}
 
-	socketio.init_app(app, cors_allowed_origins='*')
-
 	socketio.run(app, host='0.0.0.0', **sslInfo)

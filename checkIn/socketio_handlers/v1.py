@@ -70,6 +70,10 @@ class SocketV1Namespace(Namespace):
 					emit('go', {'to': url_for('userflow.success', action='checkout', name=card.user.name),
 					            'hwid': data['hwid']})
 					self.update_kiosks(location.id, except_hwid=data['hwid'], use_request_context=False)
+
+					# for v2 api
+					self.emit('user_leave', {'user': lastIn.user.to_v2_dict(db)}, namespace='/v2', room='location-' + str(location.id))
+
 					db.commit()
 					return
 
@@ -180,6 +184,10 @@ class SocketV1Namespace(Namespace):
 							'hwid': data['hwid']})
 
 					self.update_kiosks(location.id, except_hwid=data['hwid'], use_request_context=False)
+
+					# for v2 api
+					self.emit('user_enter', {'user': userLocation.to_v2_dict(db)},
+					          namespace='/v2', room='location-' + str(location.id))
 
 				# user needs to sign waiver
 				else:

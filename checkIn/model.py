@@ -224,6 +224,18 @@ class UserLocation(_base):
 
 		return missing_trainings_list
 
+	def to_v2_dict(self, db):
+		return {
+					'sid': self.sid,
+					'name': self.name,
+					'photo': self.photo,
+					'type': {
+						'name': self.type.name,
+						'level': self.type.level
+					},
+					'missingTrainings': bool(self.get_missing_trainings(db))
+				}
+
 
 class Kiosk(_base):
 	__tablename__ = 'kiosks'

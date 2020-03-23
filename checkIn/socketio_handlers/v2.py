@@ -15,7 +15,7 @@ class SocketV2Namespace(Namespace):
 		self.app: Flask = app
 		super().__init__(namespace)
 
-	def get_users_list(self, location_id: int) -> List[UserLocation]:
+	def get_users_list(self, location_id: int) -> List[Access]:
 		return self.db.query(Access) \
 			.filter_by(timeOut=None) \
 			.filter_by(location_id=location_id) \
@@ -29,7 +29,7 @@ class SocketV2Namespace(Namespace):
 		if not location:
 			location = kiosk.location
 
-		in_lab = self.get_users_list(location.id)
+		in_lab: List[Access] = self.get_users_list(location.id)
 
 		return {
 			'hardware_id': kiosk.hardware_id,
@@ -40,14 +40,14 @@ class SocketV2Namespace(Namespace):
 			},
 			'activeUsers': [
 				{
-					'sid': u.sid,
-					'name': u.name,
-					'photo': u.photo,
+					'sid': u.user.sid,
+					'name': u.user.name,
+					'photo': u.user.photo,
 					'type': {
-						'name': u.type.name,
-						'level': u.type.level
+						'name': u.user.type.name,
+						'level': u.user.type.level
 					},
-					'missingTrainings': bool(u.get_missing_trainings(self.db))
+					'missingTrainings': bool(u.user.get_missing_trainings(self.db))
 				} for u in in_lab
 			]
 		}
@@ -152,7 +152,7 @@ class SocketV2Namespace(Namespace):
 		if kiosk and kiosk.location_id == data['location_id'] and kiosk.validate_token(data['token']):
 			kiosk.refresh_token()
 			emit('auth_success', {
-				'initial_state': self.get_initial_app_state(kiosk=kiosk)
+				'initial_state': self.get_initial_app_state(kiosk.location, kiosk)
 			})
 			join_room('location-' + str(kiosk.location.id))
 		else:

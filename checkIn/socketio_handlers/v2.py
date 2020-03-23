@@ -40,6 +40,7 @@ class SocketV2Namespace(Namespace):
 			},
 			'activeUsers': [
 				{
+					'sid': u.sid,
 					'name': u.name,
 					'photo': u.photo,
 					'type': {
@@ -81,7 +82,7 @@ class SocketV2Namespace(Namespace):
 					},
 					activeUsers: [{
 						name: string, photo: string (url), type: { name: string, level: int },
-						missingTrainings: bool
+						missingTrainings: bool, sid: int
 					}] 
 				}
 			}

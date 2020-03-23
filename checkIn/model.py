@@ -239,6 +239,9 @@ class Kiosk(_base):
 		self.token = base64.urlsafe_b64encode(os.urandom(33)).decode('ascii')
 		return self.token
 
+	def validate_token(self, response: str) -> bool:
+		return self.token == response
+
 
 class Type(_base):
 	__tablename__ = 'types'

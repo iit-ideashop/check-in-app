@@ -120,7 +120,23 @@ class SocketV2Namespace(Namespace):
 		self.db.commit()
 
 	"""
-	reauth event:
+	reauth event
+	data: {location_id: int, hardware_id: int, token: string}
+	emits:
+		on error:
+			auth_error { location_id: int, hardware_id: int, message: string }
+		on success:
+			auth_success {
+				initial_state: {
+					location: {
+						name: string, id: int, token: string
+					},
+					activeUsers: [{
+						name: string, photo: string (url), type: { name: string, level: int },
+						missingTrainings: bool
+					}] 
+				}
+			}
 	"""
 	def on_reauth(self, data: Dict):
 		kiosk: Kiosk = self.db.query(Kiosk).options(joinedload(Kiosk.location)).get(data['hardware_id'])

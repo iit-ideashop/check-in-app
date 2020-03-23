@@ -20,9 +20,9 @@ class SocketV2Namespace(Namespace):
 			.filter_by(timeOut=None) \
 			.filter_by(location_id=location_id) \
 			.options(joinedload(Access.user)) \
-			.options(joinedload(UserLocation.user)) \
-			.options(joinedload(UserLocation.type)) \
-			.options(joinedload(User.trainings)) \
+			.options(joinedload(Access.user, UserLocation.user)) \
+			.options(joinedload(Access.user, UserLocation.type)) \
+			.options(joinedload(Access.user, UserLocation.user, User.trainings)) \
 			.all()
 
 	def get_initial_app_state(self, location: Optional[Location], kiosk: Kiosk) -> Dict:
@@ -32,6 +32,7 @@ class SocketV2Namespace(Namespace):
 		in_lab = self.get_users_list(location.id)
 
 		return {
+			'hardware_id': kiosk.hardware_id,
 			'location': {
 				'name': location.name,
 				'id': location.id,
@@ -51,9 +52,12 @@ class SocketV2Namespace(Namespace):
 		}
 
 	def on_connect(self):
-		pass
+		self.app.logger.info('Client ' + request.sid + ' connected.')
+		locations: List[Location] = self.db.query(Location).all()
+		emit('location_list', {l.id: l.name for l in locations})
 
 	def on_disconnect(self):
+		self.app.logger.info('Client ' + request.sid + ' disconnected.')
 		pass
 
 	def on_error(self, exc):
@@ -84,6 +88,7 @@ class SocketV2Namespace(Namespace):
 	"""
 	def on_auth(self, data: Dict):
 		# check presented secret
+		self.app.logger.info('Client ' + request.sid + ' requested authentication.')
 		location: Optional[Location] = self.db.query(Location).get(data['location_id'])
 		if not location:
 			emit('auth_error', {
@@ -91,6 +96,7 @@ class SocketV2Namespace(Namespace):
 				'hardware_id': data['hardware_id'],
 				'message': 'Invalid location!'
 			})
+			self.app.logger.info('Client ' + request.sid + ' denied authentication: invalid location')
 			return
 		if not location.verify_secret(data['secret']):
 			emit('auth_error', {
@@ -98,6 +104,7 @@ class SocketV2Namespace(Namespace):
 				'hardware_id': data['hardware_id'],
 				'message': 'Invalid secret!'
 			})
+			self.app.logger.info('Client ' + request.sid + ' denied authentication: invalid secret')
 			return
 
 		# create kiosk record in db
@@ -118,6 +125,7 @@ class SocketV2Namespace(Namespace):
 
 		join_room('location-' + str(location.id))
 		self.db.commit()
+		self.app.logger.info('Client ' + request.sid + ' successfully authenticated to ' + repr(location))
 
 	"""
 	reauth event

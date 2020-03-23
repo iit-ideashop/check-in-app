@@ -99,9 +99,8 @@ def before_request():
 			.filter_by(timeOut=None) \
 			.filter_by(location_id=session['location_id']) \
 			.options(joinedload(Access.user)) \
-			.options(joinedload(UserLocation.user)) \
-			.options(joinedload(UserLocation.type)) \
-			.options(joinedload(User.trainings)) \
+			.options(joinedload(Access.user, UserLocation.type)) \
+			.options(joinedload(Access.user, UserLocation.user, User.trainings)) \
 			.all() \
 			if 'location_id' in session else list()
 
@@ -177,5 +176,7 @@ if __name__ == '__main__':
 	sslInfo = {}
 	if "SSLCERT" in app.config and "SSLKEY" in app.config:
 		sslInfo = {"certfile": app.config["SSLCERT"], "keyfile": app.config["SSLKEY"]}
+
+	socketio.init_app(app, cors_allowed_origins='*')
 
 	socketio.run(app, host='0.0.0.0', **sslInfo)

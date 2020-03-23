@@ -1,4 +1,4 @@
-from typing import Union, Callable, Optional, List
+from typing import Union, Callable, Optional, List, Dict
 
 from flask import Flask, request
 from flask_socketio import Namespace, join_room, leave_room, emit
@@ -25,6 +25,31 @@ class SocketV2Namespace(Namespace):
 			.options(joinedload(User.trainings)) \
 			.all()
 
+	def get_initial_app_state(self, location: Optional[Location], kiosk: Kiosk) -> Dict:
+		if not location:
+			location = kiosk.location
+
+		in_lab = self.get_users_list(location.id)
+
+		return {
+			'location': {
+				'name': location.name,
+				'id': location.id,
+				'token': kiosk.token
+			},
+			'activeUsers': [
+				{
+					'name': u.name,
+					'photo': u.photo,
+					'type': {
+						'name': u.type.name,
+						'level': u.type.level
+					},
+					'missingTrainings': bool(u.get_missing_trainings(self.db))
+				} for u in in_lab
+			]
+		}
+
 	def on_connect(self):
 		pass
 
@@ -38,7 +63,26 @@ class SocketV2Namespace(Namespace):
 		})
 		self.app.logger.error(exc, exc_info=True)
 
-	def on_auth(self, data):
+	"""
+	auth event
+	data: {location_id: int, hardware_id: int, secret: string}
+	emits:
+		on error:
+			auth_error { location_id: int, hardware_id: int, message: string }
+		on success:
+			auth_success {
+				initial_state: {
+					location: {
+						name: string, id: int, token: string
+					},
+					activeUsers: [{
+						name: string, photo: string (url), type: { name: string, level: int },
+						missingTrainings: bool
+					}] 
+				}
+			}
+	"""
+	def on_auth(self, data: Dict):
 		# check presented secret
 		location: Optional[Location] = self.db.query(Location).get(data['location_id'])
 		if not location:
@@ -67,27 +111,30 @@ class SocketV2Namespace(Namespace):
 		kiosk.refresh_token()
 
 		self.db.merge(kiosk)
-		self.db.commit()
-
-		in_lab = self.get_users_list(location.id)
 
 		emit('auth_success', {
-			'initial_state': {
-				'location': {
-					'name': location.name,
-					'id': location.id,
-					'token': kiosk.token
-				},
-				'activeUsers': [
-					{
-						'name': u.name,
-						'photo': u.photo,
-						'type': {
-							'name': u.type.name,
-							'level': u.type.level
-						},
-						'missingTrainings': bool(u.get_missing_trainings(self.db))
-					} for u in in_lab
-				]
-			}
+			'initial_state': self.get_initial_app_state(location, kiosk)
 		})
+
+		join_room('location-' + str(location.id))
+		self.db.commit()
+
+	"""
+	reauth event:
+	"""
+	def on_reauth(self, data: Dict):
+		kiosk: Kiosk = self.db.query(Kiosk).options(joinedload(Kiosk.location)).get(data['hardware_id'])
+		if kiosk and kiosk.location_id == data['location_id'] and kiosk.validate_token(data['token']):
+			kiosk.refresh_token()
+			emit('auth_success', {
+				'initial_state': self.get_initial_app_state(kiosk=kiosk)
+			})
+			join_room('location-' + str(kiosk.location.id))
+		else:
+			emit('auth_error', {
+				'location_id': data['location_id'],
+				'hardware_id': data['hardware_id'],
+				'message': 'Cannot reauthenticate this kiosk. Please manually reauthenticate.'
+			})
+
+		self.db.commit()

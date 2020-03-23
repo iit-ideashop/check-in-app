@@ -1,3 +1,4 @@
+import base64
 import enum
 import hashlib
 import hmac
@@ -233,6 +234,10 @@ class Kiosk(_base):
 	last_ip = sa.Column(sa.String(length=16), nullable=True)
 
 	location = relationship('Location')
+
+	def refresh_token(self) -> str:
+		self.token = base64.urlsafe_b64encode(os.urandom(33)).decode('ascii')
+		return self.token
 
 
 class Type(_base):

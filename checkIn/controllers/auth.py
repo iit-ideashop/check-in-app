@@ -22,7 +22,6 @@ def auth():
 		if not location.verify_secret(request.form['secret']):
 			return render_template('auth.html', error='Invalid secret!', locations=locations)
 
-		new_token = base64.urlsafe_b64encode(os.urandom(33)).decode('ascii')
 		kiosk = g.db.query(Kiosk) \
 			.filter_by(hardware_id=request.form['hwid']) \
 			.one_or_none()
@@ -31,22 +30,20 @@ def auth():
 			# deauthorize any existing kiosks with that ID
 			g.socketio.emit('go', {'to': url_for('.auth'), 'hwid': kiosk.hardware_id})
 
-			kiosk.token = new_token
 			kiosk.location_id = request.form['location']
 			kiosk.last_seen = sa.func.now()
 
 		else:
 			kiosk = Kiosk(location_id=request.form['location'],
 			              hardware_id=request.form['hwid'],
-			              token=new_token,
 			              last_seen=sa.func.now())
 			g.db.add(kiosk)
 
-		g.db.commit()
-
 		session['location_id'] = kiosk.location_id
 		session['hardware_id'] = int(request.form['hwid'])
-		session['token'] = new_token
+		session['token'] = kiosk.refresh_token()
+
+		g.db.commit()
 
 		return redirect('/')
 

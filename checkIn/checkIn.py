@@ -10,7 +10,7 @@ from flask_bootstrap import Bootstrap
 from flask_socketio import SocketIO
 import sqlalchemy as sa
 from sqlalchemy.orm import joinedload
-from checkIn.model import UserLocation, Access, Kiosk, Location, init_db, get_types
+from checkIn.model import UserLocation, Access, Kiosk, Location, init_db, get_types, User
 from checkIn.controllers.auth import auth_controller
 from checkIn.controllers.userflow import userflow_controller
 from checkIn.controllers.api import api_controller
@@ -99,6 +99,9 @@ def before_request():
 			.filter_by(timeOut=None) \
 			.filter_by(location_id=session['location_id']) \
 			.options(joinedload(Access.user)) \
+			.options(joinedload(UserLocation.user)) \
+			.options(joinedload(UserLocation.type)) \
+			.options(joinedload(User.trainings)) \
 			.all() \
 			if 'location_id' in session else list()
 

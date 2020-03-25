@@ -21,7 +21,7 @@ from checkIn.socketio_handlers.v2 import SocketV2Namespace
 version = "1.0.0"
 
 app = Flask(__name__, static_url_path='/static', static_folder='static')  # create the application instance :)
-socketio = SocketIO(app, manage_session=True, logger=True)
+socketio = SocketIO(app, manage_session=True, logger=True, engineio_logger=True, cors_allowed_origins='*')
 app.config.from_object(__name__)
 app.config.from_pyfile('config.cfg')
 app.config.from_envvar('FLASKR_SETTINGS', silent=True)
@@ -62,10 +62,10 @@ default_type, ban_type = get_types(db)
 db.close()
 app.logger.info('Server started.')
 
-io_controller = SocketV1Namespace('/', db_session, app)
+io_controller: SocketV1Namespace = SocketV1Namespace('/', db_session, app)
 socketio.on_namespace(io_controller)
 
-io_controller_v2 = SocketV2Namespace('/v2', db_session, app)
+io_controller_v2: SocketV2Namespace = SocketV2Namespace('/v2', db_session, app)
 socketio.on_namespace(io_controller_v2)
 
 
@@ -75,6 +75,7 @@ def before_request():
 	g.socketio = socketio
 	g.db = db
 	g.io_controller = io_controller
+	g.io_controller_v2 = io_controller_v2
 
 	if 'location_id' not in session \
 			and request.endpoint != 'auth.auth' \

@@ -157,6 +157,14 @@ class User(_base):
 	def location_specific(self, db: sa.orm.Session, location_id: int) -> Optional["UserLocation"]:
 		return db.query(UserLocation).filter(UserLocation.sid == self.sid).filter(UserLocation.location_id == location_id).one_or_none()
 
+	def to_v2_dict(self, db):
+		return {
+					'source': 'db-without-location',
+					'sid': self.sid,
+					'name': self.name,
+					'photo': self.photo
+				}
+
 	userLocation = relationship('UserLocation', lazy="dynamic")
 	trainings = relationship('Training', foreign_keys=[Training.trainee_id])
 	cards = relationship('HawkCard')
@@ -226,6 +234,7 @@ class UserLocation(_base):
 
 	def to_v2_dict(self, db):
 		return {
+					'source': 'db-with-location',
 					'sid': self.sid,
 					'name': self.name,
 					'photo': self.photo,

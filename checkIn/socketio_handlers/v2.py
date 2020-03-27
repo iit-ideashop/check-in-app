@@ -28,7 +28,7 @@ class SocketV2Namespace(Namespace):
 
 		"""
 		if hardware_id not in self.conn_hwids.keys():
-			print('Attempted to send tap for kiosk', hardware_id, 'but there was no kiosk!')
+			self.app.logger.warning('Attempted to send tap for kiosk %d but there was no kiosk!' % (hardware_id))
 			return
 		kiosk: Kiosk = self.active_connections[self.conn_hwids[hardware_id]]
 		if card.user:
@@ -95,18 +95,9 @@ class SocketV2Namespace(Namespace):
 				'name': location.name,
 				'token': kiosk.token
 			},
-			'activeUsers': [
-				{
-					'sid': u.user.sid,
-					'name': u.user.name,
-					'photo': u.user.photo,
-					'type': {
-						'name': u.user.type.name,
-						'level': u.user.type.level
-					},
-					'missingTrainings': bool(u.user.get_missing_trainings(self.db))
-				} for u in in_lab
-			]
+			'labState': {
+				'activeUsers': [u.user.to_v2_dict(self.db) for u in in_lab]
+			}
 		}
 
 	def on_connect(self):

@@ -93,7 +93,9 @@ class SocketV2Namespace(Namespace):
 				'hardwareId': kiosk.hardware_id,
 				'locationId': location.id,
 				'name': location.name,
-				'token': kiosk.token
+				'token': kiosk.token,
+				'capacity': location.capacity,
+				'staffRatio': location.staff_ratio,
 			},
 			'labState': {
 				'activeUsers': [u.user.to_v2_dict(self.db) for u in in_lab]

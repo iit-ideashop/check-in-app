@@ -5,7 +5,7 @@ from flask_socketio import Namespace, join_room, leave_room, emit
 from sqlalchemy.orm import Session, joinedload
 import sqlalchemy as sa
 
-from checkIn.model import HasRemoveMethod, Kiosk, Location, Access, UserLocation, User, HawkCard
+from checkIn.model import HasRemoveMethod, Kiosk, Location, Access, UserLocation, User, HawkCard, get_types, Type, Warning
 
 
 class SocketV2Namespace(Namespace):
@@ -15,6 +15,8 @@ class SocketV2Namespace(Namespace):
 		self.app: Flask = app
 		self.active_connections: Dict[str, Kiosk] = {}
 		self.conn_hwids: Dict[int, str] = {}
+
+		(self.ban_type, self.default_type) = get_types(self.db)
 
 		super().__init__(namespace)
 
@@ -172,12 +174,9 @@ class SocketV2Namespace(Namespace):
 
 		kiosk.refresh_token()
 
-		self.db.merge(kiosk)
+		kiosk = self.db.merge(kiosk)
 
 		self.deauthorize_kiosk(kiosk.hardware_id, request.sid)
-
-		self.conn_hwids[kiosk.hardware_id] = request.sid
-		self.active_connections[request.sid] = kiosk
 
 		emit('auth_success', {
 			'initial_state': self.get_initial_app_state(location, kiosk)
@@ -185,6 +184,10 @@ class SocketV2Namespace(Namespace):
 
 		join_room('location-' + str(location.id))
 		self.db.commit()
+
+		self.conn_hwids[int(kiosk.hardware_id)] = request.sid
+		self.active_connections[request.sid] = kiosk
+
 		self.app.logger.info('Client ' + request.sid + ' successfully authenticated to ' + repr(location))
 
 	def on_reauth(self, data: Dict):
@@ -214,19 +217,152 @@ class SocketV2Namespace(Namespace):
 				'initial_state': self.get_initial_app_state(kiosk.location, kiosk)
 			})
 			join_room('location-' + str(kiosk.location.id))
+			self.app.logger.info('Client ' + request.sid + ' successfully reauthenticated to ' + repr(kiosk.location))
 		else:
 			emit('auth_error', {
 				'location_id': data['location_id'],
 				'hardware_id': data['hardware_id'],
 				'message': 'Cannot reauthenticate this kiosk. Please manually reauthenticate.'
 			})
+			self.app.logger.info('Client ' + request.sid + ' failed reauthentication to ' + repr(kiosk.location))
+			return
 
 		self.db.commit()
 
 		# deauthorize the old kiosk
 		self.deauthorize_kiosk(kiosk.hardware_id, request.sid)
 
-		self.conn_hwids[kiosk.hardware_id] = request.sid
+		self.conn_hwids[int(kiosk.hardware_id)] = request.sid
 		self.active_connections[request.sid] = kiosk
-		self.app.logger.info('Client ' + request.sid + ' successfully reauthenticated to ' + repr(kiosk.location))
+
+	def on_check_out(self, data):
+		# we have 2 separate events here - check_in and check_out - in an attempt to allow kiosks to maintain a locally
+		# consistent state. if the kiosk displays checking out but it's out of sync with the system, don't actually do
+		# anything and have the user re-tap
+
+		# auth code may need some refinement later on
+		# TODO: make this a decorator
+		if request.sid not in self.active_connections.keys() or self.active_connections[request.sid].token != data['location']['token']:
+			emit('auth_error', {
+				'location_id': data['location']['locationId'],
+				'hardware_id': data['location']['hardwareId'],
+				'message': 'This session is not authorized. Please re-authenticate the kiosk.'
+			})
+			return
+
+		kiosk: Kiosk = self.active_connections[request.sid]
+
+		access: List[Access] = self.db.query(Access).filter_by(sid=data['user']['sid'],
+		                                                       location_id=kiosk.location_id,
+		                                                       timeOut=None).all()
+		for a in access:
+			# just in case there are multiple records for some reason... weirder things have happened!
+			a.timeOut = sa.func.now()
+
+		# if we actually checked anyone out
+		if len(access):
+			user: Optional[UserLocation] = self.db.query(UserLocation).filter_by(sid=data['user']['sid'],
+			                                                                     location_id=kiosk.location_id)\
+																	  .one_or_none()
+			if user:
+				emit('user_leave', {
+					'user': user.to_v2_dict(self.db)
+				}, room='location-' + str(kiosk.location_id))
+
+		else:
+			# TODO: resync client because something got fucked
+			return
+
+		self.db.commit()
+
+	def on_check_in(self, data):
+		if request.sid not in self.active_connections.keys() or self.active_connections[request.sid].token != data['location']['token']:
+			emit('auth_error', {
+				'location_id': data['location']['locationId'],
+				'hardware_id': data['location']['hardwareId'],
+				'message': 'This session is not authorized. Please re-authenticate the kiosk.'
+			})
+			return
+
+		kiosk: Kiosk = self.active_connections[request.sid]
+
+		# check for existing session, if found don't create a new one
+		access: int = self.db.query(Access.id).filter_by(sid=data['user']['sid'],
+	 	                                                 location_id=kiosk.location_id,
+	                                                     timeOut=None).scalar()
+		if access:
+			# TODO: resync client because something got fucked
+			return
+
+		# check to see if user exists
+		user: Optional[User] = self.db.query(User).filter_by(sid=data['user']['sid']).one_or_none()
+		if not user:
+			emit('check_in_result', {
+				'user': user.to_v2_dict(self.db),
+				'result': 'requireRegister'
+			})
+			return
+
+		# check to see if user has a location specific record
+		userLocation: Optional[UserLocation] = user.location_specific(self.db, kiosk.location_id)
+		if not userLocation or userLocation.waiverSigned is None:
+			# if not, show waiver
+			userLocation = UserLocation(sid=user.sid, location_id=kiosk.location_id, type_id=self.default_type.id)
+			self.db.add(userLocation)
+			emit('check_in_result', {
+				'user': user.to_v2_dict(self.db),
+				'result': 'requireWaiver'
+			})
+			return
+
+		# check to see if user was banned
+		banned: int = self.db.query(Warning.id).filter(Warning.location_id == kiosk.location_id,
+		                                               Warning.warnee_id == userLocation.sid,
+		                                               Warning.banned).scalar()
+		if userLocation.type.id == self.ban_type.id or banned:
+			emit('check_in_result', {
+				'user': user.to_v2_dict(self.db),
+				'result': 'banned'
+			})
+			return
+
+		# capacity checking is handled clientside, but we should verify it just in case
+		if userLocation.type.level <= 0:
+			userQuery: sa.orm.Query = self.db.query(Access).filter_by(location_id=kiosk.location_id, timeOut=None).subquery()
+			userCount: int = self.db.query(userQuery).filter(Access.user.has(UserLocation.type.has(Type.level <= 0))).count()
+			if userCount + 1 > kiosk.location.capacity:
+				emit('check_in_result', {
+					'user': user.to_v2_dict(self.db),
+					'result': 'overCapacity'
+				})
+				return
+
+			staffCount: int = self.db.query(userQuery).filter(Access.user.has(UserLocation.type.has(Type.level > 0))).count()
+			if userCount + 1 > staffCount * kiosk.location.staff_ratio:
+				emit('check_in_result', {
+					'user': user.to_v2_dict(self.db),
+					'result': 'overRatio'
+				})
+				return
+
+		# no need to check safety trainings, someone without trainings won't be denied entry
+		# displaying that is already handled client side and that data is sent on every tap
+
+		# create an access record
+		access: Access = Access(timeIn=sa.func.now, sid=userLocation.sid, location_id=kiosk.location_id)
+		self.db.add(access)
+
+		# respond to request
+		emit('check_in_result', {
+			'user': user.to_v2_dict(self.db),
+			'result': 'success'
+		})
+
+		# broadcast to room
+		emit('user_enter', {
+			'user': userLocation.to_v2_dict(self.db)
+		}, room='location-' + str(kiosk.location_id))
+
+		self.db.commit()
+
 

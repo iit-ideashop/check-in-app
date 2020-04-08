@@ -212,7 +212,7 @@ class SocketV2Namespace(Namespace):
 		"""
 		kiosk: Kiosk = self.db.query(Kiosk).options(joinedload(Kiosk.location)).get(data['hardware_id'])
 		if kiosk and kiosk.location_id == data['location_id'] and kiosk.validate_token(data['token']):
-			kiosk.refresh_token()
+			# kiosk.refresh_token()
 			emit('auth_success', {
 				'initial_state': self.get_initial_app_state(kiosk.location, kiosk)
 			})
@@ -333,7 +333,7 @@ class SocketV2Namespace(Namespace):
 			if userCount + 1 > kiosk.location.capacity:
 				emit('check_in_result', {
 					'user': user.to_v2_dict(self.db),
-					'result': 'overCapacity'
+					'result': 'deniedFireCapacity'
 				})
 				return
 
@@ -341,7 +341,7 @@ class SocketV2Namespace(Namespace):
 			if userCount + 1 > staffCount * kiosk.location.staff_ratio:
 				emit('check_in_result', {
 					'user': user.to_v2_dict(self.db),
-					'result': 'overRatio'
+					'result': 'deniedStaffRatio'
 				})
 				return
 
@@ -355,7 +355,7 @@ class SocketV2Namespace(Namespace):
 		# respond to request
 		emit('check_in_result', {
 			'user': user.to_v2_dict(self.db),
-			'result': 'success'
+			'result': 'enter'
 		})
 
 		# broadcast to room

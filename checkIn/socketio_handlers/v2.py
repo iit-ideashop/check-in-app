@@ -16,7 +16,7 @@ class SocketV2Namespace(Namespace):
 		self.active_connections: Dict[str, Kiosk] = {}
 		self.conn_hwids: Dict[int, str] = {}
 
-		(self.ban_type, self.default_type) = get_types(self.db)
+		(self.default_type, self.ban_type) = get_types(self.db)
 
 		super().__init__(namespace)
 

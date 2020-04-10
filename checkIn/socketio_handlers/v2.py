@@ -345,22 +345,21 @@ class SocketV2Namespace(Namespace):
 				})
 				return
 
-		# no need to check safety trainings, someone without trainings won't be denied entry
-		# displaying that is already handled client side and that data is sent on every tap
-
 		# create an access record
 		access: Access = Access(timeIn=sa.func.now, sid=userLocation.sid, location_id=kiosk.location_id)
 		self.db.add(access)
 
+		userDict: Dict = userLocation.to_v2_dict(self.db)
+
 		# respond to request
 		emit('check_in_result', {
-			'user': user.to_v2_dict(self.db),
-			'result': 'enter'
+			'user': userDict,
+			'result': 'missingTrainings' if userDict['missingTrainings'] else 'enter'
 		})
 
 		# broadcast to room
 		emit('user_enter', {
-			'user': userLocation.to_v2_dict(self.db)
+			'user': userDict
 		}, room='location-' + str(kiosk.location_id))
 
 		self.db.commit()

@@ -4,7 +4,7 @@ import hashlib
 import hmac
 import os
 from datetime import date, timedelta, datetime
-from typing import Union, Callable, Tuple, Optional
+from typing import Union, Callable, Tuple, Optional, List
 
 import sqlalchemy as sa
 from sqlalchemy.ext.declarative import declarative_base
@@ -97,7 +97,7 @@ class Training(_base):
 					data.append((x.Machine.name, x.Training.invalidation_reason))
 				else:
 					data.append((x.Machine.name, ''))
-			elif x.Training.quiz_score != 100.0 \
+			elif x.Training.quiz_score < x.Machine.quiz.pass_score \
 					and x.Training.date.date() < (date.today() - timedelta(days=x.Machine.quiz_grace_period_days)):
 				data.append((x.Machine.name, 'Incomplete quiz'))
 
@@ -209,30 +209,41 @@ class UserLocation(_base):
 	def get_missing_trainings(self, db: sa.orm.Session):
 		assert db
 
-		trainings = db.query(Machine, Training,
-		                          sa.func.nullif(sa.func.max(sa.func.coalesce(Training.date, datetime.max)), datetime.max) \
-		                          .label('max_date')) \
-			.outerjoin(Training, sa.and_(
-				Training.trainee_id == self.sid,
-				Machine.id == Training.machine_id
-			)) \
-			.filter(sa.and_(Machine.location_id == self.location_id, Machine.required == 1)) \
-			.group_by(Machine.id) \
-			.having(sa.text("safetyTraining.date = max_date or safetyTraining.date is null")) \
-			.order_by(Machine.id) \
+		required_machines = db.query(Machine) \
+			.filter(Machine.required == 1, Machine.location_id == self.location_id) \
+			.subquery()
+
+		most_recent_dates = db.query(Training.machine_id, sa.func.max(Training.date).label('max_date')) \
+			.filter(Training.trainee_id == self.sid) \
+			.group_by(Training.machine_id) \
+			.join(Machine, Training.machine_id == Machine.id) \
+			.subquery()
+
+		trainings = db.query(Machine, Training) \
+			.select_entity_from(required_machines) \
+			.outerjoin(most_recent_dates, Machine.id == most_recent_dates.c.machine_id) \
+			.outerjoin(Training, sa.and_(Training.date == most_recent_dates.c.max_date,
+		                                 Training.machine_id == most_recent_dates.c.machine_id,
+		                                 Training.trainee_id == self.sid)) \
+			.filter(Training.trainee_id == self.sid, Machine.location_id == self.location_id, Machine.required == 1) \
+			.options(
+				sa.orm.joinedload(Machine.quiz, innerjoin=True)
+			) \
 			.all()
 
 		missing_trainings_list = [
 			x for x in trainings
 			if not x.Training
 			   or not x.Training.date
-			   or (x.Training.quiz_score != 100.0 and x.Machine.quiz_grace_period_days and x.Training.date.date() < (date.today() - timedelta(days=x.Machine.quiz_grace_period_days)))
+			   or (x.Training.quiz_score < x.Machine.quiz.pass_score and x.Machine.quiz_grace_period_days and x.Training.date.date() < (date.today() - timedelta(days=x.Machine.quiz_grace_period_days)))
 			   or (x.Training.invalidation_date is not None and x.Training.invalidation_date < datetime.utcnow())
 		]
 
 		return missing_trainings_list
 
 	def to_v2_dict(self, db):
+		missing_trainings: List = self.get_missing_trainings(db)
+
 		return {
 					'source': 'db-with-location',
 					'sid': self.sid,
@@ -242,7 +253,7 @@ class UserLocation(_base):
 						'name': self.type.name,
 						'level': self.type.level
 					},
-					'missingTrainings': bool(self.get_missing_trainings(db))
+					'missingTrainings': False if not missing_trainings else Training.build_missing_trainings_string(missing_trainings)
 				}
 
 

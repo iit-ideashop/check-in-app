@@ -97,7 +97,7 @@ class Training(_base):
 					data.append((x.Machine.name, x.Training.invalidation_reason))
 				else:
 					data.append((x.Machine.name, ''))
-			elif x.Training.quiz_score < x.Machine.quiz.pass_score \
+			elif (not x.Training.quiz_score or x.Training.quiz_score < x.Machine.quiz.pass_score) \
 					and x.Training.date.date() < (date.today() - timedelta(days=x.Machine.quiz_grace_period_days)):
 				data.append((x.Machine.name, 'Incomplete quiz'))
 
@@ -235,7 +235,7 @@ class UserLocation(_base):
 			x for x in trainings
 			if not x.Training
 			   or not x.Training.date
-			   or (x.Training.quiz_score < x.Machine.quiz.pass_score and x.Machine.quiz_grace_period_days and x.Training.date.date() < (date.today() - timedelta(days=x.Machine.quiz_grace_period_days)))
+			   or ((not x.Training.quiz_score or x.Training.quiz_score < x.Machine.quiz.pass_score) and x.Machine.quiz_grace_period_days and x.Training.date.date() < (date.today() - timedelta(days=x.Machine.quiz_grace_period_days)))
 			   or (x.Training.invalidation_date is not None and x.Training.invalidation_date < datetime.utcnow())
 		]
 

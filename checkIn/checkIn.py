@@ -134,12 +134,10 @@ def error_404(error):
 def display_error():
 	return render_template("internal_error.html"), 500
 
-
 app.register_blueprint(auth_controller)
 app.register_blueprint(userflow_controller)
 app.register_blueprint(api_controller)
 app.register_blueprint(admin_controller)
-
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='Idea Shop Check In App')

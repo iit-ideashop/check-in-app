@@ -13,6 +13,8 @@ _base = declarative_base()
 
 DBStudentIDType = sa.Integer
 DBCardType = sa.Integer
+ban_type = None
+default_type = None
 
 
 class Location(_base):
@@ -433,9 +435,8 @@ class TypeInfo:
 		self.name = type.name
 
 
-def get_types() -> Tuple[TypeInfo, TypeInfo]:
-	global ban_type, default_type, db_session
-	db = db_session()
+def get_types(db) -> Tuple[TypeInfo, TypeInfo]:
+	global ban_type, default_type
 	ban_type = db.query(Type).filter(Type.level < 0).first()
 	if not ban_type:
 		ban_type = Type(level=-10, name="Banned")
@@ -446,7 +447,10 @@ def get_types() -> Tuple[TypeInfo, TypeInfo]:
 		default_type = Type(level=0, name="Users")
 		db.add(default_type)
 		db.commit()
-	return TypeInfo(default_type), TypeInfo(ban_type)
+
+	ban_type = TypeInfo(ban_type)
+	default_type = TypeInfo(default_type)
+	return default_type, ban_type
 
 
 # Just for type-hinting, if you know a better way please fix
@@ -463,6 +467,7 @@ def init_db(connection_string: str) -> Union[Callable[[], sa.orm.Session], HasRe
 	engine = sa.create_engine(connection_string, pool_size=50, max_overflow=150, pool_recycle=3600, encoding='utf-8')
 	db_session = scoped_session(sessionmaker(bind=engine))
 	_base.metadata.create_all(engine)
-	default_type, ban_type = get_types()
-	get_types()
+	db = db_session()
+	default_type, ban_type = get_types(db)
+	db.close()
 	return db_session

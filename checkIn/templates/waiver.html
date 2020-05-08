@@ -197,7 +197,7 @@
                 if (data.hwid === {{ session['hardware_id'] | tojson }}) {
                     //data.token = {{ session['token'] | tojson }};
                     data.location = {{ session['location_id'] | tojson }};
-                    socket.emit('check in', data)
+                    socket.emit('check_in', data)
                 }
             });
         });

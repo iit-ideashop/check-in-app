@@ -43,10 +43,10 @@ class Location(_base):
 class Training(_base):
 	__tablename__ = 'safetyTraining'
 	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-	trainee_id: int = sa.Column(DBStudentIDType, sa.ForeignKey('users.sid'), nullable=False)
-	trainer_id: int = sa.Column(DBStudentIDType, sa.ForeignKey('users.sid'), nullable=False)
+	trainee_id: int = sa.Column(DBStudentIDType, sa.ForeignKey('users.sid'), nullable=True)
+	trainer_id: int = sa.Column(DBStudentIDType, sa.ForeignKey('users.sid'), nullable=True)
 	machine_id = sa.Column(sa.Integer, sa.ForeignKey('machines.id'), nullable=False)
-	date = sa.Column(sa.DateTime, default=sa.func.now, nullable=False)
+	in_person_date = sa.Column(sa.DateTime, default=sa.func.now, nullable=True)
 	invalidation_date = sa.Column(sa.DateTime)
 	invalidation_reason = sa.Column(sa.Text)
 	show_invalidation_reason = sa.Column(sa.Boolean)

@@ -243,12 +243,12 @@ def admin_add_training():
 			t.append(Training(trainee_id=int(request.form['student_id']),
 	             trainer_id=int(session['admin']),
 	             machine_id=each.id,
-	             date=sa.func.now()))
+	             in_person_date=sa.func.now()))
 	else:
 		t.append(Training(trainee_id=int(request.form['student_id']),
 	             trainer_id=int(session['admin']),
 	             machine_id=int(request.form['machine']),
-	             date=sa.func.now()))
+	             in_person_date=sa.func.now()))
 	try:
 		check_allowed_modify(g.db, session['admin'], request.form['student_id'], session['location_id'])
 		g.db.add_all(t)

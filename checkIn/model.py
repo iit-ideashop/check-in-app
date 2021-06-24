@@ -43,10 +43,10 @@ class Location(_base):
 class Training(_base):
 	__tablename__ = 'safetyTraining'
 	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-	trainee_id: int = sa.Column(DBStudentIDType, sa.ForeignKey('users.sid'), nullable=False)
-	trainer_id: int = sa.Column(DBStudentIDType, sa.ForeignKey('users.sid'), nullable=False)
+	trainee_id: int = sa.Column(DBStudentIDType, sa.ForeignKey('users.sid'), nullable=True)
+	trainer_id: int = sa.Column(DBStudentIDType, sa.ForeignKey('users.sid'), nullable=True)
 	machine_id = sa.Column(sa.Integer, sa.ForeignKey('machines.id'), nullable=False)
-	date = sa.Column(sa.DateTime, default=sa.func.now, nullable=False)
+	in_person_date = sa.Column(sa.DateTime, default=sa.func.now, nullable=True)
 	invalidation_date = sa.Column(sa.DateTime)
 	invalidation_reason = sa.Column(sa.Text)
 	show_invalidation_reason = sa.Column(sa.Boolean)
@@ -73,14 +73,14 @@ class Training(_base):
 			return False
 
 	def quiz_available(self):
-		if self.date and self.machine and self.machine and self.machine.quiz_issue_days:
-			return (not self.quiz_passed()) and self.date + timedelta(
+		if self.in_person_date and self.machine and self.machine and self.machine.quiz_issue_days:
+			return (not self.quiz_passed()) and self.in_person_date + timedelta(
 				days=self.machine.quiz_issue_days) < datetime.now()
 		else:
 			return False
 
 	def quiz_training_invalidated(self):
-		return (not self.quiz_passed()) and self.date + \
+		return (not self.quiz_passed()) and self.in_person_date + \
 		       timedelta(days=self.machine.quiz_grace_period_days) + \
 		       timedelta(days=self.machine.quiz_issue_days) < datetime.now()
 	
@@ -97,7 +97,7 @@ class Training(_base):
 				else:
 					data.append((x.Machine.name, ''))
 			elif x.Training.quiz_score != 100.0 \
-					and x.Training.date.date() < (date.today() - timedelta(days=x.Machine.quiz_grace_period_days)):
+					and x.Training.in_person_date.date() < (date.today() - timedelta(days=x.Machine.quiz_grace_period_days)):
 				data.append((x.Machine.name, 'Incomplete quiz'))
 
 		missing_trainings = ', '.join([x[0] + (' - ' + x[1] if x[1] else '') for x in data])
@@ -201,7 +201,7 @@ class UserLocation(_base):
 		assert db
 
 		trainings = db.query(Machine, Training,
-		                          sa.func.nullif(sa.func.max(sa.func.coalesce(Training.date, datetime.max)), datetime.max) \
+		                          sa.func.nullif(sa.func.max(sa.func.coalesce(Training.in_person_date, datetime.max)), datetime.max) \
 		                          .label('max_date')) \
 			.outerjoin(Training, sa.and_(
 				Training.trainee_id == self.sid,
@@ -209,15 +209,15 @@ class UserLocation(_base):
 			)) \
 			.filter(sa.and_(Machine.location_id == self.location_id, Machine.required == 1)) \
 			.group_by(Machine.id) \
-			.having(sa.text("safetyTraining.date = max_date or safetyTraining.date is null")) \
+			.having(sa.text("safetyTraining.in_person_date = max_date or safetyTraining.in_person_date is null")) \
 			.order_by(Machine.id) \
 			.all()
 
 		missing_trainings_list = [
 			x for x in trainings
 			if not x.Training
-			   or not x.Training.date
-			   or (x.Training.quiz_score != 100.0 and x.Machine.quiz_grace_period_days and x.Training.date.date() < (date.today() - timedelta(days=x.Machine.quiz_grace_period_days)))
+			   or not x.Training.in_person_date
+			   or (x.Training.quiz_score != 100.0 and x.Machine.quiz_grace_period_days and x.Training.in_person_date.date() < (date.today() - timedelta(days=x.Machine.quiz_grace_period_days)))
 			   or (x.Training.invalidation_date is not None and x.Training.invalidation_date < datetime.utcnow())
 		]
 
@@ -267,6 +267,7 @@ class Access(_base):
 
 class HawkCard(_base):
 	__tablename__ = 'hawkcards'
+	facility: int = sa.Column(DBCardType, primary_key=True, autoincrement=False)
 	card: int = sa.Column(DBCardType, primary_key=True, autoincrement=False)
 	sid: Optional[int] = sa.Column(DBStudentIDType, sa.ForeignKey(User.sid))
 
@@ -360,7 +361,7 @@ class Warning(_base):
 				.join(Training.machine) \
 				.filter(Machine.location_id == location, Machine.required == True) \
 				.all():
-			numWarnings = sum(1 for _ in filter(lambda x: x.time > training.date, warnings))
+			numWarnings = sum(1 for _ in filter(lambda x: x.time > training.in_person_date, warnings))
 			if numWarnings >= 5:
 				training.invalidation_date = sa.func.now()
 				training.invalidation_reason = 'System - Excessive warnings'

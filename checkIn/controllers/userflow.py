@@ -3,8 +3,8 @@ import sys
 
 import sqlalchemy as sa
 from collections import defaultdict
-from flask import Blueprint, session, render_template, request, redirect, g, url_for
-from iitlookup import IITLookup
+from flask import Blueprint, session, render_template, request, redirect, g, url_for, current_app
+from checkIn.iitlookup import IITLookup
 from checkIn.model import Access, UserLocation, Training, HawkCard, User
 
 userflow_controller = Blueprint('userflow', __name__)
@@ -149,7 +149,7 @@ def register():
 		if not name or not sid:
 			# ping acaps if we couldn't find everything
 			try:
-				il = IITLookup(app.config['IITLOOKUPURL'], app.config['IITLOOKUPUSER'], app.config['IITLOOKUPPASS'])
+				il = IITLookup(current_app.config['IITLOOKUPURL'], current_app.config['IITLOOKUPUSER'], current_app.config['IITLOOKUPPASS'])
 				resp = il.nameIDByCard(card_id)
 			except:
 				print(sys.exc_info()[0])
@@ -169,7 +169,7 @@ def register():
 		existing_user = g.db.query(User).get(request.form['sid'])
 		if not existing_user:
 			existing_user = User(sid=request.form['sid'], name=request.form['name'].title())
-			db.add(existing_user)
+			g.db.add(existing_user)
 
 		existing_user_location = g.db.query(UserLocation).get((request.form['sid'], session['location_id']))
 		if not existing_user_location:

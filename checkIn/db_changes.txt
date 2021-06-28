@@ -1,0 +1,13 @@
+//DB CHANGE LOG:
+
+// safetyTraining "date" changed to "in_person_date"
+
+alter table safetyTraining change date in_person_date datetime not null;
+
+// safetyTraining new column "videos_watched"
+// Following has error SQL syntax on null:
+alter table safetyTraining
+    add videos_watched varchar null;
+
+// Model.py "date" changed to "in_person_date" and made nullable
+// Model.py "trainer_id" made nullable

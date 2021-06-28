@@ -1,6 +1,7 @@
 //DB CHANGE LOG:
 
 // safetyTraining "date" changed to "in_person_date"
+
 // SQL:
 alter table safetyTraining change date in_person_date datetime not null;
 
@@ -11,4 +12,3 @@ alter table safetyTraining
 
 // Model.py "date" changed to "in_person_date" and made nullable
 // Model.py "trainer_id" made nullable
-

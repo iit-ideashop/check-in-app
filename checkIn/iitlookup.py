@@ -1,28 +1,46 @@
-from pysimplesoap.client import SoapClient,SoapFault
-import base64
+from requests import Session, auth
+import zeep
+
+
 class IITLookup:
 
         def __init__(self, wsurl, user=None, pwd=None, idlength=6):
                 self.idlength=idlength
                 if(user or pwd):
-                    bts = ('%s:%s' % (user, pwd)).encode('ascii')
-                    auth = base64.b64encode(bts).replace(b'\n', b'')
-                    head = {'Authorization': "Basic %s" % auth.decode('ascii')}
-                    self.sclient=SoapClient(wsdl=wsurl, sessions=True, http_headers=head)
+                    session = Session()
+                    session.auth = auth.HTTPBasicAuth(user, pwd)
+                    self.sclient=zeep.Client(wsdl=wsurl, transport=zeep.Transport(session=session))
                 else:
-                    self.sclient=SoapClient(wsdl=wsurl)
+                    self.sclient=zeep.Client(wsdl=wsurl)
 
-        def nameByID(self,idnumber):
+        def getServices(self):
+            for service in self.sclient.wsdl.services.values():
+                print(service)
+                for port in service.ports.values():
+                    print(port)
+                    try:
+                        operations = port.binding._operations.values()
+                        for operation in operations:
+                            print(operation.name)
+                            node = self.sclient.create_message(self.sclient.service, operation.name)
+                            print(node)
+                    except zeep.exceptions.Error as zeep_error:
+                        print(zeep_error)
+                        return None
+
+        def nameByID(self, idnumber):
                 try:
-                    return self.sclient.PCSGetName(idNumber=idnumber)['PCSGetNameResult']
-                except SoapFault:
+                    return self.sclient.service.PCSGetName(idNumber=idnumber)
+                except zeep.exceptions.Error as zeep_error:
+                    print(zeep_error)
                     return None
 
         def nameIDByCard(self,cardnum):
                 lookupstr = str(cardnum).zfill(self.idlength)
                 try:
-                    ret = self.sclient.PCSGetbyCardNum(cardNumber=lookupstr)['PCSGetbyCardNumResult']
-                except SoapFault:
+                    ret = self.sclient.service.PCSGetbyCardNum(cardNumber=lookupstr)
+                except zeep.exceptions.Error as zeep_error:
+                    print(zeep_error)
                     return None
                 if(ret == 'Not Found'):
                     return None
@@ -33,25 +51,3 @@ class IITLookup:
                 output['middle_name'] = ret[2]
                 output['idnumber'] = ret[3]
                 return output
-
-        def inquiryByID(self,idnumber):
-                try:
-                    ret = self.sclient.PCSGetInquiry(idNumber=idnumber)['PCSGetInquiryResult']
-                except SoapFault:
-                    return None
-                output = {}
-                for x in ret:
-                    x = x['InquiryRecord']
-                    n_obj = {}
-                    n_obj['blocked'] = x['blocked']
-                    n_obj['limit'] = x['limit']
-                    n_obj['balance'] = x['balance']
-                    output[x['tender']] = n_obj
-                return output
-
-        def inquiryByCard(self,cardnum):
-                idn = self.nameIDByCard(cardnum)
-                if not idn:
-                        return None
-                return self.inquiryByID(idn['idnumber'])
-

@@ -94,7 +94,7 @@ class Training(_base):
 	def completed(self):
 		if self.in_person_date is None or self.videos_watched is None:
 			return False
-		elif are_equal(list(self.machine.videos), list(self.videos_watched)):
+		elif are_equal(list(self.machine.videos), list(self.videos_watched)) and self.quiz_passed():
 			return True
 		else:
 			return False

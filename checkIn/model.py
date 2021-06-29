@@ -16,6 +16,13 @@ DBCardType = sa.Integer
 ban_type = None
 default_type = None
 
+def are_equal(a, b):
+	if len(a) != len(b):
+		return False
+	for c in a:
+		if c not in b:
+			return False
+	return True
 
 class Location(_base):
 	__tablename__ = 'locations'
@@ -83,7 +90,15 @@ class Training(_base):
 		return (not self.quiz_passed()) and self.in_person_date + \
 		       timedelta(days=self.machine.quiz_grace_period_days) + \
 		       timedelta(days=self.machine.quiz_issue_days) < datetime.now()
-	
+
+	def completed(self):
+		if self.in_person_date is None or self.videos_watched is None:
+			return False
+		elif are_equal(list(self.machine.videos), list(self.videos_watched)) and self.quiz_passed():
+			return True
+		else:
+			return False
+
 	@classmethod
 	def build_missing_trainings_string(cls, missing_trainings_list):
 		data = []

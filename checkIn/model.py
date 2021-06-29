@@ -92,7 +92,7 @@ class Training(_base):
 		       timedelta(days=self.machine.quiz_issue_days) < datetime.now()
 
 	def completed(self):
-		if self.in_person_date is None:
+		if self.in_person_date is None or self.videos_watched is None:
 			return False
 		elif are_equal(list(self.machine.videos), list(self.videos_watched)):
 			return True

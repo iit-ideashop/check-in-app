@@ -1,7 +1,6 @@
 //DB CHANGE LOG:
 
 // safetyTraining "date" changed to "in_person_date"
-
 // SQL:
 alter table safetyTraining change date in_person_date datetime not null;
 
@@ -12,3 +11,20 @@ alter table safetyTraining
 
 // Model.py "date" changed to "in_person_date" and made nullable
 // Model.py "trainer_id" made nullable
+
+// Model.py new class video (tablename is video)
+// video contains: id, length, filepath, name, descrip
+
+// new table video w/ columns: id primaryKey int, length int, filepath text, name text, descrip text
+// SQL:
+create table video
+(
+	id int not null,
+	length int null,
+	filepath text null,
+	name varchar(100) null,
+	descrip varchar(100) null,
+	constraint video_pk
+		primary key (id)
+);
+

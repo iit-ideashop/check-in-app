@@ -450,6 +450,13 @@ class TypeInfo:
 		self.level = type.level
 		self.name = type.name
 
+class Video(_base):
+	__tablename__ = 'video'
+	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
+	length = sa.Column(sa.Integer,nullable=False)
+	filepath = sa.Column(sa.Text)
+	name = sa.Column(sa.Text)
+	descrip = sa.Column(sa.Text)
 
 def get_types(db) -> Tuple[TypeInfo, TypeInfo]:
 	global ban_type, default_type

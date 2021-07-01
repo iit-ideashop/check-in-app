@@ -15,7 +15,7 @@ alter table safetyTraining
 // Model.py new class video (tablename is video)
 // video contains: id, length, filepath, name, descrip
 
-// new table video w/ columns: id primaryKey int, length int, filepath text, name text, descrip text
+// new table video w/ columns: id primaryKey int, length int, filepath text, name varchar(100), descrip varchar(100)
 // SQL:
 create table video
 (

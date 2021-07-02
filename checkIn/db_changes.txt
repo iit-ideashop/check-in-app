@@ -20,7 +20,7 @@ alter table safetyTraining
 create table video
 (
 	id int not null,
-	length int null,
+	length int not null,
 	filepath text null,
 	name varchar(100) null,
 	descrip varchar(100) null,

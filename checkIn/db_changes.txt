@@ -15,7 +15,7 @@ alter table safetyTraining
 // Model.py new class video (tablename is video)
 // video contains: id, length, filepath, name, descrip
 
-// new table video w/ columns: id primaryKey int, length int, filepath text, name varchar(100), descrip varchar(100)
+// new table video w/ columns: id primaryKey int, length int, filepath text, name varchar(100), descrip text
 // SQL:
 create table video
 (
@@ -23,7 +23,7 @@ create table video
 	length int not null,
 	filepath text null,
 	name varchar(100) null,
-	descrip varchar(100) null,
+	descrip text null,
 	constraint video_pk
 		primary key (id)
 );

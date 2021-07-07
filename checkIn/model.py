@@ -456,7 +456,7 @@ class Video(_base):
 	length = sa.Column(sa.Integer, nullable=False)
 	filepath = sa.Column(sa.Text)
 	name = sa.Column(sa.varChar(100), nullable=True)
-	descrip = sa.Column(sa.varChar(100), nullable=True)
+	descrip = sa.Column(sa.Text, nullable=True)
 
 def get_types(db) -> Tuple[TypeInfo, TypeInfo]:
 	global ban_type, default_type

@@ -23,7 +23,7 @@ create table video
 	length int not null,
 	filepath text null,
 	name varchar(100) null,
-	descrip varchar(100) null,
+	descrip text null,
 	constraint video_pk
 		primary key (id)
 );

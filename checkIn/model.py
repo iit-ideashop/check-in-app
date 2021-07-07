@@ -459,7 +459,7 @@ class Video(_base):
 	__tablename__ = 'video'
 	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True, nullable=False)
 	length = sa.Column(sa.Integer, nullable=False)
-	filepath = sa.Column(sa.Text)
+	filepath = sa.Column(sa.Text, nullable = False)
 	name = sa.Column(sa.varChar(100), nullable=True)
 	descrip = sa.Column(sa.Text, nullable=True)
 

@@ -21,7 +21,7 @@ create table video
 (
 	id int not null,
 	length int not null,
-	filepath text null,
+	filepath text not null,
 	name varchar(100) null,
 	descrip text null,
 	constraint video_pk

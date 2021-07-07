@@ -28,3 +28,24 @@ create table video
 		primary key (id)
 );
 
+// Model.py new columns for parent_id varChar 200, nullable; video_id 200, nullable)
+// Model.py new columns for in_person_component
+// machines new columns parent_id,video_id, in_person_component, about_link
+// SQL:
+alter table machines
+	add parent_id varchar(200) null;
+
+alter table machines
+	add video_id varChar(200) not null;
+
+alter table machines
+	add in_person_component varChar(200) not null;
+
+alter table machines
+	add about_link varchar(100) null;
+//
+
+
+
+
+

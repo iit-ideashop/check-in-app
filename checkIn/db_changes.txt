@@ -15,7 +15,7 @@ alter table safetyTraining
 // Model.py new class video (tablename is video)
 // video contains: id, length, filepath, name, descrip
 
-// new table video w/ columns: id primaryKey int, length int, filepath text, name varchar(100), descrip text
+// new table video w/ columns shown below (Model.py updated accordingly)
 // SQL:
 create table video
 (
@@ -28,9 +28,7 @@ create table video
 		primary key (id)
 );
 
-// Model.py new columns parent_id varChar 200, nullable; video_id 200, nullable)
-// Model.py new columns for in_person_component
-// machines new columns parent_id,video_id, in_person_component, about_link
+// machines new columns show below. Model.py's machine class made to match
 // SQL:
 alter table machines
 	add parent_id varchar(200) null;

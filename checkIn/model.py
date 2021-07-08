@@ -463,6 +463,15 @@ class Video(_base):
 	name = sa.Column(sa.varChar(100), nullable=True)
 	descrip = sa.Column(sa.Text, nullable=True)
 
+class Energizer(_base):
+	__tablename__ = 'energizer'
+	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True, nullable=False)
+	name = sa.Column(sa.varChar(50),nullable=False)
+	status = sa.Column(sa.Integer,nullable=True)
+	timestamp = sa.Column(sa.DateTime)
+	machine_enabled = sa.Column(sa.Boolean)
+	active_user = sa.Column(DBCardType,nullable=True)
+
 def get_types(db) -> Tuple[TypeInfo, TypeInfo]:
 	global ban_type, default_type
 	ban_type = db.query(Type).filter(Type.level < 0).first()

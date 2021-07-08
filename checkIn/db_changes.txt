@@ -44,6 +44,20 @@ alter table machines
 alter table machines
 	add about_link varchar(100) null;
 //
+// New table energizer. Model.py class energizer has active_user type "DBCARDTYPE"
+// SQL:
+create table energizer
+(
+	id int auto_increment,
+	name varchar(50) not null,
+	status int null,
+	timestamp datetime null,
+	machine_enabled boolean null,
+	active_user int null,
+	constraint energizer_pk
+		primary key (id)
+);
+
 
 
 

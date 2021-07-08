@@ -106,18 +106,18 @@ class SocketV1Namespace(Namespace):
 					self.app.logger.error("ERROR: IIT Lookup is offline.")
 				if not student:
 					# user is new and isn't in IIT's database
-					card = HawkCard(sid=None, card=data['card'])
+					card = HawkCard(sid=None, card=data['card'], facility=data['facility'])
 					db.add(card)
 					db.commit()
 				elif db.query(User).get(sid):
 					# user exists, has a new card
-					card = HawkCard(sid=sid, card=data['card'])
+					card = HawkCard(sid=None, card=data['card'], facility=data['facility'])
 					db.add(card)
 					db.commit()
 				else:
 					# first time in lab
 					resp = ("User for card id %d not found" % data['card'])
-					card = HawkCard(sid=None, card=data['card'])
+					card = HawkCard(sid=None, card=data['card'], facility=data['facility'])
 					db.add(card)
 					db.commit()
 

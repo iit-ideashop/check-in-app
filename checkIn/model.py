@@ -302,10 +302,10 @@ class Machine(_base):
 	quiz_issue_days = sa.Column(sa.Integer, nullable=True)
 	quiz_grace_period_days = sa.Column(sa.Integer, nullable=True)
 
-	parent_id = sa.Column(sa.varChar(200), nullable = True)
-	video_id = sa.Column(sa.varChar(200), nullable = False)
+	parent_id = sa.Column(sa.VARCHAR(200), nullable = True)
+	video_id = sa.Column(sa.VARCHAR(200), nullable = False)
 	in_person_component = sa.Column(sa.Boolean, nullable = False)
-	about_link = sa.Column(sa.varChar(100), nullable = True)
+	about_link = sa.Column(sa.VARCHAR(100), nullable = True)
 
 	location = relationship('Location')
 	trained_users = relationship('Training')
@@ -460,7 +460,7 @@ class Video(_base):
 	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True, nullable=False)
 	length = sa.Column(sa.Integer, nullable=False)
 	filepath = sa.Column(sa.Text, nullable = False)
-	name = sa.Column(sa.varChar(100), nullable=True)
+	name = sa.Column(sa.VARCHAR(100), nullable=True)
 	descrip = sa.Column(sa.Text, nullable=True)
 
 def get_types(db) -> Tuple[TypeInfo, TypeInfo]:

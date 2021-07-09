@@ -57,6 +57,23 @@ create table energizer
 );
 
 
+// Reservation Types Table.
+// SQL Script:
+create table checkIn_dev.reservation_types
+(
+    id       int auto_increment,
+    name     varchar(100) not null,
+    duration float        not null,
+    capacity int          not null,
+    constraint reservation_types_id_uindex
+        unique (id),
+    constraint machines_id
+        foreign key (id) references checkIn_dev.machines (id)
+);
+
+alter table checkIn_dev.reservation_types
+    add primary key (id);
+
 
 
 

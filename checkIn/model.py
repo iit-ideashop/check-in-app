@@ -474,6 +474,10 @@ class Energizer(_base):
 
 class reservation_windows(_base):
 	__tablename__ = 'reservation_windows'
+	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True, nullable=False)
+	type_id = sa.Column(sa.Integer, nullable=False)
+	start = sa.Column(sa.datetime,nullable=False)
+	end = sa.Column(sa.datetime, nullable=False)
 
 def get_types(db) -> Tuple[TypeInfo, TypeInfo]:
 	global ban_type, default_type

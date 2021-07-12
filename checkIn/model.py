@@ -472,6 +472,9 @@ class Energizer(_base):
 	machine_enabled = sa.Column(sa.Boolean)
 	active_user = sa.Column(DBCardType,nullable=True)
 
+class reservation_windows(_base):
+	__tablename__ = 'reservation_windows'
+
 def get_types(db) -> Tuple[TypeInfo, TypeInfo]:
 	global ban_type, default_type
 	ban_type = db.query(Type).filter(Type.level < 0).first()

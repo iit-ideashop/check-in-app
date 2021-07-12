@@ -83,3 +83,18 @@ create table checkIn_dev.reservation_types
 
 alter table checkIn_dev.reservation_types
     add primary key (id);
+
+// Reservations for In Person Training Table. Model.py class ReservationInpersontraining matching
+// SQL:
+create table reservation_inperson_training
+(
+    id int auto_increment,
+    sid int not null,
+    reservation_window_id int not null,
+    constraint reservation_inperson_training_pk
+        primary key (id),
+    constraint reservation_window_id_fk
+        foreign key (id) references reservation_windows (id),
+    constraint sid_fk
+        foreign key (sid) references users (sid)
+);

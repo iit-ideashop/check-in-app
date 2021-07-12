@@ -479,6 +479,16 @@ class reservation_windows(_base):
 	start = sa.Column(sa.datetime,nullable=False)
 	end = sa.Column(sa.datetime, nullable=False)
 
+class ReservationTypes(_base):
+    __tablename__ = 'reservation_types'
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True, nullable=False)
+    name = sa.Column(sa.VARCHAR(100), nullable=False)
+    duration = sa.Column(sa.Float, nullable=False)
+    capacity = sa.Column(sa.Integer, nullable=False)
+    machines_id = sa.Column(sa.Integer, sa.ForeignKey('machines.id'), nullable=False)
+
+    machine = relationship('Machine')
+
 def get_types(db) -> Tuple[TypeInfo, TypeInfo]:
 	global ban_type, default_type
 	ban_type = db.query(Type).filter(Type.level < 0).first()

@@ -489,6 +489,18 @@ class ReservationTypes(_base):
 
     machine = relationship('Machine')
 
+class ReservationInpersontraining(_base):
+	__tablename__ = 'reservation_inperson_training'
+	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True, nullable=False)
+	sid = sa.Column(sa.Integer, sa.ForeignKey('users.sid'), nullable=False)
+	reservation_window_id = sa.Column(sa.Integer, sa.ForeignKey('reservation_windows.id'), nullable=False)
+	user = relationship('User', lazy = "joined")
+	user = relationship('User', lazy="joined")
+	reservation_type = relationship('ReservationWindows')
+
+	def __repr__(self):
+		return "<Reservation ID %s>" % self.id
+
 def get_types(db) -> Tuple[TypeInfo, TypeInfo]:
 	global ban_type, default_type
 	ban_type = db.query(Type).filter(Type.level < 0).first()

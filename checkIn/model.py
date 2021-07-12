@@ -472,7 +472,7 @@ class Energizer(_base):
 	machine_enabled = sa.Column(sa.Boolean)
 	active_user = sa.Column(DBCardType,nullable=True)
 
-class reservation_windows(_base):
+class ReservationWindows(_base):
 	__tablename__ = 'reservation_windows'
 	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True, nullable=False)
 	type_id = sa.Column(sa.Integer, nullable=False)

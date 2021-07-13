@@ -181,6 +181,10 @@ class SocketV1Namespace(Namespace):
 
 					self.update_kiosks(location.id, except_hwid=data['hwid'], use_request_context=False)
 
+					# check for user's video watched
+					if not Training.completed(self):
+						print("")
+
 				# user needs to sign waiver
 				else:
 					resp = ("User %s (card id %d) needs to sign waiver at location %s (id %d, kiosk %d)" % (

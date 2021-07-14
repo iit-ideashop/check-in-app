@@ -462,17 +462,18 @@ class Video(_base):
 	name = sa.Column(sa.VARCHAR(100), nullable=True)
 	descrip = sa.Column(sa.Text, nullable=True)
 
+
 class machineStatus(enum.Enum):
 	idle		= 0
 	in_use		= 1
 	queued		= 2
 	offline		= 3
 
-
 class Energizer(_base):
 	__tablename__ = 'energizer'
 	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True, nullable=False)
 	name = sa.Column(sa.VARCHAR(50),nullable=False)
+
 	machine_id = sa.Column(sa.Integer, sa.ForeignKey('machines.id'), nullable=False)
 	status = sa.Column(sa.Enum(machineStatus))
 	timestamp=sa.Column(sa.DateTime(), nullable=False)
@@ -485,6 +486,7 @@ class ReservationWindows(_base):
 	type_id = sa.Column(sa.Integer, nullable=False)
 	start = sa.Column(sa.DateTime(),nullable=False)
 	end = sa.Column(sa.DateTime(), nullable=False)
+
 
 class ReservationTypes(_base):
     __tablename__ = 'reservation_types'

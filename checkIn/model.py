@@ -99,6 +99,11 @@ class Training(_base):
 		else:
 			return False
 
+	def difference(self):
+		li1 = list(self.machine.videos)
+		li2 = list(self.videos_watched)
+		return list(set(li1) - set(li2)) + list(set(li2) - set(li1))
+
 	@classmethod
 	def build_missing_trainings_string(cls, missing_trainings_list):
 		data = []

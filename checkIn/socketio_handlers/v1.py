@@ -181,9 +181,18 @@ class SocketV1Namespace(Namespace):
 
 					self.update_kiosks(location.id, except_hwid=data['hwid'], use_request_context=False)
 
-					# check for user's video watched
+					# check for user's video watched (using completed function from model.py's Training object)
 					if not Training.completed(self):
-						print("")
+						# ?
+
+						difference = Training.difference(self)
+
+						resp = ("User %s (card id %d) does not have training videos completed (%s)" % (
+							card.user.name, data['card'], difference
+
+						))
+						# Present login page (auth.auth?)
+						emit('go', {'to': url_for('auth.auth', sid=card.sid), 'hwid': data['hwid']})
 
 				# user needs to sign waiver
 				else:

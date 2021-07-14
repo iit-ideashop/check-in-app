@@ -491,11 +491,10 @@ db_session = None
 class machineStatus(enum.Enum):
 	idle		= 0
 	in_use		= 1
-	online		= 2
-	queued		= 3
-	offline		= 4
+	queued		= 2
+	offline		= 3
 
-class Energizers(_dbBase):
+class Energizers(_base):
 	__tablename__ = 'energizer'
 	id=sa.Column(sa.Integer, nullable=False, unique=True, primary_key=True)
 	machine_id = sa.Column(sa.Integer, sa.ForeignKey('machines.id'), nullable=False)

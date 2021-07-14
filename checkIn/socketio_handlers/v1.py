@@ -183,7 +183,6 @@ class SocketV1Namespace(Namespace):
 
 					# check for user's video watched (using completed function from model.py's Training object)
 					if not Training.completed(self):
-						# ?
 
 						difference = Training.difference(self)
 

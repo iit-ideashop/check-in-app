@@ -462,6 +462,53 @@ class Video(_base):
 	name = sa.Column(sa.VARCHAR(100), nullable=True)
 	descrip = sa.Column(sa.Text, nullable=True)
 
+class machineStatus(enum.Enum):
+	idle		= 0
+	in_use		= 1
+	queued		= 2
+	offline		= 3
+
+
+class Energizer(_base):
+	__tablename__ = 'energizer'
+	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True, nullable=False)
+	name = sa.Column(sa.VARCHAR(50),nullable=False)
+	machine_id = sa.Column(sa.Integer, sa.ForeignKey('machines.id'), nullable=False)
+	status = sa.Column(sa.Enum(machineStatus))
+	timestamp=sa.Column(sa.DateTime(), nullable=False)
+	machine_enabled = sa.Column(sa.Integer(), nullable=False)
+	active_user = sa.Column(DBCardType,nullable=True)
+
+class ReservationWindows(_base):
+	__tablename__ = 'reservation_windows'
+	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True, nullable=False)
+	type_id = sa.Column(sa.Integer, nullable=False)
+	start = sa.Column(sa.DateTime(),nullable=False)
+	end = sa.Column(sa.DateTime(), nullable=False)
+
+class ReservationTypes(_base):
+    __tablename__ = 'reservation_types'
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True, nullable=False)
+    name = sa.Column(sa.VARCHAR(100), nullable=False)
+    duration = sa.Column(sa.Float, nullable=False)
+    capacity = sa.Column(sa.Integer, nullable=False)
+    machines_id = sa.Column(sa.Integer, sa.ForeignKey('machines.id'), nullable=False)
+
+    machine = relationship('Machine')
+
+class ReservationInpersontraining(_base):
+	__tablename__ = 'reservation_inperson_training'
+	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True, nullable=False)
+	sid = sa.Column(sa.Integer, sa.ForeignKey('users.sid'), nullable=False)
+	reservation_window_id = sa.Column(sa.Integer, sa.ForeignKey('reservation_windows.id'), nullable=False)
+	user = relationship('User', lazy = "joined")
+	user = relationship('User', lazy="joined")
+	reservation_type = relationship('ReservationWindows')
+
+	def __repr__(self):
+		return "<Reservation ID %s>" % self.id
+
+
 def get_types(db) -> Tuple[TypeInfo, TypeInfo]:
 	global ban_type, default_type
 	ban_type = db.query(Type).filter(Type.level < 0).first()
@@ -488,21 +535,7 @@ class HasRemoveMethod:
 
 db_session = None
 
-class machineStatus(enum.Enum):
-	idle		= 0
-	in_use		= 1
-	queued		= 2
-	offline		= 3
 
-class Energizers(_base):
-	__tablename__ = 'energizer'
-	id=sa.Column(sa.Integer, nullable=False, unique=True, primary_key=True)
-	machine_id = sa.Column(sa.Integer, sa.ForeignKey('machines.id'), nullable=False)
-	name=sa.Column(sa.Text(50), nullable=False)
-	status=sa.Column(sa.Enum(machineStatus))
-	timestamp=sa.Column(sa.DateTime(), nullable=False)
-	machine_enabled=sa.Column(sa.Integer(), nullable=False)
-	active_user=sa.Column(sa.Integer(), nullable=True)
 
 def init_db(connection_string: str) -> Union[Callable[[], sa.orm.Session], HasRemoveMethod]:
 	global default_type, ban_type, engine, db_session

@@ -249,7 +249,6 @@ class Kiosk(_base):
 
 	location = relationship('Location')
 
-
 class Type(_base):
 	__tablename__ = 'types'
 	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
@@ -489,6 +488,22 @@ class HasRemoveMethod:
 
 db_session = None
 
+class machineStatus(enum.Enum):
+	idle		= 0
+	in_use		= 1
+	online		= 2
+	queued		= 3
+	offline		= 4
+
+class Energizers(_dbBase):
+	__tablename__ = 'energizer'
+	id=sa.Column(sa.Integer, nullable=False, unique=True, primary_key=True)
+	machine_id = sa.Column(sa.Integer, sa.ForeignKey('machines.id'), nullable=False)
+	name=sa.Column(sa.Text(50), nullable=False)
+	status=sa.Column(sa.Enum(machineStatus))
+	timestamp=sa.Column(sa.DateTime(), nullable=False)
+	machine_enabled=sa.Column(sa.Integer(), nullable=False)
+	active_user=sa.Column(sa.Integer(), nullable=True)
 
 def init_db(connection_string: str) -> Union[Callable[[], sa.orm.Session], HasRemoveMethod]:
 	global default_type, ban_type, engine, db_session

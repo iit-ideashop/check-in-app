@@ -101,8 +101,8 @@ class Training(_base):
 			return False
 
 	def difference(self):
-		li1 = list(self.machine.videos)
-		li2 = list(self.videos_watched)
+		li1 = json.loads(self.machine.videos)
+		li2 = json.loads(self.videos_watched)
 		return list(set(li1) - set(li2)) + list(set(li2) - set(li1))
 
 	@classmethod

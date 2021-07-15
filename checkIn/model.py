@@ -8,6 +8,7 @@ from typing import Union, Callable, Tuple, Optional
 import sqlalchemy as sa
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import scoped_session, sessionmaker, relationship
+import json
 
 _base = declarative_base()
 
@@ -92,9 +93,9 @@ class Training(_base):
 		       timedelta(days=self.machine.quiz_issue_days) < datetime.now()
 
 	def completed(self):
-		if self.in_person_date is None or self.videos_watched is None:
+		if self.in_person_date is None or self.videos_watched is None or self.invalidation_date is not None:
 			return False
-		elif are_equal(list(self.machine.videos), list(self.videos_watched)) and self.quiz_passed():
+		elif are_equal(json.loads(self.machine.videos), json.loads(self.videos_watched)) and self.quiz_passed():
 			return True
 		else:
 			return False

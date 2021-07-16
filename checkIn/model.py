@@ -8,6 +8,7 @@ from typing import Union, Callable, Tuple, Optional
 import sqlalchemy as sa
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import scoped_session, sessionmaker, relationship
+import json
 
 _base = declarative_base()
 
@@ -61,7 +62,7 @@ class Training(_base):
 	quiz_date = sa.Column(sa.DateTime, nullable=True)
 	quiz_attempts = sa.Column(sa.Integer, nullable=True)
 	quiz_notification_sent = sa.Column(sa.DateTime, nullable=True)
-    videos_watched = sa.Column(sa.VARCHAR(200), nullable=True)
+  videos_watched = sa.Column(sa.VARCHAR(200), nullable=True)
 
 	trainee = relationship('User', foreign_keys=[trainee_id], back_populates='trainings')
 	trainer = relationship('User', foreign_keys=[trainer_id])
@@ -93,12 +94,17 @@ class Training(_base):
 		       timedelta(days=self.machine.quiz_issue_days) < datetime.now()
 
 	def completed(self):
-		if self.in_person_date is None or self.videos_watched is None:
+		if self.in_person_date is None or self.videos_watched is None or self.invalidation_date is not None:
 			return False
-		elif are_equal(list(self.machine.video_id), list(self.videos_watched)) and self.quiz_passed():
+		elif are_equal(json.loads(self.machine.video_id), json.loads(self.videos_watched)) and self.quiz_passed():
 			return True
 		else:
 			return False
+
+	def difference(self):
+		li1 = json.loads(self.machine.videos)
+		li2 = json.loads(self.videos_watched)
+		return list(set(li1) - set(li2)) + list(set(li2) - set(li1))
 
 	@classmethod
 	def build_missing_trainings_string(cls, missing_trainings_list):
@@ -249,7 +255,6 @@ class Kiosk(_base):
 	last_ip = sa.Column(sa.String(length=16), nullable=True)
 
 	location = relationship('Location')
-
 
 class Type(_base):
 	__tablename__ = 'types'
@@ -464,21 +469,27 @@ class Video(_base):
 	name = sa.Column(sa.VARCHAR(100), nullable=True)
 	descrip = sa.Column(sa.Text, nullable=True)
 
+class machineStatus(enum.Enum):
+	idle		= 0
+	in_use		= 1
+	queued		= 2
+	offline		= 3
+
 class Energizer(_base):
 	__tablename__ = 'energizer'
 	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True, nullable=False)
-	name = sa.Column(sa.VARCHAR(50),nullable=False)
-	status = sa.Column(sa.Integer,nullable=True)
-	timestamp = sa.Column(sa.DateTime)
-	machine_enabled = sa.Column(sa.Boolean)
+	name = sa.Column(sa.Text(50),nullable=False)
+	status = sa.Column(sa.Enum(machineStatus),nullable=True)
+	timestamp = sa.Column(sa.DateTime, nullable=False)
+	machine_enabled = sa.Column(sa.Integer)
 	active_user = sa.Column(DBCardType,nullable=True)
 
 class ReservationWindows(_base):
 	__tablename__ = 'reservation_windows'
 	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True, nullable=False)
 	type_id = sa.Column(sa.Integer, nullable=False)
-	start = sa.Column(sa.datetime,nullable=False)
-	end = sa.Column(sa.datetime, nullable=False)
+	start = sa.Column(sa.DateTime,nullable=False)
+	end = sa.Column(sa.DateTime, nullable=False)
 
 class ReservationTypes(_base):
     __tablename__ = 'reservation_types'
@@ -526,6 +537,7 @@ class HasRemoveMethod:
 
 
 db_session = None
+
 
 
 def init_db(connection_string: str) -> Union[Callable[[], sa.orm.Session], HasRemoveMethod]:

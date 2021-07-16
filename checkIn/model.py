@@ -61,6 +61,7 @@ class Training(_base):
 	quiz_date = sa.Column(sa.DateTime, nullable=True)
 	quiz_attempts = sa.Column(sa.Integer, nullable=True)
 	quiz_notification_sent = sa.Column(sa.DateTime, nullable=True)
+    videos_watched = sa.Column(sa.VARCHAR(200), nullable=True)
 
 	trainee = relationship('User', foreign_keys=[trainee_id], back_populates='trainings')
 	trainer = relationship('User', foreign_keys=[trainer_id])
@@ -94,7 +95,7 @@ class Training(_base):
 	def completed(self):
 		if self.in_person_date is None or self.videos_watched is None:
 			return False
-		elif are_equal(list(self.machine.videos), list(self.videos_watched)) and self.quiz_passed():
+		elif are_equal(list(self.machine.video_id), list(self.videos_watched)) and self.quiz_passed():
 			return True
 		else:
 			return False
@@ -495,7 +496,6 @@ class ReservationInpersontraining(_base):
 	sid = sa.Column(sa.Integer, sa.ForeignKey('users.sid'), nullable=False)
 	reservation_window_id = sa.Column(sa.Integer, sa.ForeignKey('reservation_windows.id'), nullable=False)
 	user = relationship('User', lazy = "joined")
-	user = relationship('User', lazy="joined")
 	reservation_type = relationship('ReservationWindows')
 
 	def __repr__(self):

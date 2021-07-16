@@ -15,7 +15,7 @@ alter table safetyTraining
 // Model.py new class video (tablename is video)
 // video contains: id, length, filepath, name, descrip
 
-// new table video w/ columns: id primaryKey int, length int, filepath text, name varchar(100), descrip text
+// new table video w/ columns shown below (Model.py updated accordingly)
 // SQL:
 create table video
 (
@@ -28,9 +28,7 @@ create table video
 		primary key (id)
 );
 
-// Model.py new columns parent_id varChar 200, nullable; video_id 200, nullable)
-// Model.py new columns for in_person_component
-// machines new columns parent_id,video_id, in_person_component, about_link
+// machines new columns show below. Model.py's machine class made to match
 // SQL:
 alter table machines
 	add parent_id varchar(200) null;
@@ -44,8 +42,59 @@ alter table machines
 alter table machines
 	add about_link varchar(100) null;
 //
+// New table energizer. Model.py class energizer has active_user type "DBCARDTYPE"
+// SQL:
+create table energizer
+(
+	id int auto_increment,
+	name varchar(50) not null,
+	status int null,
+	timestamp datetime null,
+	machine_enabled boolean null,
+	active_user int null,
+	constraint energizer_pk
+		primary key (id)
+);
+// New table reservation_windows, Model.py class reservation_windows made to match
+// SQL:
+create table reservation_windows
+(
+	id int auto_increment,
+	type_id int not null,
+	start datetime not null,
+	end datetime not null,
+	constraint reservation_windows_pk
+		primary key (id)
+);
 
+// Reservation Types Table.
+// SQL Script:
+create table checkIn_dev.reservation_types
+(
+    id       int auto_increment,
+    name     varchar(100) not null,
+    duration float        not null,
+    capacity int          not null,
+    constraint reservation_types_id_uindex
+        unique (id),
+    constraint machines_id
+        foreign key (id) references checkIn_dev.machines (id)
+);
 
+alter table checkIn_dev.reservation_types
+    add primary key (id);
 
-
-
+// Reservations for In Person Training Table. Model.py class ReservationInpersontraining matching
+// SQL:
+create table reservation_inperson_training
+(
+    id int auto_increment,
+    sid int not null,
+    reservation_window_id int not null,
+    constraint reservation_inperson_training_pk
+        primary key (id),
+    constraint reservation_window_id_fk
+        foreign key (id) references reservation_windows (id),
+    constraint sid_fk
+        foreign key (sid) references users (sid)
+);

@@ -68,8 +68,7 @@ class Training(_base):
 	machine = relationship('Machine', foreign_keys=[machine_id], lazy='joined')
 
 	def __repr__(self):
-		return "<%s trained %s on %s, time=%s>" % \
-		       (self.trainer.name, self.trainee.name, self.machine.name, str(self.date))
+		return "<%s trained %s on %s, time=%s>" % (self.trainer.name, self.trainee.name, self.machine.name, str(self.in_person_date))
 
 	def quiz_required(self):
 		return self.machine.quiz is not None

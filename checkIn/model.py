@@ -54,7 +54,7 @@ class Training(_base):
 	trainee_id: int = sa.Column(DBStudentIDType, sa.ForeignKey('users.sid'), nullable=True)
 	trainer_id: int = sa.Column(DBStudentIDType, sa.ForeignKey('users.sid'), nullable=True)
 	machine_id = sa.Column(sa.Integer, sa.ForeignKey('machines.id'), nullable=False)
-	in_person_date = sa.Column(sa.DateTime, default=sa.func.now, nullable=True)
+	in_person_date = sa.Column(sa.DateTime, default=sa.func.now(), nullable=True)
 	invalidation_date = sa.Column(sa.DateTime)
 	invalidation_reason = sa.Column(sa.Text)
 	show_invalidation_reason = sa.Column(sa.Boolean)
@@ -477,6 +477,7 @@ class Energizer(_base):
 	__tablename__ = 'energizer'
 	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True, nullable=False)
 	name = sa.Column(sa.Text(50),nullable=False)
+	machine_id = sa.Column(sa.Integer, nullable=False)
 	status = sa.Column(sa.Enum(machineStatus),nullable=True)
 	timestamp = sa.Column(sa.DateTime, nullable=False)
 	machine_enabled = sa.Column(sa.Integer)

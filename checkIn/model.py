@@ -327,7 +327,7 @@ class Machine(_base):
 	video_id = sa.Column(sa.VARCHAR(200), nullable = False)
 	in_person_component = sa.Column(sa.Boolean, nullable = False)
 	about_link = sa.Column(sa.VARCHAR(100), nullable = True)
-
+	machineEnabled = sa.Column(sa.Boolean, nullable=False, default=False)
 	location = relationship('Location')
 	trained_users = relationship('Training')
 	quiz = relationship('Quiz', lazy='joined')

@@ -318,6 +318,14 @@ class Machine(_base):
 	def __repr__(self):
 		return "<Machine %s>" % self.name
 
+	def getMachineVideoIds():
+		db=db_session()
+		machine_data = db.query(Machine.id,Machine.video_id)
+		machine_video_ids = {}
+		for each in machine_data:
+			machine_video_ids[each.id] = json.loads(str(each.video_id))
+		return machine_video_ids
+
 
 class AdminLog(_base):
 	__tablename__ = 'adminLog'

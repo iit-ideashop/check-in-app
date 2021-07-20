@@ -62,6 +62,7 @@ class Training(_base):
 	quiz_date = sa.Column(sa.DateTime, nullable=True)
 	quiz_attempts = sa.Column(sa.Integer, nullable=True)
 	quiz_notification_sent = sa.Column(sa.DateTime, nullable=True)
+	videos_watched = sa.Column(sa.VARCHAR(100), nullable=True)
 
 	trainee = relationship('User', foreign_keys=[trainee_id], back_populates='trainings')
 	trainer = relationship('User', foreign_keys=[trainer_id])
@@ -94,7 +95,7 @@ class Training(_base):
 	def completed(self):
 		if self.in_person_date is None or self.videos_watched is None or self.invalidation_date is not None:
 			return False
-		elif are_equal(json.loads(self.machine.videos), json.loads(self.videos_watched)) and self.quiz_passed():
+		elif are_equal(json.loads(self.machine.video_id), json.loads(self.videos_watched)) and self.quiz_passed():
 			return True
 		else:
 			return False

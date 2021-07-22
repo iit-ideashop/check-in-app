@@ -63,7 +63,7 @@ class Training(_base):
 	quiz_attempts = sa.Column(sa.Integer, nullable=True)
 	quiz_notification_sent = sa.Column(sa.DateTime, nullable=True)
 	videos_watched = sa.Column(sa.VARCHAR(100), nullable=True)
-
+	video_watch_date = sa.Column(sa.DateTime, nullable=True)
 	trainee = relationship('User', foreign_keys=[trainee_id], back_populates='trainings')
 	trainer = relationship('User', foreign_keys=[trainer_id])
 	machine = relationship('Machine', foreign_keys=[machine_id], lazy='joined')
@@ -334,6 +334,14 @@ class Machine(_base):
 
 	def __repr__(self):
 		return "<Machine %s>" % self.name
+
+	def getMachinesEnabled():
+		db = db_session()
+		machine_data = db.query(Machine.id, Machine.machineEnabled)
+		machinesEnabled = {}
+		for each in machine_data:
+			machinesEnabled[each.id] = each.machineEnabled
+		return machinesEnabled
 
 	def getMachineVideoIds():
 		db=db_session()

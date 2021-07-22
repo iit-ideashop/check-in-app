@@ -63,7 +63,7 @@ class Training(_base):
 	quiz_attempts = sa.Column(sa.Integer, nullable=True)
 	quiz_notification_sent = sa.Column(sa.DateTime, nullable=True)
 	videos_watched = sa.Column(sa.VARCHAR(100), nullable=True)
-
+	video_watch_date = sa.Column(sa.DateTime, nullable=True)
 	trainee = relationship('User', foreign_keys=[trainee_id], back_populates='trainings')
 	trainer = relationship('User', foreign_keys=[trainer_id])
 	machine = relationship('Machine', foreign_keys=[machine_id], lazy='joined')
@@ -93,9 +93,17 @@ class Training(_base):
 		       timedelta(days=self.machine.quiz_issue_days) < datetime.now()
 
 	def completed(self):
-		if self.in_person_date is None or self.videos_watched is None or self.invalidation_date is not None:
+		db = db_session()
+		videos_watched_query=db.query(TrainingVideosBridge).filter_by(user_id=int(self.trainee_id)).one_or_none()
+		videos_watched = None
+		if videos_watched_query is not None:
+			videos_watched = videos_watched_query.videos_watched
+		if (self.in_person_date is None) or (videos_watched is None) or (self.invalidation_date is not None):
 			return False
-		elif are_equal(json.loads(self.machine.video_id), json.loads(self.videos_watched)) and self.quiz_passed():
+
+		# checks for membership of required video in the list of all videos watched by user
+		# without regard for element positions
+		elif all(x in json.loads(videos_watched) for x in json.loads(self.machine.video_id)) and self.quiz_passed():
 			return True
 		else:
 			return False
@@ -124,6 +132,14 @@ class Training(_base):
 		missing_trainings = ', '.join([x[0] + (' - ' + x[1] if x[1] else '') for x in data])
 		return missing_trainings
 
+class TrainingVideosBridge(_base):
+	__tablename__ = 'trainingVideosBridge'
+	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
+	user_id: int = sa.Column(DBStudentIDType, sa.ForeignKey('users.sid'), unique=True, nullable=False)
+	videos_watched = sa.Column(sa.VARCHAR(200), nullable=True)
+
+	def __repr__(self):
+		return "<%s has watched videos:  %s>" % (self.user_id, self.videos_watched)
 
 class Major(_base):
 	__tablename__ = 'majors'
@@ -311,13 +327,21 @@ class Machine(_base):
 	video_id = sa.Column(sa.VARCHAR(200), nullable = False)
 	in_person_component = sa.Column(sa.Boolean, nullable = False)
 	about_link = sa.Column(sa.VARCHAR(100), nullable = True)
-
+	machineEnabled = sa.Column(sa.Boolean, nullable=False, default=False)
 	location = relationship('Location')
 	trained_users = relationship('Training')
 	quiz = relationship('Quiz', lazy='joined')
 
 	def __repr__(self):
 		return "<Machine %s>" % self.name
+
+	def getMachinesEnabled():
+		db = db_session()
+		machine_data = db.query(Machine.id, Machine.machineEnabled)
+		machinesEnabled = {}
+		for each in machine_data:
+			machinesEnabled[each.id] = each.machineEnabled
+		return machinesEnabled
 
 	def getMachineVideoIds():
 		db=db_session()

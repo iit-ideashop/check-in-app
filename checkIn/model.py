@@ -335,7 +335,7 @@ class Machine(_base):
 	def __repr__(self):
 		return "<Machine %s>" % self.name
 
-	def getMachinesEnabled():
+	def getMachinesEnabled(self):
 		db = db_session()
 		machine_data = db.query(Machine.id, Machine.machineEnabled)
 		machinesEnabled = {}
@@ -343,7 +343,7 @@ class Machine(_base):
 			machinesEnabled[each.id] = each.machineEnabled
 		return machinesEnabled
 
-	def getMachineVideoIds():
+	def getMachineVideoIds(self):
 		db=db_session()
 		machine_data = db.query(Machine.id,Machine.video_id)
 		machine_video_ids = {}

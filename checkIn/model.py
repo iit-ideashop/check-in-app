@@ -141,6 +141,15 @@ class TrainingVideosBridge(_base):
 	def __repr__(self):
 		return "<%s has watched videos:  %s>" % (self.user_id, self.videos_watched)
 
+	def getWatchedVideos(user):
+		db=db_session()
+		videos_query = db.query(TrainingVideosBridge).filter_by(user_id=user).one_or_none()
+		if videos_query is not None:
+			videos = videos_query.videos_watched
+			return json.loads(videos)
+		else:
+			return list()
+
 class Major(_base):
 	__tablename__ = 'majors'
 	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)

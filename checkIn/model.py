@@ -111,7 +111,7 @@ class Training(_base):
 	def difference(self):
 		li1 = json.loads(self.machine.videos)
 		li2 = json.loads(self.videos_watched)
-		return list(set(li1) - set(li2)) + list(set(li2) - set(li1))
+		return json.loads(set(li1) - set(li2)) + json.loads(set(li2) - set(li1))
 
 	@classmethod
 	def build_missing_trainings_string(cls, missing_trainings_list):

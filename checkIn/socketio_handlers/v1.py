@@ -163,6 +163,18 @@ class SocketV1Namespace(Namespace):
 					accessEntry = Access(sid=card.sid, timeIn=sa.func.now(), location_id=location.id)
 					db.add(accessEntry)
 
+					# check for user's video watched (using completed function from model.py's Training object)
+					if not Training.completed(self):
+
+						difference = Training.difference(self)
+
+						resp = ("User %s (card id %d) does not have training videos completed (%s)" % (
+							card.user.name, data['card'], difference
+
+						))
+						# Present login page (auth.auth?)
+						emit('go', {'to': url_for('userflow.success', sid=card.sid), 'hwid': data['hwid']})
+
 					# if user has training or there is no training required, let 'em in
 					if not missing_trainings_list:
 						if userLocation.type.level > 0:

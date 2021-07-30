@@ -5,11 +5,22 @@
 <div class="container">
     <h1>Please verify the information below.</h1>
     <form action="/register" method="post">
+
         <div class="form-group form-group-lg row">
             <label for="sid" class="col-sm-2 col-form-label col-form-label-lg">Card Number</label>
             <div class="input-group col-sm-10">
                 <input class="form-control input-lg col-sm-10" type="tel" value="{{ card_id }}" id="card_id" readonly name="card_id" />
             </div>
+        </div>
+
+        <div class="form-group form-group-lg row">
+            <label for="status">Status</label>
+            <select class="form-control" id="status" name="status" required>
+                <option selected value="">Choose your status...</option>
+                {% for each in statuses %}
+                    <option value="{{ each }}">{{ each }}</option>
+                {% endfor %}
+            </select>
         </div>
 
         <div class="form-group form-group-lg row">
@@ -25,6 +36,11 @@
             <div class="input-group col-sm-10">
                 <input class="form-control input-lg keyboard col-sm-10" type="text" value="{{ name }}" id="name" name="name" />
             </div>
+        </div>
+
+        <div class="form-group">
+            <label for="email">Email address</label>
+            <input type="email" class="form-control" id="email" name="email" aria-describedby="emailHelp" value="{{ email }}" readonly required>
         </div>
 
         <br />

@@ -246,7 +246,7 @@ def admin_add_training():
 	             in_person_date=sa.func.now()))
 	else: # If exists, do not append, instead, modify. Otherwise, append
 		if (Training(trainee_id=int(request.form['student_id']))):
-			pass
+			t.in_person_date=sa.func.now()
 		else:
 		    t.append(Training(trainee_id=int(request.form['student_id']),
 	                 trainer_id=int(session['admin']),

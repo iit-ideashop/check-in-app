@@ -244,7 +244,7 @@ def admin_add_training():
 	             trainer_id=int(session['admin']),
 	             machine_id=each.id,
 	             in_person_date=sa.func.now()))
-	else:
+	else: # If exists, do not append, instead, modify. Otherwise, append
 		t.append(Training(trainee_id=int(request.form['student_id']),
 	             trainer_id=int(session['admin']),
 	             machine_id=int(request.form['machine']),

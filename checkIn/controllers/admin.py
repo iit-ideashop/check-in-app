@@ -245,10 +245,13 @@ def admin_add_training():
 	             machine_id=each.id,
 	             in_person_date=sa.func.now()))
 	else: # If exists, do not append, instead, modify. Otherwise, append
-		t.append(Training(trainee_id=int(request.form['student_id']),
-	             trainer_id=int(session['admin']),
-	             machine_id=int(request.form['machine']),
-	             in_person_date=sa.func.now()))
+		if (Training(trainee_id=int(request.form['student_id']))):
+			pass
+		else:
+		    t.append(Training(trainee_id=int(request.form['student_id']),
+	                 trainer_id=int(session['admin']),
+	                 machine_id=int(request.form['machine']),
+	                 in_person_date=sa.func.now()))
 	try:
 		check_allowed_modify(g.db, session['admin'], request.form['student_id'], session['location_id'])
 		g.db.add_all(t)

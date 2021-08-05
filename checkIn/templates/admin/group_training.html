@@ -76,6 +76,8 @@
                     updateTrained();
                 });
             else {
+                window.alert("Student not registered!");
+
                 document.getElementById('sound-unregistered').play();
                 $('#status').html('This student is not registered!');
             }

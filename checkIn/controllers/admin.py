@@ -245,7 +245,6 @@ def admin_add_training():
 	             machine_id=each.id,
 	             in_person_date=sa.func.now()))
 	else:
-		print(request.form)
 		ls = []
 		query = g.db.query(Training.machine_id).filter_by(trainee_id=request.form['student_id']).all()
 		for i in query:

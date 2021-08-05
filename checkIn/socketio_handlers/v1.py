@@ -150,11 +150,9 @@ class SocketV1Namespace(Namespace):
 					))
 					emit('go', {'to': url_for('userflow.banned'), 'hwid': data['hwid']})
 
-
 				# user signing in
 				elif userLocation.waiverSigned:
 					missing_trainings_list = card.user.location_specific(db, location.id).get_missing_trainings(db)
-					missing_trainings = Training.build_missing_trainings_string(missing_trainings_list)
 
 					resp = ("User %s (card id %d) is cleared for entry at location %s (id %d, kiosk %d)" % (
 						card.user.name, data['card'], location.name, location.id, data['hwid']
@@ -162,18 +160,6 @@ class SocketV1Namespace(Namespace):
 					# sign user in and send to confirmation page
 					accessEntry = Access(sid=card.sid, timeIn=sa.func.now(), location_id=location.id)
 					db.add(accessEntry)
-
-					# check for user's video watched (using completed function from model.py's Training object)
-					if not Training.completed(self):
-
-						difference = Training.difference(self)
-
-						resp = ("User %s (card id %d) does not have training videos completed (%s)" % (
-							card.user.name, data['card'], difference
-
-						))
-						# Present login page (auth.auth?)
-						emit('go', {'to': url_for('userflow.success', sid=card.sid), 'hwid': data['hwid']})
 
 					# if user has training or there is no training required, let 'em in
 					if not missing_trainings_list:
@@ -186,24 +172,13 @@ class SocketV1Namespace(Namespace):
 							            'hwid': data['hwid']})
 
 					else:
+						missing_trainings = Training.build_missing_trainings_string(missing_trainings_list)
 						resp += (' (Missing trainings: %s)' % missing_trainings)
 						emit('go', {
 							'to': url_for('userflow.needs_training', name=card.user.name, trainings=missing_trainings),
 							'hwid': data['hwid']})
 
 					self.update_kiosks(location.id, except_hwid=data['hwid'], use_request_context=False)
-
-					# check for user's video watched (using completed function from model.py's Training object)
-					if not Training.completed(self):
-
-						difference = Training.difference(self)
-
-						resp = ("User %s (card id %d) does not have training videos completed (%s)" % (
-							card.user.name, data['card'], difference
-
-						))
-						# Present login page (auth.auth?)
-						emit('go', {'to': url_for('auth.auth', sid=card.sid), 'hwid': data['hwid']})
 
 				# user needs to sign waiver
 				else:

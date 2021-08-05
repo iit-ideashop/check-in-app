@@ -122,8 +122,8 @@ class Training(_base):
 					data.append((x.Machine.name, x.Training.invalidation_reason))
 				else:
 					data.append((x.Machine.name, ''))
-			elif x.Training.quiz_score < x.Training.machine.quiz.pass_score \
-					and x.Training.in_person_date.date() < (date.today() - timedelta(days=x.Machine.quiz_grace_period_days)):
+			elif not x.Training.quiz_score or (x.Training.quiz_score < x.Training.machine.quiz.pass_score \
+					and x.Training.in_person_date.date() < (date.today() - timedelta(days=x.Machine.quiz_grace_period_days))):
 				data.append((x.Machine.name, 'Incomplete quiz'))
 
 		missing_trainings = ', '.join([x[0] + (' - ' + x[1] if x[1] else '') for x in data])
@@ -234,9 +234,10 @@ class UserLocation(_base):
 	def get_missing_trainings(self, db: sa.orm.Session):
 		assert db
 
-		trainings = db.query(Machine, Training).\
-			outerjoin(Training, sa.and_(Training.trainee_id == self.sid, Machine.id == Training.machine_id))\
+		trainings = db.query(Machine, Training, sa.func.nullif(sa.func.max(sa.func.coalesce(Training.in_person_date, datetime.max)), datetime.max).label('max_date'))\
+			.outerjoin(Training, sa.and_(Training.trainee_id == self.sid, Machine.id == Training.machine_id))\
 			.filter(sa.and_(Machine.machineEnabled == 1, Machine.required == 1, Machine.location_id == self.location_id))\
+			.having(sa.text("safetyTraining.in_person_date = max_date or safetyTraining.in_person_date is null"))\
 			.all()
 
 		missing_trainings_list = [

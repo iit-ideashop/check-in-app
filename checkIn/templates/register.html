@@ -14,7 +14,7 @@
         </div>
 
         <div class="form-group form-group-lg row">
-            <label for="status">Status</label>
+            <label for="status" class="col-sm-2 col-form-label col-form-label-lg">Status</label>
             <select class="form-control" id="status" name="status" required>
                 <option selected value="">Choose your status...</option>
                 {% for each in statuses %}
@@ -40,14 +40,14 @@
 
         <div class="form-group">
             <label for="email">Email address</label>
-            <input type="email" class="form-control" id="email" name="email" aria-describedby="emailHelp" value="{{ email }}" readonly required>
+            <input type="email" class="form-control" id="email" name="email" placeholder="@hawk.iit.edu" aria-describedby="emailHelp" value="{{ email }}" readonly required>
         </div>
 
         <br />
         <br />
         <br />
         <br />
-        <input class="btn btn-success btn-lg btn-block" type="submit" value="Continue"/>
+        <input class="btn btn-success btn-lg btn-block" type="submit" name="submitButton" onclick=disable() value="Continue"/>
     </form>
 </div>
 {% endblock %}
@@ -83,4 +83,31 @@
             window.location.replace("/");
         }, 45000);
     </script>
+    <script type="text/javascript">
+
+
+    function disable(){
+
+        // If fields are empty, disable button. Otherwise, enable
+
+        var inputStatus = document.getElementsByName("status")
+        var inputSid = document.getElementsByName("sid")
+        var inputName = document.getElementsByName("name")
+        var inputEmail = document.getElementsByName("email")
+
+
+        if (!(inputStatus && inputSid & inputName && inputEmail)){
+            $("#submitButton").attr("disabled", true);
+            $('#submitButton').addClass('disabled');
+        }
+        else {
+            $("#submitButton").attr("disabled", false);
+            $('#submitButton').removeClass('disabled');
+        }
+
+
+        }
+    </script>
+
+<input type="button" class="btn btn-danger" onclick="disable()" id="myBtn" value="Disable Button" />
 {% endblock %}

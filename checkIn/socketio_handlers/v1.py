@@ -8,7 +8,7 @@ import sqlalchemy as sa
 from sqlalchemy.orm import joinedload
 
 from checkIn.model import HawkCard, Location, Access, UserLocation, User, CardScan, Training, Kiosk
-from iitlookup import IITLookup
+from checkIn.iitlookup import IITLookup
 
 
 class SocketV1Namespace(Namespace):

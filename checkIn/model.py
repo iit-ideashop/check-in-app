@@ -575,7 +575,7 @@ db_session = None
 
 def init_db(connection_string: str) -> Union[Callable[[], sa.orm.Session], HasRemoveMethod]:
 	global default_type, ban_type, engine, db_session
-	engine = sa.create_engine(connection_string, pool_size=50, max_overflow=150, pool_recycle=3600, encoding='utf-8')
+	engine = sa.create_engine(connection_string, pool_size=50, pool_recycle=3600, encoding='utf-8')
 	db_session = scoped_session(sessionmaker(bind=engine))
 	_base.metadata.create_all(engine)
 	db = db_session()

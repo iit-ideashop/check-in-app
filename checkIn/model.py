@@ -88,7 +88,9 @@ class Training(_base):
 			return False
 
 	def quiz_training_invalidated(self):
-		return not self.quiz_passed() and (self.in_person_date + timedelta(days=self.machine.quiz_grace_period_days) < datetime.now())
+		if self.in_person_date and self.machine.quiz_grace_period_days:
+			return not self.quiz_passed() and (self.in_person_date + timedelta(days=self.machine.quiz_grace_period_days) < datetime.now())
+		return False
 
 	def completed(self):
 		db = db_session()
@@ -122,8 +124,7 @@ class Training(_base):
 					data.append((x.Machine.name, x.Training.invalidation_reason))
 				else:
 					data.append((x.Machine.name, ''))
-			elif not x.Training.quiz_score or (x.Training.quiz_score < x.Training.machine.quiz.pass_score \
-					and x.Training.in_person_date.date() < (date.today() - timedelta(days=x.Machine.quiz_grace_period_days))):
+			elif x.Training.quiz_training_invalidated():
 				data.append((x.Machine.name, 'Incomplete quiz'))
 
 		missing_trainings = ', '.join([x[0] + (' - ' + x[1] if x[1] else '') for x in data])
@@ -234,18 +235,15 @@ class UserLocation(_base):
 	def get_missing_trainings(self, db: sa.orm.Session):
 		assert db
 
-		trainings = db.query(Machine, Training, sa.func.nullif(sa.func.max(sa.func.coalesce(Training.in_person_date, datetime.max)), datetime.max).label('max_date'))\
-			.outerjoin(Training, sa.and_(Training.trainee_id == self.sid, Machine.id == Training.machine_id))\
+		trainings = db.query(Machine, Training)\
+			.outerjoin(Training, sa.and_(Training.trainee_id == self.sid, Training.invalidation_date == None, Machine.id == Training.machine_id))\
 			.filter(sa.and_(Machine.machineEnabled == 1, Machine.required == 1, Machine.location_id == self.location_id))\
-			.having(sa.text("safetyTraining.in_person_date = max_date or safetyTraining.in_person_date is null"))\
 			.all()
-
 		missing_trainings_list = [
 			x for x in trainings
 			if not x.Training
 				or (not x.Training.completed() and x.Training.quiz_training_invalidated())
-		]
-
+				]
 		return missing_trainings_list
 
 

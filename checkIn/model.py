@@ -331,7 +331,7 @@ class Machine(_base):
 		return "<Machine %s>" % self.name
 
 	@classmethod
-	def getMachinesEnabled(db: sa.orm.Session):
+	def getMachinesEnabled(cls, db: sa.orm.Session):
 		machine_data = db.query(Machine.id, Machine.machineEnabled)
 		machinesEnabled = {}
 		for each in machine_data:
@@ -339,7 +339,7 @@ class Machine(_base):
 		return machinesEnabled
 
 	@classmethod
-	def getMachineVideoIds(db: sa.orm.Session):
+	def getMachineVideoIds(cls, db: sa.orm.Session):
 		machine_data = db.query(Machine.id,Machine.video_id)
 		machine_video_ids = {}
 		for each in machine_data:

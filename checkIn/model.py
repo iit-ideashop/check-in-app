@@ -323,16 +323,16 @@ class Machine(_base):
 	def __repr__(self):
 		return "<Machine %s>" % self.name
 
-	def getMachinesEnabled(self):
-		db = db_session()
+	@classmethod
+	def getMachinesEnabled(db: sa.orm.Session):
 		machine_data = db.query(Machine.id, Machine.machineEnabled)
 		machinesEnabled = {}
 		for each in machine_data:
 			machinesEnabled[each.id] = each.machineEnabled
 		return machinesEnabled
 
-	def getMachineVideoIds(self):
-		db=db_session()
+	@classmethod
+	def getMachineVideoIds(db: sa.orm.Session):
 		machine_data = db.query(Machine.id,Machine.video_id)
 		machine_video_ids = {}
 		for each in machine_data:

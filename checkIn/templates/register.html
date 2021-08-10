@@ -42,8 +42,8 @@
             <label for="email">Email address</label>
             <input type="email" class="form-control" id="email" name="email" aria-describedby="emailHelp" value="{{ email }}" readonly required>
             <div class="input-group-append">
-                <select>
-                <option selected value="hawk.iit.edu">hawk.iit.edu</option>
+                <select id="emailSuffix" onchange="inputEmailSuffix()" name="emailSuffix">
+                <option value="hawk.iit.edu">hawk.iit.edu</option>
                 <option value="id.iit.edu">id.iit.edu</option>
                 <option value="hawk.iit.edu">iit.edu</option>
                 </select>
@@ -136,8 +136,10 @@
             $("#submitButton").attr("disabled", false);
             $('#submitButton').removeClass('disabled');
         }
-
-
+        }
+        function inputEmailSuffix(){
+            var emamil = $('#emailSuffix').val();
+            console.log(email)
         }
     </script>
 

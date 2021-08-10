@@ -62,7 +62,6 @@ class Training(_base):
 	quiz_date = sa.Column(sa.DateTime, nullable=True)
 	quiz_attempts = sa.Column(sa.Integer, nullable=True)
 	quiz_notification_sent = sa.Column(sa.DateTime, nullable=True)
-	videos_watched = sa.Column(sa.VARCHAR(100), nullable=True)
 	video_watch_date = sa.Column(sa.DateTime, nullable=True)
 	trainee = relationship('User', foreign_keys=[trainee_id], back_populates='trainings')
 	trainer = relationship('User', foreign_keys=[trainer_id])
@@ -80,9 +79,29 @@ class Training(_base):
 		else:
 			return False
 
+	def videos_watched(self):
+		db=db_session()
+		videoList = db.query(TrainingVideosBridge).filter_by(user_id=self.trainee_id).one_or_none()
+		if videoList is None:
+			return False
+		if all(video in json.loads(videoList.videos_watched) for video in json.loads(self.machine.video_id)):
+			return True
+		return False
+
+	def quiz_available_date(self):
+		if self.in_person_date is not None and self.machine and self.machine.quiz_issue_days:
+			return self.in_person_date + timedelta(days=self.machine.quiz_issue_days)
+		elif self.machine.in_person_component is False:
+			return self.video_watch_date + timedelta(days=self.machine.quiz_issue_days)
+		else:
+			return "prerequisites completed"
+
 	def quiz_available(self):
 		if self.in_person_date and self.machine and self.machine and self.machine.quiz_issue_days:
 			return (not self.quiz_passed()) and self.in_person_date + timedelta(
+				days=self.machine.quiz_issue_days) < datetime.now()
+		elif self.machine.in_person_component is False:
+			return (not self.quiz_passed()) and self.video_watch_date + timedelta(
 				days=self.machine.quiz_issue_days) < datetime.now()
 		else:
 			return False
@@ -98,7 +117,8 @@ class Training(_base):
 		videos_watched = None
 		if videos_watched_query is not None:
 			videos_watched = videos_watched_query.videos_watched
-		if (self.in_person_date is None) or (videos_watched is None) or (self.invalidation_date is not None):
+
+		if (self.in_person_date is None and self.machine.in_person_component is True) or (videos_watched is None) or (self.invalidation_date is not None):
 			return False
 
 		# checks for membership of required video in the list of all videos watched by user
@@ -494,6 +514,13 @@ class Video(_base):
 	filepath = sa.Column(sa.Text, nullable = False)
 	name = sa.Column(sa.VARCHAR(100), nullable=True)
 	descrip = sa.Column(sa.Text, nullable=True)
+
+	def getVideoNameByID(id):
+		db = db_session()
+		video = db.query(Video).filter_by(id=id).one_or_none()
+		if video is None:
+			return "video ID does not exist"
+		return video.name
 
 class machineStatus(enum.Enum):
 	idle		= 0

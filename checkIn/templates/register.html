@@ -38,6 +38,19 @@
             </div>
         </div>
 
+    <!--<div class="form-group">
+        <label for="email">Email address</label>
+        <input type="email" class="form-control" id="email" name="email" aria-describedby="emailHelp" value="{{ email }}" readonly required>
+        <div class="input-group-append">
+            <select id="emailSuffix" onchange="inputEmailSuffix()" name="emailSuffix">
+            <option value="hawk.iit.edu">hawk.iit.edu</option>
+            <option value="id.iit.edu">id.iit.edu</option>
+            <option value="hawk.iit.edu">iit.edu</option>
+            </select>
+
+        </div>
+    </div> -->
+
     <div class="col-auto">
       <label class="sr-only" for="inlineFormInput">Name</label>
       <input type="text" class="form-control mb-2" id="inlineFormInput" placeholder="username">
@@ -50,7 +63,7 @@
         </div>
 <!--        <input type="text" class="form-control" id="inlineFormInputGroup" placeholder="Username">-->
           <div class="input-group-append">
-                <select id="emailSuffix" onchange="inputEmailSuffix()" name="emailSuffix">
+                <select id="email" onchange="inputEmailSuffix()" name="email">
                 <option value="hawk.iit.edu" selected="">hawk.iit.edu</option>
                 <option value="iit.edu">iit.edu</option>
                 <option value="id.iit.edu">id.iit.edu</option>

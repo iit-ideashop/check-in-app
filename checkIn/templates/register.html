@@ -40,12 +40,15 @@
 
         <div class="form-group">
             <label for="email">Email address</label>
-            <input type="email" class="form-control" id="email" name="email" aria-describedby="emailHelp" value="{{ email }}" readonly required>
+            <input type="email" class="form-control" id="email" name="email" aria-describedby="emailHelp" value="{{ email }}">
             <div class="input-group-append">
                 <select id="emailSuffix" onchange="inputEmailSuffix()" name="emailSuffix">
                 <option value="hawk.iit.edu" selected="">hawk.iit.edu</option>
+                <option value="iit.edu">iit.edu</option>
                 <option value="id.iit.edu">id.iit.edu</option>
-                <option value="hawk.iit.edu">iit.edu</option>
+                <option value="kaplan.iit.edu">kaplan.iit.edu</option>
+                <option value="stuart.iit.edu">stuart.iit.edu</option>
+                <option value="kentlaw.iit.edu">kentlaw.iit.edu</option>
                 </select>
                 <!--<span class="input-group-text" id="basic-addon2">TEXT</span> -->
             </div>

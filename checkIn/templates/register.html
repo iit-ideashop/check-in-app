@@ -14,16 +14,6 @@
         </div>
 
         <div class="form-group form-group-lg row">
-            <label for="status" class="col-sm-2 col-form-label col-form-label-lg">Status</label>
-            <select class="form-control" id="status" name="status" default="undergraduate" required>
-                <option selected value="">Choose your status...</option>
-                {% for each in statuses %}
-                    <option value="{{ each }}">{{ each }}</option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div class="form-group form-group-lg row">
             <label for="sid" class="col-sm-2 col-form-label col-form-label-lg">Student ID</label>
             <div class="input-group col-sm-10">
                 <div class="input-group-addon">A</div>
@@ -53,11 +43,11 @@
 
     <div class="col-auto">
       <label class="sr-only" for="inlineFormInput">Name</label>
-      <input type="text" class="form-control mb-2" id="inlineFormInput" placeholder="username">
+      <input type="text" class="form-control mb-3" id="inlineFormInput" placeholder="username">
     </div>
     <div class="col-auto">
       <label class="sr-only" for="inlineFormInputGroup">Username</label>
-      <div class="input-group mb-2">
+      <div class="input-group mb-3">
         <div class="input-group-prepend">
           <div class="input-group-text">@</div>
         </div>
@@ -98,6 +88,16 @@
                 <option value="-1">Other not listed.</option>
             </select>
             <input class="form-control" type="text" id="custom-major" name="custom-major" hidden>
+        </div>
+
+        <div class="form-group form-group-lg row">
+            <label for="status" class="col-sm-2 col-form-label col-form-label-lg">Status</label>
+            <select class="form-control" id="status" name="status" default="undergraduate" required>
+                <option selected value="">Choose your status...</option>
+                {% for each in statuses %}
+                    <option value="{{ each }}">{{ each }}</option>
+                {% endfor %}
+            </select>
         </div>
 
         <br />
@@ -170,6 +170,36 @@
 
     <script type = "text/javascript">
     const suffixPrefix = ["@hawk.iit.edu","@id.iit.edu","@iit.edu"];
+    </script>
+    <script type = "text/javascript">
+            function inputCollegeName(){
+            var selectedMajor = $('#college').val();
+            console.log(selectedMajor)
+			if(selectedMajor === '-1')  {
+			    var cname = document.getElementById('custom-name');
+                cname.removeAttribute('hidden')
+			}
+        }
+        function inputMajorName(){
+            var selectedCollege = $('#major').val();
+            console.log(selectedCollege)
+			if(selectedCollege === '-1')  {
+			    var cname = document.getElementById('custom-major');
+                cname.removeAttribute('hidden')
+			}
+        }
+
+        $(function () {
+            $('#college').change(inputCollegeName)
+        });
+        $(function () {
+            $('#major').change(inputMajorName)
+        });
+
+        $(function () {
+            $('#sid').change(checkSID)
+        });
+
     </script>
 
 <input type="button" class="btn btn-danger" onclick="disable()" id="myBtn" value="Disable Button" />

@@ -9,13 +9,7 @@ alter table safetyTraining change date in_person_date datetime not null;
 alter table safetyTraining
     add videos_watched varchar(100) null;
 
-// Model.py "date" changed to "in_person_date" and made nullable
-// Model.py "trainer_id" made nullable
-
-// Model.py new class video (tablename is video)
-// video contains: id, length, filepath, name, descrip
-
-// new table video w/ columns shown below (Model.py updated accordingly)
+// new table "video" w/ columns shown below (Model.py updated accordingly)
 // SQL:
 create table video
 (
@@ -28,7 +22,7 @@ create table video
 		primary key (id)
 );
 
-// machines new columns show below. Model.py's machine class made to match
+// new columns in "machines" table shown below. Model.py's machine class made to match
 // SQL:
 alter table machines
 	add parent_id varchar(200) null;
@@ -41,8 +35,8 @@ alter table machines
 
 alter table machines
 	add about_link varchar(100) null;
-//
-// New table energizer. Model.py class energizer has active_user type "DBCARDTYPE"
+
+// New table "energizer". Model.py class energizer has active_user type "DBCARDTYPE"
 // SQL:
 create table energizer
 (
@@ -55,7 +49,7 @@ create table energizer
 	constraint energizer_pk
 		primary key (id)
 );
-// New table reservation_windows, Model.py class reservation_windows made to match
+// New table "reservation_windows", Model.py class reservation_windows made to match
 // SQL:
 create table reservation_windows
 (
@@ -67,22 +61,17 @@ create table reservation_windows
 		primary key (id)
 );
 
-// Reservation Types Table.
+// "reservation_types" table added.
 // SQL Script:
-create table checkIn_dev.reservation_types
+create table reservation_types
 (
-    id       int auto_increment,
-    name     varchar(100) not null,
-    duration float        not null,
-    capacity int          not null,
-    constraint reservation_types_id_uindex
-        unique (id),
-    constraint machines_id
-        foreign key (id) references checkIn_dev.machines (id)
+	id int auto_increment,
+	name varChar(100) not null,
+	duration float not null,
+	capacity int not null,
+	constraint reservation_types_pk
+		primary key (id)
 );
-
-alter table checkIn_dev.reservation_types
-    add primary key (id);
 
 // Reservations for In Person Training Table. Model.py class ReservationInpersontraining matching
 // SQL:

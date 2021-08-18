@@ -41,17 +41,14 @@
     </div> -->
 
     <div class="form-group">
-      <label class="sr-only" for="inlineFormInput">Name</label>
-      <input type="text" class="form-control mb-3" id="inlineFormInput" placeholder="username">
 
-    <div class="col-auto">
-      <label class="sr-only" for="inlineFormInputGroup">Username</label>
-      <div class="input-group mb-3">
-        <div class="input-group-prepend">
-          <div class="input-group-text">@</div>
-        </div>
-<!--        <input type="text" class="form-control" id="inlineFormInputGroup" placeholder="Username">-->
-          <div class="input-group-append">
+
+    <div class="form-group" >
+	    <input type="text" class="col-lg-4" id="inlineFormInput" placeholder="Username">
+      <div class="input-group mb-2">
+	      <div class="col-lg-3">
+          <label class="input-group-text">@</label>
+	        <div class="col-lg-6">
                 <select id="email" onchange="inputEmailSuffix()" name="email">
                 <option value="hawk.iit.edu" selected="">hawk.iit.edu</option>
                 <option value="iit.edu">iit.edu</option>
@@ -62,32 +59,33 @@
                 </select>
                 <!--<span class="input-group-text" id="basic-addon2">TEXT</span> -->
             </div>
+        </div>
+<!--        <input type="text" class="form-control" id="inlineFormInputGroup" placeholder="Username">-->
+
       </div>
     </div>
     </div>
 
         <div class="form-group">
             <label for="college">College</label>
-            <select class="form-control" id="college" onchange="inputCollegeName()" name="college" required>
+            <select class="form-control" id="college"  name="college" required>
                 <option selected value="">Choose your college...</option>
                 {% for each in colleges %}
                     <option value="{{ each.id }}">{{ each.name }}</option>
                 {% endfor %}
                 <option value="-1">Other not listed.</option>
             </select>
-            <input class="form-control" type="text" id="custom-name" name="custom-name" hidden>
         </div>
 
         <div class="form-group">
             <label>Major</label>
-            <select class="form-control" id="major" name="major" onchange="inputMajorName()" required>
+            <select class="form-control" id="major" name="major"  required>
                 <option selected value="">Choose your major...</option>
                 {% for each in majors %}
                 <option value="{{ each.id }}">{{ each.name }}</option>
                 {% endfor %}
                 <option value="-1">Other not listed.</option>
             </select>
-            <input class="form-control" type="text" id="custom-major" name="custom-major" hidden>
         </div>
 
         <div class="form-group form-group-lg row">
@@ -106,6 +104,8 @@
         <br />
         <input class="btn btn-success btn-lg btn-block" type="submit" name="submitButton" onclick=disable() value="Continue"/>
     </form>
+    <link rel="stylesheet" href="/static/css/reg.css"/>
+
 </div>
 {% endblock %}
 
@@ -163,7 +163,7 @@
         }
         }
         function inputEmailSuffix(){
-            var emamil = $('#emailSuffix').val();
+            var email = $('#emailSuffix').val();
             console.log(email)
         }
     </script>
@@ -172,29 +172,6 @@
     const suffixPrefix = ["@hawk.iit.edu","@id.iit.edu","@iit.edu"];
     </script>
     <script type = "text/javascript">
-            function inputCollegeName(){
-            var selectedMajor = $('#college').val();
-            console.log(selectedMajor)
-			if(selectedMajor === '-1')  {
-			    var cname = document.getElementById('custom-name');
-                cname.removeAttribute('hidden')
-			}
-        }
-        function inputMajorName(){
-            var selectedCollege = $('#major').val();
-            console.log(selectedCollege)
-			if(selectedCollege === '-1')  {
-			    var cname = document.getElementById('custom-major');
-                cname.removeAttribute('hidden')
-			}
-        }
-
-        $(function () {
-            $('#college').change(inputCollegeName)
-        });
-        $(function () {
-            $('#major').change(inputMajorName)
-        });
 
         $(function () {
             $('#sid').change(checkSID)
@@ -202,5 +179,5 @@
 
     </script>
 
-<input type="button" class="btn btn-danger" onclick="disable()" id="myBtn" value="Disable Button" />
+{#<input type="button" class="btn btn-danger" onclick="disable()" id="myBtn" value="Disable Button" />#}
 {% endblock %}

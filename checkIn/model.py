@@ -54,7 +54,7 @@ class Training(_base):
 	trainee_id: int = sa.Column(DBStudentIDType, sa.ForeignKey('users.sid'), nullable=True)
 	trainer_id: int = sa.Column(DBStudentIDType, sa.ForeignKey('users.sid'), nullable=True)
 	machine_id = sa.Column(sa.Integer, sa.ForeignKey('machines.id'), nullable=False)
-	in_person_date = sa.Column(sa.DateTime, default=sa.func.now(), nullable=True)
+	in_person_date = sa.Column(sa.DateTime, nullable=True)
 	invalidation_date = sa.Column(sa.DateTime)
 	invalidation_reason = sa.Column(sa.Text)
 	show_invalidation_reason = sa.Column(sa.Boolean)
@@ -62,13 +62,13 @@ class Training(_base):
 	quiz_date = sa.Column(sa.DateTime, nullable=True)
 	quiz_attempts = sa.Column(sa.Integer, nullable=True)
 	quiz_notification_sent = sa.Column(sa.DateTime, nullable=True)
-	video_watch_date = sa.Column(sa.DateTime, nullable=True)
 	trainee = relationship('User', foreign_keys=[trainee_id], back_populates='trainings')
 	trainer = relationship('User', foreign_keys=[trainer_id])
 	machine = relationship('Machine', foreign_keys=[machine_id], lazy='joined')
+	watched_videos = relationship('TrainingVideosBridge')
 
 	def __repr__(self):
-		return "<%s trained %s on %s, time=%s>" % (self.trainer.name, self.trainee.name, self.machine.name, str(self.in_person_date))
+		return "<%s training for %s.>" % (self.trainee.name, self.machine.name)
 
 	def quiz_required(self):
 		return self.machine.quiz is not None
@@ -81,10 +81,9 @@ class Training(_base):
 
 	def videos_watched(self):
 		db=db_session()
-		videoList = db.query(TrainingVideosBridge).filter_by(user_id=self.trainee_id).one_or_none()
-		if videoList is None:
+		if not (self.watched_videos and self.machine.videos):
 			return False
-		if all(video in json.loads(videoList.videos_watched) for video in json.loads(self.machine.video_id)):
+		if all(y in [x.video_id for x in self.watched_videos] for y in [x.video_id for x in self.machine.videos]):
 			return True
 		return False
 
@@ -92,17 +91,23 @@ class Training(_base):
 		if self.in_person_date is not None and self.machine and self.machine.quiz_issue_days:
 			return self.in_person_date + timedelta(days=self.machine.quiz_issue_days)
 		elif self.machine.in_person_component is False:
-			return self.video_watch_date + timedelta(days=self.machine.quiz_issue_days)
+			baseDate = [x.timestamp for x in self.watched_videos]
+			if baseDate:
+				return max(baseDate) + timedelta(days=self.machine.quiz_issue_days)
+			else:
+				return None
 		else:
-			return "prerequisites completed"
+			return None
 
 	def quiz_available(self):
 		if self.in_person_date and self.machine and self.machine and self.machine.quiz_issue_days:
 			return (not self.quiz_passed()) and self.in_person_date + timedelta(
 				days=self.machine.quiz_issue_days) < datetime.now()
 		elif self.machine.in_person_component is False:
-			return (not self.quiz_passed()) and self.video_watch_date + timedelta(
-				days=self.machine.quiz_issue_days) < datetime.now()
+			baseDate = [x.timestamp for x in self.watched_videos]
+			if baseDate:
+				return (not self.quiz_passed()) and max(baseDate) + timedelta(
+					days=self.machine.quiz_issue_days) < datetime.now()
 		else:
 			return False
 
@@ -113,17 +118,15 @@ class Training(_base):
 
 	def completed(self):
 		db = db_session()
-		videos_watched_query=db.query(TrainingVideosBridge).filter_by(user_id=int(self.trainee_id)).one_or_none()
-		videos_watched = None
-		if videos_watched_query is not None:
-			videos_watched = videos_watched_query.videos_watched
-
-		if (self.in_person_date is None and self.machine.in_person_component is True) or (videos_watched is None) or (self.invalidation_date is not None):
+		if (self.in_person_date is None and self.machine.in_person_component is True) or (self.invalidation_date is not None):
 			return False
-
 		# checks for membership of required video in the list of all videos watched by user
 		# without regard for element positions
-		elif all(x in json.loads(videos_watched) for x in json.loads(self.machine.video_id)) and self.quiz_passed():
+		videos_watched = [x.video_id for x in self.watched_videos]
+		machine_videos = [x.video_id for x in self.machine.videos]
+		if not videos_watched or not machine_videos:
+			return False
+		elif all(x in videos_watched for x in machine_videos) and self.quiz_passed():
 			return True
 		else:
 			return False
@@ -152,19 +155,24 @@ class Training(_base):
 
 class TrainingVideosBridge(_base):
 	__tablename__ = 'trainingVideosBridge'
-	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-	user_id: int = sa.Column(DBStudentIDType, sa.ForeignKey('users.sid'), unique=True, nullable=False)
-	videos_watched = sa.Column(sa.VARCHAR(200), nullable=True)
+	training_id = sa.Column(sa.Integer, sa.ForeignKey('safetyTraining.id'), primary_key=True)
+	video_id = sa.Column(sa.Integer, sa.ForeignKey('video.id'), primary_key=True)
+	timestamp = sa.Column(sa.DateTime, default=sa.func.now())
+
+	training = relationship('Training')
+	video = relationship('Video')
 
 	def __repr__(self):
-		return "<%s has watched videos:  %s>" % (self.user_id, self.videos_watched)
+		return "<%s has watched video %s for training %s>" % (self.training.trainee.name, self.video.name, self.training.machine.name)
 
 	def getWatchedVideos(user):
-		db=db_session()
-		videos_query = db.query(TrainingVideosBridge).filter_by(user_id=user).one_or_none()
+		db = db_session()
+		#videos_query = db.query(TrainingVideosBridge).filter_by(user_id=user).one_or_none()
+		training_ids = db.query(Training.id).filter_by(trainee_id=user)
+		videos_query = db.query(TrainingVideosBridge.video_id).filter(TrainingVideosBridge.training_id in training_ids.all()).all()
+		print(videos_query)
 		if videos_query is not None:
-			videos = videos_query.videos_watched
-			return json.loads(videos)
+			return videos_query
 		else:
 			return list()
 
@@ -346,6 +354,7 @@ class Machine(_base):
 	location = relationship('Location')
 	trained_users = relationship('Training')
 	quiz = relationship('Quiz', lazy='joined')
+	videos = relationship('VideoMachineBridge')
 
 	def __repr__(self):
 		return "<Machine %s>" % self.name
@@ -521,6 +530,19 @@ class Video(_base):
 		if video is None:
 			return "video ID does not exist"
 		return video.name
+
+
+class VideoMachineBridge(_base):
+	__tablename__ = 'videoMachineBridge'
+	video_id = sa.Column(sa.Integer, sa.ForeignKey('video.id'), primary_key=True)
+	machine_id = sa.Column(sa.Integer, sa.ForeignKey('machines.id'), primary_key=True)
+
+	machine = relationship('Machine')
+	video = relationship('Video')
+
+	def __repr__(self):
+		return "Machine %s requires video %s" % (self.machine.name, self.video.name)
+
 
 class machineStatus(enum.Enum):
 	idle		= 0

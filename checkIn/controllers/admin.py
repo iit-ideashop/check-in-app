@@ -244,14 +244,21 @@ def admin_add_training():
 	             trainer_id=int(session['admin']),
 	             machine_id=each.id,
 	             in_person_date=sa.func.now()))
-	else: # If exists, do not append, instead, modify. Otherwise, append
-		if (Training(trainee_id=int(request.form['student_id']))):
-			t.in_person_date=sa.func.now()
+	else:
+		ls = []
+		query = g.db.query(Training.machine_id).filter_by(trainee_id=request.form['student_id']).filter_by(in_person_date=None).all()
+		for i in query:
+			ls.append(int(i[0]))
+		if int(request.form['machine']) in ls:
+			obj = g.db.query(Training).filter_by(trainee_id=request.form['student_id']) \
+				.filter_by(machine_id=int(request.form['machine'])).filter_by(in_person_date=None).first()
+			obj.in_person_date = sa.func.now()
+			g.db.commit()
 		else:
-		    t.append(Training(trainee_id=int(request.form['student_id']),
-	                 trainer_id=int(session['admin']),
-	                 machine_id=int(request.form['machine']),
-	                 in_person_date=sa.func.now()))
+			t.append(Training(trainee_id=int(request.form['student_id']),
+			                  trainer_id=int(session['admin']),
+			                  machine_id=int(request.form['machine']),
+			                  in_person_date=sa.func.now()))
 	try:
 		check_allowed_modify(g.db, session['admin'], request.form['student_id'], session['location_id'])
 		g.db.add_all(t)

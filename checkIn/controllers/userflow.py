@@ -168,7 +168,10 @@ def register():
 
 		existing_user = g.db.query(User).get(request.form['sid'])
 		if not existing_user:
-			existing_user = User(sid=request.form['sid'], name=request.form['name'].title())
+			existing_user = User(sid=request.form['sid'],
+								 name=request.form['name'].title(),
+								 email=request.form['email'],
+								 status=request.form['status'])
 			g.db.add(existing_user)
 
 		existing_user_location = g.db.query(UserLocation).get((request.form['sid'], session['location_id']))

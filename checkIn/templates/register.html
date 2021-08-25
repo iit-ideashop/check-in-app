@@ -5,6 +5,7 @@
 <div class="container">
     <h1>Please verify the information below.</h1>
     <form action="/register" method="post">
+
         <div class="form-group form-group-lg row">
             <label for="sid" class="col-sm-2 col-form-label col-form-label-lg">Card Number</label>
             <div class="input-group col-sm-10">
@@ -26,13 +27,85 @@
                 <input class="form-control input-lg keyboard col-sm-10" type="text" value="{{ name }}" id="name" name="name" />
             </div>
         </div>
+    <!--<div class="form-group">
+        <label for="email">Email address</label>
+        <input type="email" class="form-control" id="email" name="email" aria-describedby="emailHelp" value="{{ email }}" readonly required>
+        <div class="input-group-append">
+            <select id="emailSuffix" onchange="inputEmailSuffix()" name="emailSuffix">
+            <option value="hawk.iit.edu">hawk.iit.edu</option>
+            <option value="id.iit.edu">id.iit.edu</option>
+            <option value="hawk.iit.edu">iit.edu</option>
+            </select>
+
+        </div>
+    </div> -->
+
+    <div class="form-group">
+
+
+    <div class="form-group" >
+	    <input type="text" class="col-lg-4" id="inlineFormInput" placeholder="Username">
+      <div class="input-group mb-2">
+	      <div class="col-lg-3">
+          <label class="input-group-text">@</label>
+	        <div class="col-lg-6">
+                <select id="email" onchange="inputEmailSuffix()" name="email">
+                <option value="hawk.iit.edu" selected="">hawk.iit.edu</option>
+                <option value="iit.edu">iit.edu</option>
+                <option value="id.iit.edu">id.iit.edu</option>
+                <option value="kaplan.iit.edu">kaplan.iit.edu</option>
+                <option value="stuart.iit.edu">stuart.iit.edu</option>
+                <option value="kentlaw.iit.edu">kentlaw.iit.edu</option>
+                </select>
+                <!--<span class="input-group-text" id="basic-addon2">TEXT</span> -->
+            </div>
+        </div>
+<!--        <input type="text" class="form-control" id="inlineFormInputGroup" placeholder="Username">-->
+
+      </div>
+    </div>
+    </div>
+
+        <div class="form-group">
+            <label for="college">College</label>
+            <select class="form-control" id="college"  name="college" required>
+                <option selected value="">Choose your college...</option>
+                {% for each in colleges %}
+                    <option value="{{ each.id }}">{{ each.name }}</option>
+                {% endfor %}
+                <option value="-1">Other not listed.</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Major</label>
+            <select class="form-control" id="major" name="major"  required>
+                <option selected value="">Choose your major...</option>
+                {% for each in majors %}
+                <option value="{{ each.id }}">{{ each.name }}</option>
+                {% endfor %}
+                <option value="-1">Other not listed.</option>
+            </select>
+        </div>
+
+        <div class="form-group form-group-lg row">
+            <label for="status" class="col-sm-2 col-form-label col-form-label-lg">Status</label>
+            <select class="form-control" id="status" name="status" default="undergraduate" required>
+                <option selected value="">Choose your status...</option>
+                {% for each in statuses %}
+                    <option value="{{ each }}">{{ each }}</option>
+                {% endfor %}
+            </select>
+        </div>
 
         <br />
         <br />
         <br />
         <br />
-        <input class="btn btn-success btn-lg btn-block" type="submit" value="Continue"/>
+        <input class="btn btn-success btn-lg btn-block" type="submit" name="submitButton" onclick=disable() value="Continue"/>
     </form>
+    <link rel="stylesheet" href="/static/css/reg.css"/>
+
 </div>
 {% endblock %}
 
@@ -67,4 +140,44 @@
             window.location.replace("/");
         }, 45000);
     </script>
+    <script type="text/javascript">
+
+
+    function disable(){
+
+        // If fields are empty, disable button. Otherwise, enable
+
+        var inputStatus = document.getElementsByName("status")
+        var inputSid = document.getElementsByName("sid")
+        var inputName = document.getElementsByName("name")
+        var inputEmail = document.getElementsByName("email")
+
+
+        if (!(inputStatus && inputSid & inputName && inputEmail)){
+            $("#submitButton").attr("disabled", true);
+            $('#submitButton').addClass('disabled');
+        }
+        else {
+            $("#submitButton").attr("disabled", false);
+            $('#submitButton').removeClass('disabled');
+        }
+        }
+        function inputEmailSuffix(){
+            var email = $('#emailSuffix').val();
+            console.log(email)
+        }
+    </script>
+
+    <script type = "text/javascript">
+    const suffixPrefix = ["@hawk.iit.edu","@id.iit.edu","@iit.edu"];
+    </script>
+    <script type = "text/javascript">
+
+        $(function () {
+            $('#sid').change(checkSID)
+        });
+
+    </script>
+
+{#<input type="button" class="btn btn-danger" onclick="disable()" id="myBtn" value="Disable Button" />#}
 {% endblock %}

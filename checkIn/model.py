@@ -66,6 +66,7 @@ class Training(_base):
 	trainer = relationship('User', foreign_keys=[trainer_id])
 	machine = relationship('Machine', foreign_keys=[machine_id], lazy='joined')
 	watched_videos = relationship('TrainingVideosBridge')
+	in_person_reservation = relationship('ReservationInpersontraining')
 
 	def __repr__(self):
 		return "<%s training for %s.>" % (self.trainee.name, self.machine.name)
@@ -355,6 +356,7 @@ class Machine(_base):
 	trained_users = relationship('Training')
 	quiz = relationship('Quiz', lazy='joined')
 	videos = relationship('VideoMachineBridge')
+	reservation_type = relationship('ReservationTypes')
 
 	def __repr__(self):
 		return "<Machine %s>" % self.name
@@ -550,6 +552,7 @@ class machineStatus(enum.Enum):
 	queued		= 2
 	offline		= 3
 
+
 class Energizer(_base):
 	__tablename__ = 'energizer'
 	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True, nullable=False)
@@ -560,12 +563,19 @@ class Energizer(_base):
 	machine_enabled = sa.Column(sa.Integer)
 	active_user = sa.Column(DBCardType,nullable=True)
 
+
 class ReservationWindows(_base):
 	__tablename__ = 'reservation_windows'
 	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True, nullable=False)
-	type_id = sa.Column(sa.Integer, nullable=False)
+	type_id = sa.Column(sa.Integer, sa.ForeignKey('reservation_types.id'), nullable=False)
 	start = sa.Column(sa.DateTime,nullable=False)
 	end = sa.Column(sa.DateTime, nullable=False)
+
+	window_type = relationship('ReservationTypes')
+	reservations = relationship('ReservationInpersontraining')
+
+	def __repr__(self):
+		return "<Reservation for %s, %s -> %s>" % (self.window_type.name, self.start, self.end)
 
 class ReservationTypes(_base):
     __tablename__ = 'reservation_types'
@@ -573,18 +583,18 @@ class ReservationTypes(_base):
     name = sa.Column(sa.VARCHAR(100), nullable=False)
     duration = sa.Column(sa.Float, nullable=False)
     capacity = sa.Column(sa.Integer, nullable=False)
-    machines_id = sa.Column(sa.Integer, sa.ForeignKey('machines.id'), nullable=False)
+    machine_id = sa.Column(sa.Integer, sa.ForeignKey('machines.id'), nullable=False)
 
     machine = relationship('Machine')
 
 class ReservationInpersontraining(_base):
 	__tablename__ = 'reservation_inperson_training'
 	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True, nullable=False)
-	sid = sa.Column(sa.Integer, sa.ForeignKey('users.sid'), nullable=False)
 	reservation_window_id = sa.Column(sa.Integer, sa.ForeignKey('reservation_windows.id'), nullable=False)
-	user = relationship('User', lazy = "joined")
-	user = relationship('User', lazy="joined")
-	reservation_type = relationship('ReservationWindows')
+	training_id = sa.Column(sa.Integer, sa.ForeignKey('safetyTraining.id'), nullable=False)
+
+	training = relationship('Training')
+	window = relationship('ReservationWindows')
 
 	def __repr__(self):
 		return "<Reservation ID %s>" % self.id

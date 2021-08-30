@@ -403,9 +403,12 @@ class AdminLog(_base):
 class CardScan(_base):
 	__tablename__ = 'scanLog'
 	id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-	card_id = sa.Column(DBCardType, sa.ForeignKey(HawkCard.card), nullable=False)
+	card_id = sa.Column(DBCardType, nullable=False)
+	facility_id = sa.Column(DBCardType, nullable=False)
 	time = sa.Column(sa.DateTime, nullable=False)
 	location_id = sa.Column(sa.Integer, sa.ForeignKey(Location.id), nullable=False)
+
+	__tabkle_args__ =  (sa.ForeignKeyConstraint([facility_id, card_id], [HawkCard.facility, HawkCard.card]), {})
 
 	card = relationship('HawkCard')
 	location = relationship('Location', foreign_keys=[location_id], viewonly=True)

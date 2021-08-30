@@ -171,7 +171,6 @@ class TrainingVideosBridge(_base):
 		#videos_query = db.query(TrainingVideosBridge).filter_by(user_id=user).one_or_none()
 		training_ids = db.query(Training.id).filter_by(trainee_id=user)
 		videos_query = db.query(TrainingVideosBridge.video_id).filter(TrainingVideosBridge.training_id in training_ids.all()).all()
-		print(videos_query)
 		if videos_query is not None:
 			return videos_query
 		else:

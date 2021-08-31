@@ -189,7 +189,7 @@ class SocketV1Namespace(Namespace):
 					# present waiver page
 					emit('go', {'to': url_for('userflow.waiver', sid=card.sid), 'hwid': data['hwid']})
 
-			logEntry = CardScan(card_id=data['card'], time=sa.func.now(), location_id=data['location'])
+			logEntry = CardScan(facility_id=data['facility'], card_id=data['card'], time=sa.func.now(), location_id=data['location'])
 			db.add(logEntry)
 
 			db.commit()

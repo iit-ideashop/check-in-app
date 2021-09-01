@@ -12,7 +12,7 @@ def card_read(hwid):
 	if not kiosk:
 		return abort(403)
 
-	dbcard = g.db.query(HawkCard).filter_by(card=request.form['cardnum']).one_or_none()
+	dbcard = g.db.query(HawkCard).filter_by(card=request.form['cardnum'],facility=request.form['facility']).one_or_none()
 	user = dbcard.user if dbcard else None
 	g.socketio.emit('scan', {
 		'facility': request.form['facility'],

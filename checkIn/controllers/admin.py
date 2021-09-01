@@ -186,7 +186,7 @@ def admin_lookup():
 		machines = g.db.query(Machine).filter_by(location_id=session['location_id']).all()
 		# if found user has lower rank than admin user
 		if results[0][0].type.level < g.admin.type.level:
-			types = g.db.query(Type).filter(Type.level <= g.admin.type.level).all()
+			types = g.db.query(Type).filter(Type.level <= g.admin.type.level).order_by(Type.level).all()
 		access_log = g.db.query(Access) \
 			.filter_by(sid=results[0][0].sid, location_id=session['location_id']) \
 			.order_by(Access.timeIn.desc()).limit(10).all()

@@ -173,7 +173,7 @@ def register():
 
 		existing_user_location = g.db.query(UserLocation).get((request.form['sid'], session['location_id']))
 		if not existing_user_location:
-			from checkIn import default_type
+			from checkIn.model import default_type
 			g.db.add(UserLocation(sid=request.form['sid'],
 			                    type_id=default_type.id,
 			                    waiverSigned=None,

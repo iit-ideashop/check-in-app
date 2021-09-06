@@ -323,6 +323,14 @@ class Access(_base):
 	def __repr__(self):
 		return "<Access %s(%s-%s)>" % (self.user.name, str(self.timeIn), str(self.timeOut))
 
+	@classmethod
+	def getUserCount(cls, db: sa.orm.Session, location):
+		users = len(db.query(Access).filter_by(location_id=location, timeOut=None).join(UserLocation, Access.sid == UserLocation.sid).join(Type,UserLocation.type_id==Type.id).filter(Type.level==0).all())
+		return users
+	@classmethod
+	def getStaffCount(cls, db: sa.orm.Session, location):
+		staff = len(db.query(Access).filter_by(location_id=location, timeOut=None).join(UserLocation, Access.sid == UserLocation.sid).join(Type,UserLocation.type_id==Type.id).filter(Type.level>0).all())
+		return staff
 
 class HawkCard(_base):
 	__tablename__ = 'hawkcards'

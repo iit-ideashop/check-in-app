@@ -92,6 +92,10 @@ class Training(_base):
 		if self.in_person_date is not None and self.machine and self.machine.quiz_issue_days:
 			return self.in_person_date + timedelta(days=self.machine.quiz_issue_days)
 		elif self.machine.in_person_component is False:
+			videos_watched = [x.video_id for x in self.watched_videos]
+			machine_videos = [x.video_id for x in self.machine.videos]
+			if not all(x in videos_watched for x in machine_videos):
+				return None
 			baseDate = [x.timestamp for x in self.watched_videos]
 			if baseDate:
 				return max(baseDate) + timedelta(days=self.machine.quiz_issue_days)
@@ -105,8 +109,10 @@ class Training(_base):
 			return (not self.quiz_passed()) and self.in_person_date + timedelta(
 				days=self.machine.quiz_issue_days) < datetime.now()
 		elif self.machine.in_person_component is False:
+			videos_watched = [x.video_id for x in self.watched_videos]
+			machine_videos = [x.video_id for x in self.machine.videos]
 			baseDate = [x.timestamp for x in self.watched_videos]
-			if baseDate:
+			if baseDate and all(x in videos_watched for x in machine_videos):
 				return (not self.quiz_passed()) and max(baseDate) + timedelta(
 					days=self.machine.quiz_issue_days) < datetime.now()
 		else:

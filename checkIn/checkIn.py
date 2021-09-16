@@ -9,7 +9,6 @@ from flask import Flask, request, session, g, redirect, url_for, render_template
 from flask_bootstrap import Bootstrap
 from flask_socketio import SocketIO
 import sqlalchemy as sa
-from sqlalchemy.orm import joinedload
 from checkIn.model import UserLocation, Access, Kiosk, Location, init_db, get_types
 from checkIn.controllers.auth import auth_controller
 from checkIn.controllers.userflow import userflow_controller
@@ -91,27 +90,27 @@ def before_request():
 		else:
 			return redirect("/auth")
 
-		in_lab = db.query(Access) \
-			.filter_by(timeOut=None) \
-			.filter_by(location_id=session['location_id']) \
-			.options(joinedload(Access.user)) \
-			.all() \
-			if 'location_id' in session else list()
-
+		# in_lab = db.query(Access) \
+		# 	.filter_by(timeOut=None) \
+		# 	.filter_by(location_id=session['location_id']) \
+		# 	.options(joinedload(Access.user)) \
+		# 	.all() \
+		# 	if 'location_id' in session else list()
+		#
 		g.location = db.query(Location).filter_by(
 			id=session['location_id']).one_or_none() if 'location_id' in session else None
-		g.students = [a.user for a in in_lab if a.hideStaff or a.user.type.level <= 0]
-		g.staff = [a.user for a in in_lab if not a.hideStaff and a.user.type.level > 0]
-		g.staff.sort(key=lambda x: x.type.level, reverse=True)
+		# g.students = [a.user for a in in_lab if a.hideStaff or a.user.type.level <= 0]
+		# g.staff = [a.user for a in in_lab if not a.hideStaff and a.user.type.level > 0]
+		# g.staff.sort(key=lambda x: x.type.level, reverse=True)
 		g.admin = db.query(UserLocation).filter_by(sid=session['admin'], location_id=session['location_id']).one_or_none() if 'admin' in session else None
 		g.version = version
 		g.kiosk = kiosk
-
-		for student in g.students:
-			if not student.get_missing_trainings(db):
-				student.general_training = True
-			else:
-				student.general_training = False
+		#
+		# for student in g.students:
+		# 	if not student.get_missing_trainings(db):
+		# 		student.general_training = True
+		# 	else:
+		# 		student.general_training = False
 
 
 @app.teardown_appcontext
@@ -133,6 +132,7 @@ def error_404(error):
 @app.route('/error')
 def display_error():
 	return render_template("internal_error.html"), 500
+
 
 app.register_blueprint(auth_controller)
 app.register_blueprint(userflow_controller)

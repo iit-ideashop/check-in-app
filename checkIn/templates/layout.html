@@ -10,10 +10,96 @@
 
 {% block scripts %}
     {{ super() }}
-
     <script src="/static/js/socket.io.js"></script>
     <script src="/static/js/jqbtk.min.js"></script>
     <script src="/static/js/checkin.js"></script>
+
+	<script type="text/javascript">
+        function updateInLab(){
+            $.getJSON('/api/in_lab', function (data) {
+                    console.log(data);
+                    if (data['staff'] && data['staff'].length > 0){
+                        let staff_list = document.getElementById('staff_table');
+                        for (let i = 0; i < data['staff'].length; i += 2)
+                        {
+                            var staff_badge = '';
+	                        var newRow = staff_list.insertRow(-1)
+                            if (data['staff'][i]['photo']){
+                                staff_badge = staff_badge +
+                                    '<td style="padding: 8px 16px;" class="col-lg-6">' +
+                                    '<div class="pull-right">' +
+                                    '<img src="' + data['staff'][i]['photo'] + '" style="max-height: 75px;" class="img-circle"/>' +
+                                    '</div>' +
+                                    '<h4>' +
+                                    data['staff'][i]['name'] + '<br>' +
+                                    '<small>' + data['staff'][i]['type'] + '</small>' +
+                                    '</h4>' +
+                                    '</td>'
+	                            }
+                            else {
+                                staff_badge = staff_badge +
+                                    '<td style="padding: 8px 16px;" class="col-lg-6">' +
+                                    '<div class="pull-right">' +
+                                    '<img src="/static/images/placeholder.png" style="max-height: 75px;" class="img-circle"/>' +
+                                    '</div>' +
+                                    '<h4>' +
+                                    data['staff'][i]['name'] + '<br>' +
+                                    '<small>' + data['staff'][i]['type'] + '</small>' +
+                                    '</h4>' +
+                                    '</td>'
+                            }
+                            var newCell = newRow.insertCell(0)
+	                        newCell.innerHTML = staff_badge
+	                        staff_badge = '';
+                            if (data['staff'][i+1]) {
+                                if (data['staff'][i + 1]['photo']) {
+                                    staff_badge = staff_badge +
+                                        '<td style="padding: 8px 16px;" class="col-lg-6">' +
+                                        '<div class="pull-right">' +
+                                        '<img src="' + data['staff'][i + 1]['photo'] + '" style="max-height: 75px;" class="img-circle"/>' +
+                                        '</div>' +
+                                        '<h4>' +
+                                        data['staff'][i + 1]['name'] + '<br>' +
+                                        '<small>' + data['staff'][i + 1]['type'] + '</small>' +
+                                        '</h4>' +
+                                        '</td>'
+                                } else {
+                                    staff_badge = staff_badge +
+                                        '<td style="padding: 8px 16px;" class="col-lg-6">' +
+                                        '<div class="pull-right">' +
+                                        '<img src="/static/images/placeholder.png" style="max-height: 75px;" class="img-circle"/>' +
+                                        '</div>' +
+                                        '<h4>' +
+                                        data['staff'][i + 1]['name'] + '<br>' +
+                                        '<small>' + data['staff'][i + 1]['type'] + '</small>' +
+                                        '</h4>' +
+                                        '</td>'
+                                }
+                                newCell = newRow.insertCell(1)
+                                newCell.innerHTML = staff_badge
+                            }
+                        }
+                    }
+                    if (data['students'] && data['students'].length > 0){
+                        let user_list = document.getElementById('user_table');
+                        for (let i = 0; i < data['students'].length; i++){
+                            var newRow = user_list.insertRow(-1);
+                            if (!data['students'][i]['valid']){
+                                newRow.classList.add("danger");
+                            }
+                            var user_badge = '<td style="vertical-align:middle">' +
+	                            '<span class="glyphicon glyphicon-user" aria-hidden="true">&nbsp;</span>' +
+	                            data['students'][i]['name'] +
+                                '</td>';
+                            var newCell = newRow.insertCell(0)
+	                        newCell.innerHTML = user_badge;
+                        }
+                    }
+                }
+            );
+        }
+        $('document').ready(updateInLab())
+	</script>
 {% endblock scripts %}
 
 {% block navbar %}
@@ -29,8 +115,7 @@
                     <span class="icon-bar"></span>
                     <span class="icon-bar"></span>
                 </button>
-                <a class="navbar-brand" style="font-size:2em" href="/">{{ g.location.name if g.location else '' }} Check
-                    In</a>
+                <a class="navbar-brand" style="font-size:2em" href="/">{{ g.location.name if g.location else '' }} Check In</a>
             </div>
 
             <!-- Collect the nav links, forms, and other content for toggling -->
@@ -59,35 +144,10 @@
                     <div class="panel-heading text-center">
                         Staff
                     </div>
-                    <table class="table table-bordered">
-                    <tbody>
-                        {% for staffRow in g.staff | batch(2) %}
-                            <tr>
-                                {% for staffMember in staffRow %}
-                                    <td style="padding: 8px 16px;" {% if g.staff | length > 1 %} class="col-lg-6" {% endif %}>
-                                        <div class="pull-right">
-                                            {% if staffMember.photo %}
-                                                <img src="{{ staffMember.photo }}" style="max-height: 75px;"
-                                                     class="img-circle"/>
-                                            {% else %}
-                                                <img src="/static/images/placeholder.png" style="max-height: 75px;"
-                                                     class="img-circle"/>
-                                            {% endif %}
-                                        </div>
-                                        <h4>
-                                            {{ staffMember.name }}<br>
-                                            <small>{{ staffMember.type.name }}</small>
-                                        </h4>
-                                    </td>
-                                {% endfor %}
-
-                                {% if g.staff | length > 2 and staffRow | length == 1 %}
-                                    <td></td>
-                                {% endif %}
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                    </table>
+	                <table class="table table-bordered">
+		                <tbody id="staff_table">
+		                </tbody>
+	                </table>
                 </div>
             </div>
             <div class="panel panel-default">
@@ -99,6 +159,7 @@
                         <th>Name</th>
                         <th></th>
                     </tr>
+                <tbody id="user_table">
                     {% for student in g.students %}
                     <tr {% if not student.general_training %} class="danger" {% endif %}>
                             <td style="vertical-align:middle">
@@ -120,6 +181,7 @@
                             </td>
                         </tr>
                     {% endfor %}
+                </tbody>
                 </table>
             </div>
         </div>

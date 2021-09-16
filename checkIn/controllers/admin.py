@@ -253,6 +253,7 @@ def admin_add_training():
 			obj = g.db.query(Training).filter_by(trainee_id=request.form['student_id']) \
 				.filter_by(machine_id=int(request.form['machine'])).filter_by(in_person_date=None).first()
 			obj.in_person_date = sa.func.now()
+			obj.trainer_id=int(session['admin'])
 			g.db.commit()
 		else:
 			t.append(Training(trainee_id=int(request.form['student_id']),
